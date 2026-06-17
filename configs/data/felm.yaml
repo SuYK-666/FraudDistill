@@ -1,0 +1,4 @@
+source: FELM
+raw_dir: data/raw/felm
+converted_file: data/unified/felm.jsonl
+required_fields: [prompt, response]

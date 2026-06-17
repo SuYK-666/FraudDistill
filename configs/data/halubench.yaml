@@ -1,0 +1,4 @@
+source: HaluBench
+raw_dir: data/raw/halubench
+converted_file: data/unified/halubench.jsonl
+required_fields: [question, answer, label]

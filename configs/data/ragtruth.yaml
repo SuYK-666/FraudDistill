@@ -1,0 +1,4 @@
+source: RAGTruth
+raw_dir: data/raw/ragtruth
+converted_file: data/unified/ragtruth.jsonl
+required_fields: [prompt, response, label]

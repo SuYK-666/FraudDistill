@@ -1,0 +1,9 @@
+student_model:
+  model_name: Qwen/Qwen3-0.6B
+  architecture: generative_json_judge
+lora:
+  enabled: true
+  r: 8
+  alpha: 16
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj]

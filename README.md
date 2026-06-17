@@ -1,0 +1,229 @@
+# FraudDistill
+
+FraudDistill 是一个面向 **LLM 欺诈协助输出检测** 的研究与实验框架。项目关注的不是传统短信、邮件或网页诈骗文本分类，也不是只判断用户 prompt 是否危险，而是检测：
+
+```text
+user_query q + target_model_answer y -> safe / unsafe, risk_type, risk_score
+```
+
+核心问题是：当目标大模型面对欺诈诱导、角色扮演、多轮上下文或越狱式输入时，它是否生成了具有欺诈协助风险的回答，以及如何用较低成本自动检测这类回答。
+
+## 项目定位
+
+当前版本只保留一条主线：
+
+```text
+Prompt 诱导 -> Target LLM 生成回答 -> 检测是否存在欺诈协助、拒答失败或过度拒答
+```
+
+小模型和多 Agent 都是检测手段，不是研究对象本身。
+
+当前风险类型限定为：
+
+| 类型 | 含义 |
+|---|---|
+| `fraud_assistance` | 回答为诈骗、钓鱼、冒充身份、虚假招聘、情感诈骗等提供可执行协助 |
+| `refusal_failure` | 面对明显欺诈诱导请求时，模型没有拒绝并给出实质帮助 |
+| `over_refusal` | 面对反诈教育、识别诈骗、防范诈骗等正常请求时错误拒绝 |
+| `safe` | 正常回答、正确拒答或安全教育 |
+
+幻觉、事实性错误、RAG 证据一致性等旧方向暂不作为当前主实验。
+
+## 方法概览
+
+```text
+公开数据集 / benchmark
+        -> 统一为 q + y 样本
+        -> Multi-Agent Teacher 生成结构化 teacher signal
+        -> 本地 Student Detector 学习 gold/weak label + teacher signal
+        -> 低成本部署的欺诈协助输出检测器
+```
+
+保留的 Agent：
+
+| Agent | 作用 |
+|---|---|
+| Fraud Assistance Agent | 判断回答是否提供欺诈协助，关注可执行性 |
+| Refusal Quality Agent | 判断拒答失败和过度拒答 |
+| Relevance Agent | 判断回答是否真正回应用户意图 |
+| Arbiter Agent | 汇总 teacher signal |
+
+Factuality Agent 代码暂保留，但第一阶段不作为主线实验组件。
+
+## 数据集
+
+主数据集：
+
+| 数据集 | 用途 |
+|---|---|
+| Fraud-R1 | 核心数据来源，第一阶段聚焦 Phishing Scams、Impersonation、Fake Job Postings |
+
+辅助数据集：
+
+| 数据集 | 用途 |
+|---|---|
+| Do-Not-Answer | 补充危险请求应拒绝的基线能力 |
+| Aegis / Nemotron Content Safety Dataset | 补充内容安全 safe/unsafe 样本，优先抽取 fraud/deception/scams 相关子类 |
+| OR-Bench | 提供 hard safe cases，用于控制过度拒绝和误报 |
+
+当前仓库已包含 Fraud-R1 原始仓库数据。正式实验前建议先构造：
+
+```text
+data/generated_answers/fraudr1/qwen_outputs.jsonl
+data/unified/fraudr1_qwen.jsonl
+data/teacher_signals/fraudr1_qwen_teacher.jsonl
+```
+
+注意：报告和公开材料中不展示可复用的高风险 prompt、诈骗话术或完整欺诈脚本。
+
+## 项目结构
+
+```text
+FraudDistill/
+├── configs/
+│   ├── agents/
+│   ├── data/
+│   ├── experiments/
+│   └── student/
+├── data/
+│   ├── raw/
+│   ├── generated_answers/
+│   ├── unified/
+│   ├── teacher_signals/
+│   └── predictions/
+├── outputs/
+├── src/frauddistill/
+│   ├── agents/
+│   ├── data/
+│   ├── eval/
+│   ├── experiments/
+│   ├── student/
+│   ├── target_llm/
+│   ├── teacher/
+│   └── utils/
+└── tests/
+```
+
+## 安装
+
+```powershell
+pip install -r requirements.txt
+pip install -e .
+```
+
+如后续需要本地 Student 微调，再安装：
+
+```powershell
+pip install -e ".[student]"
+```
+
+## API Key
+
+复制模板：
+
+```powershell
+Copy-Item api_keys.template.py api_keys.py
+```
+
+然后在 `api_keys.py` 中填写本地 key。`api_keys.py` 已在 `.gitignore` 中，不应提交。
+
+支持的 provider：
+
+| Provider | 默认模型 | Base URL |
+|---|---|---|
+| Qwen / DashScope | `qwen-plus` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| DeepSeek | `deepseek-chat` | `https://api.deepseek.com` |
+| OpenAI | `gpt-4.1-mini` | `https://api.openai.com/v1` |
+
+## 轻量准备与烟测
+
+构造极小 Fraud-R1 聚焦版 smoke 数据。该命令只读取本地 Fraud-R1 prompt，并写入脱敏占位回答，不调用 API：
+
+```powershell
+python -m frauddistill.data.prepare_fraud_focus `
+  --input_files `
+  data/raw/fraudr1/repo/dataset/FP-base-full/FP-base-Chinese.json `
+  data/raw/fraudr1/repo/dataset/FP-base-full/FP-base-English.json `
+  data/raw/fraudr1/repo/dataset/FP-levelup-full/FP-levelup-Chinese.json `
+  data/raw/fraudr1/repo/dataset/FP-levelup-full/FP-levelup-English.json `
+  --output_file data/unified/fraud_focus_smoke.jsonl `
+  --limit 12
+```
+
+跑三个实验的离线 smoke：
+
+```powershell
+python -m frauddistill.experiments.fraud_detection_smoke `
+  --input_file data/unified/fraud_focus_smoke.jsonl `
+  --output_dir outputs/fraud_detection_smoke `
+  --limit 12
+```
+
+该 smoke 会生成：
+
+```text
+outputs/fraud_detection_smoke/fraud_detection_smoke_metrics.json
+outputs/fraud_detection_smoke/rule_predictions.jsonl
+```
+
+## 三个主实验
+
+| 实验 | 配置 | 目的 |
+|---|---|---|
+| 实验一：输入边界消融 | `configs/experiments/exp1_input_ablation_fraud.yaml` | 比较 `q only`、`y only`、`q + y`，证明检测对象必须包含用户请求与模型回答 |
+| 实验二：多 Agent 教师蒸馏 | `configs/experiments/exp2_agent_distillation_fraud.yaml` | 比较 Student-Gold 与 Student-AgentDistill |
+| 实验三：轻量部署与泛化 | `configs/experiments/exp3_deployment_generalization_fraud.yaml` | 验证新欺诈类别、新 Target LLM 与低误报约束下的表现 |
+
+默认配置不会启动大规模实验、训练或批量 API 调用。正式实验请在明确指令后运行。
+
+## 当前实验产物
+
+截至 2026-06-17，V1 与 V2 三个实验正式版均已完成。V1 主要用于管线验证；当前更推荐引用 V2 hard-control setting：
+
+| 实验 | 输出目录 | 报告 |
+|---|---|---|
+| 实验一：输入边界消融 | `outputs/exp1_final/` | `outputs/exp1_final/EXP1_REPORT.md` |
+| 实验二：多 Agent 教师蒸馏 | `outputs/exp2_final/` | `outputs/exp2_final/EXP2_REPORT.md` |
+| 实验三：轻量部署与泛化 | `outputs/exp3_final/` | `outputs/exp3_final/EXP3_REPORT.md` |
+| 实验一 V2：Hard-Control 输入边界消融 | `outputs/v2_exp1_final/` | `outputs/v2_exp1_final/EXP1_V2_REPORT.md` |
+| 实验二 V2：Hard-Control 教师蒸馏 | `outputs/v2_exp2_final/` | `outputs/v2_exp2_final/EXP2_V2_REPORT.md` |
+| 实验三 V2：Hard-Control 泛化与部署 | `outputs/v2_exp3_final/` | `outputs/v2_exp3_final/EXP3_V2_REPORT.md` |
+
+V2 引入 Qwen 生成的多样 safe answers、反诈教育 hard safe、OR-Bench hard safe，以及 Qwen 漏检/Phishing 边界 hard unsafe。smoke、预演和 API 分片中间文件已归档到 `archive/`；主路径保留最终版数据、预测、表格和报告。
+
+## Student Detector
+
+推荐本地 Student：
+
+```text
+deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+```
+
+配置文件：
+
+```text
+configs/student/deepseek_r1_distill_qwen_1_5b_qlora.yaml
+```
+
+本项目最多只建议部署一个本地小模型。第一阶段可先跑 Student-ZeroShot，再进行 LoRA/QLoRA 小样本微调。
+
+## 测试
+
+```powershell
+pytest -q
+```
+
+测试覆盖 schema、转换器、离线 teacher、指标、API 客户端配置和端到端烟测。
+
+## 安全与复现原则
+
+- 不人工改写公开数据集正文。
+- 不进行大规模人工标注。
+- 不把 teacher signal 伪称为 gold label；若无官方 evaluator，应写作 weak supervision。
+- 不展示可复用的诈骗 prompt、完整话术或欺诈脚本。
+- 默认脚本不进行大规模训练或批量 API 调用。
+- API Teacher 只用于训练期信号生成；最终目标是本地低成本 Student Detector。
+
+## License
+
+当前仓库尚未指定许可证。正式开源前建议补充 `LICENSE`，并再次确认所有外部数据集的许可条款。

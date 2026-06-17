@@ -1,0 +1,5 @@
+source: Fraud-R1
+raw_dir: data/raw/fraudr1
+generated_dir: data/generated_answers/fraudr1
+converted_file: data/unified/fraudr1.jsonl
+required_fields: [prompt, target_model_answer, official_label]

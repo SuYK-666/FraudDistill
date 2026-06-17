@@ -1,0 +1,20 @@
+student_model:
+  model_name: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+  mode: local
+  architecture: generative_json_judge
+  finetuning: qlora
+  load_in_4bit: true
+  max_length: 1024
+  output_format: json
+lora:
+  enabled: true
+  r: 8
+  alpha: 16
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+training:
+  default_enabled: false
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 2.0e-4
+  num_train_epochs: 1

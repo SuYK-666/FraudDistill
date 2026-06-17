@@ -1,0 +1,4 @@
+source: HaluEval
+raw_dir: data/raw/halueval
+converted_file: data/unified/halueval.jsonl
+required_fields: [query, response, label]

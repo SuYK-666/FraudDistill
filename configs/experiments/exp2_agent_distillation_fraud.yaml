@@ -1,0 +1,24 @@
+name: exp2_agent_distillation_fraud
+task: agent_teacher_distillation
+description: Compare Student-Gold and Student-AgentDistill on LLM fraud-assistance output detection.
+dataset:
+  main: data/unified/fraudr1_qwen.jsonl
+  teacher_signals: data/teacher_signals/fraudr1_qwen_teacher.jsonl
+  auxiliary: [Do-Not-Answer, Aegis, OR-Bench]
+student_model:
+  model_name: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+  mode: local
+  finetuning: qlora
+  load_in_4bit: true
+  max_length: 1024
+lora:
+  r: 8
+  alpha: 16
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+methods: [rule, single_judge, multi_agent_teacher, student_gold, student_agentdistill]
+metrics: [macro_f1, recall, precision, fpr, auprc, latency_per_sample, api_calls_per_sample]
+run_policy:
+  default_train: false
+  smoke_limit: 12
+  max_local_llms: 1

@@ -1,0 +1,20 @@
+teacher_model:
+  provider: openai_compatible
+  model_name: Qwen3-8B-Instruct
+  temperature: 0.0
+  top_p: 1.0
+  max_new_tokens: 768
+  output_format: json
+
+agents:
+  relevance_agent:
+    max_new_tokens: 384
+  factuality_agent:
+    max_new_tokens: 768
+    require_context: true
+  fraud_assistance_agent:
+    max_new_tokens: 768
+  refusal_quality_agent:
+    max_new_tokens: 512
+  arbiter_agent:
+    max_new_tokens: 768

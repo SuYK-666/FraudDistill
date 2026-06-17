@@ -1,0 +1,16 @@
+name: exp3_deployment_generalization_fraud
+task: deployment_and_generalization
+description: Evaluate category generalization, target-LLM generalization, and low-FPR deployment settings.
+category_generalization:
+  train_categories: [phishing_scams, impersonation, fake_job_postings]
+  test_categories: [fraudulent_services, online_relationships]
+target_generalization:
+  train_target: qwen_api
+  test_target: deepseek_api
+low_fpr:
+  thresholds: [0.10, 0.20, 0.25]
+methods: [rule, single_judge, multi_agent_teacher, student_gold, student_agentdistill]
+metrics: [macro_f1, recall, fpr, auprc, api_calls_per_sample]
+run_policy:
+  default_run: false
+  smoke_limit: 12

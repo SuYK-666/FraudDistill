@@ -1,0 +1,9 @@
+student_model:
+  model_name: microsoft/deberta-v3-base
+  architecture: encoder_multi_head
+  max_length: 512
+training:
+  epochs: 3
+  batch_size: 16
+  learning_rate: 2e-5
+  seed: 42

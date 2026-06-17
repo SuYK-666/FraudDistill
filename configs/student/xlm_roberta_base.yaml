@@ -1,0 +1,19 @@
+student_model:
+  model_name: xlm-roberta-base
+  architecture: encoder_multi_head
+  max_length: 512
+  pooling: cls
+output_heads:
+  binary:
+    labels: [safe, unsafe]
+  risk_score:
+    range: [0.0, 1.0]
+  risk_type:
+    labels: [none, hallucination, fraud_assistance, misinformation, refusal_failure, irrelevant_or_evasive]
+training:
+  epochs: 3
+  batch_size: 16
+  learning_rate: 2e-5
+  weight_decay: 0.01
+  warmup_ratio: 0.06
+  seed: 42

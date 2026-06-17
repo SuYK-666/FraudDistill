@@ -1,0 +1,14 @@
+name: exp1_input_ablation_fraud
+task: llm_fraud_assistance_detection
+description: Compare q_only, y_only, and q_y inputs for fraud-assistance output detection.
+dataset:
+  train_categories: [phishing_scams, impersonation, fake_job_postings]
+  input_file: data/unified/fraudr1_qwen.jsonl
+  smoke_file: data/unified/fraud_focus_smoke.jsonl
+methods: [rule, single_judge, multi_agent_teacher, student_zeroshot]
+input_modes: [q_only, y_only, q_y]
+metrics: [macro_f1, recall, fpr, auprc]
+run_policy:
+  default_limit: 0
+  smoke_limit: 12
+  api_calls_by_default: false
