@@ -1,0 +1,4 @@
+left,right,N,agreement
+polyguard_proxy,qwen3guard_proxy,1594,0.6995
+polyguard_proxy,wildguard_proxy,1594,0.6995
+qwen3guard_proxy,wildguard_proxy,1594,1.0

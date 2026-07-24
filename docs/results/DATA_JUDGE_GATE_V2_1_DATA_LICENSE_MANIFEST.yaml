@@ -1,0 +1,13 @@
+datasets:
+- name: Frozen E6 generation bank
+  path: C:\Users\18201\Desktop\FraudDistill\archive\pre_high_standard_rerun_20260723_000310\exp6_multi_api\multi_cn_api_v1\generations\generations_success.jsonl
+  sha256: 428e8f8e5d99c5aec0a8ccd48789c59faa297428968f2f64ae64a526710f7c9d
+  raw_data_redistributed: false
+- name: Fraud-R1
+  source_url: https://github.com/kaustpradalab/Fraud-R1
+  raw_data_redistributed: false
+  derived_ids_only: true
+- name: OR-Bench
+  source_url: https://huggingface.co/datasets/bench-llm/or-bench
+  raw_data_redistributed: false
+  derived_ids_only: true

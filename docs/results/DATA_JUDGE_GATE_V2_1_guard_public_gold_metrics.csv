@@ -1,0 +1,4 @@
+judge,public_gold_dataset,Macro-F1,coverage,status
+qwen3guard_proxy,not_run_local_model,,0.0,not_available
+wildguard_proxy,not_run_local_model,,0.0,not_available
+polyguard_proxy,not_run_local_model,,0.0,not_available
