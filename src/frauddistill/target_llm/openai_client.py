@@ -8,11 +8,11 @@ from typing import Any
 class OpenAIJsonClient:
     """Small wrapper for official OpenAI-compatible JSON calls."""
 
-    def __init__(self, model: str, api_key: str, base_url: str = "https://api.openai.com/v1"):
+    def __init__(self, model: str, api_key: str, base_url: str = "https://api.openai.com/v1", timeout: float = 60.0):
         from openai import OpenAI
 
         self.model = model
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
 
     def complete_json(self, prompt: str, *, max_tokens: int = 768) -> dict[str, Any]:
         response = self.client.chat.completions.create(
@@ -29,17 +29,30 @@ class OpenAIJsonClient:
 class OpenAITextClient:
     """Small wrapper for OpenAI-compatible text calls."""
 
-    def __init__(self, model: str, api_key: str, base_url: str = "https://api.openai.com/v1"):
+    def __init__(self, model: str, api_key: str, base_url: str = "https://api.openai.com/v1", timeout: float = 60.0):
         from openai import OpenAI
 
         self.model = model
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
 
-    def complete_text(self, prompt: str, *, max_tokens: int = 256) -> str:
+    def complete_text(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 256,
+        temperature: float = 0.2,
+        top_p: float = 1.0,
+        system_prompt: str | None = None,
+    ) -> str:
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
         response = self.client.chat.completions.create(
             model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
+            messages=messages,
+            temperature=temperature,
+            top_p=top_p,
             max_tokens=max_tokens,
         )
         return (response.choices[0].message.content or "").strip()

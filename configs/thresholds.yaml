@@ -1,0 +1,10 @@
+silver_labeling:
+  unsafe_threshold: 0.60
+  safe_threshold: 0.40
+  high_confidence_margin: 0.25
+  medium_confidence_margin: 0.10
+  minimum_high_agreement: 3
+
+calibration:
+  default_threshold: 0.50
+  fpr_targets: [0.10, 0.05]

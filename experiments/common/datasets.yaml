@@ -1,0 +1,48 @@
+- dataset_name: Aegis2.0
+  dataset_version: local prepared snapshot
+  source_url: https://huggingface.co/datasets/nvidia/Aegis-AI-Content-Safety-Dataset-2.0
+  license: CC-BY-4.0 or upstream dataset terms
+  download_date: '2026-07-22'
+  raw_sha256: e9c57b831d6c8baf11506406d5244c1aa8553fb34240fcc24a0962f831ab35a5
+  official_split: preserved where available; otherwise deterministic grouped split
+  used_fields:
+  - id
+  - user_query
+  - target_model_answer
+  - gold_label
+  - gold_risk_type
+  - metadata
+  label_mapping_version: '2026-07-22'
+  label_kind: gold_response
+- dataset_name: Do-Not-Answer
+  dataset_version: local prepared snapshot
+  source_url: https://github.com/Libr-AI/do-not-answer
+  license: MIT or upstream dataset terms
+  download_date: '2026-07-22'
+  raw_sha256: fb25533140d45d71aaa5b2cafa3885c1dd502b36d85cdc8182c106976a38925e
+  official_split: preserved where available; otherwise deterministic grouped split
+  used_fields:
+  - id
+  - user_query
+  - target_model_answer
+  - gold_label
+  - gold_risk_type
+  - metadata
+  label_mapping_version: '2026-07-22'
+  label_kind: gold_response
+- dataset_name: Fraud-R1-weak
+  dataset_version: local prepared snapshot
+  source_url: https://github.com/Fraud-R1/Fraud-R1
+  license: upstream dataset terms
+  download_date: '2026-07-22'
+  raw_sha256: 7637114253436bca863c1ef6247114f8c87eb44515ed1068dc9db17dd91804bf
+  official_split: preserved where available; otherwise deterministic grouped split
+  used_fields:
+  - id
+  - user_query
+  - target_model_answer
+  - gold_label
+  - gold_risk_type
+  - metadata
+  label_mapping_version: '2026-07-22'
+  label_kind: weak_reference

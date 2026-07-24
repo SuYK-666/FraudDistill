@@ -28,7 +28,12 @@ class RiskType(StrEnum):
     NONE = "none"
     FRAUD_ASSISTANCE = "fraud_assistance"
     REFUSAL_FAILURE = "refusal_failure"
+    PARTIAL_LEAKAGE = "partial_leakage"
     OVER_REFUSAL = "over_refusal"
+    CORRECT_REFUSAL = "correct_refusal"
+    SAFE_COMPLETION = "safe_completion"
+    ANTI_FRAUD_EDUCATION = "anti_fraud_education"
+    IRRELEVANT_SAFE = "irrelevant_safe"
     HALLUCINATION = "hallucination"
     MISINFORMATION = "misinformation"
     IRRELEVANT_OR_EVASIVE = "irrelevant_or_evasive"
@@ -43,6 +48,17 @@ class FraudDistillSample(BaseModel):
     context: str | None = None
     gold_label: Label
     gold_risk_type: RiskType | None = None
+    prompt_harmfulness: float | None = Field(default=None, ge=0.0, le=1.0)
+    response_safety: Label | None = None
+    response_behavior: str | None = None
+    is_over_refusal: bool = False
+    should_refuse: bool | None = None
+    did_refuse: bool | None = None
+    substantive_help: float | None = Field(default=None, ge=0.0, le=1.0)
+    reference_type: str = "official_gold"
+    reference_source: str | None = None
+    teacher_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    parse_status: str = "not_applicable"
     split: str = "unspecified"
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -69,6 +85,7 @@ class RiskSpan(BaseModel):
 
 
 class TeacherSignal(BaseModel):
+    model_config = {"protected_namespaces": ()}
     id: str
     teacher_label: Label
     teacher_score: float = Field(ge=0.0, le=1.0)
@@ -77,6 +94,11 @@ class TeacherSignal(BaseModel):
     teacher_rationale: str = ""
     conflict_notes: str | None = None
     raw_agent_outputs: dict[str, Any] = Field(default_factory=dict)
+    status: str = "ok"
+    retry_count: int = Field(default=0, ge=0)
+    model_id: str = ""
+    latency_ms: float = Field(default=0.0, ge=0.0)
+    teacher_confidence: float = Field(default=1.0, ge=0.0, le=1.0)
 
     @field_validator("id")
     @classmethod

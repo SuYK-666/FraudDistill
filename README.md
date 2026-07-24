@@ -117,7 +117,7 @@ pip install -e .
 pip install -e ".[student]"
 ```
 
-## API Key
+## API Key 与多模型接口
 
 复制模板：
 
@@ -127,6 +127,8 @@ Copy-Item api_keys.template.py api_keys.py
 
 然后在 `api_keys.py` 中填写本地 key。`api_keys.py` 已在 `.gitignore` 中，不应提交。
 
+本地接口统一使用 OpenAI-compatible Chat Completions 形式，后续只需要在 `api_keys.py` 填入 key。默认不会自动发起大规模 API 调用。
+
 支持的 provider：
 
 | Provider | 默认模型 | Base URL |
@@ -134,6 +136,19 @@ Copy-Item api_keys.template.py api_keys.py
 | Qwen / DashScope | `qwen-plus` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | DeepSeek | `deepseek-chat` | `https://api.deepseek.com` |
 | OpenAI | `gpt-4.1-mini` | `https://api.openai.com/v1` |
+| Gemini | `gemini-2.5-flash` | `https://generativelanguage.googleapis.com/v1beta/openai` |
+| Kimi / Moonshot | `moonshot-v1-8k` | `https://api.moonshot.cn/v1` |
+| GLM / ZhipuAI | `glm-4-flash` | `https://open.bigmodel.cn/api/paas/v4` |
+| Doubao / Volcano Ark | `doubao-seed-1-6-flash` | `https://ark.cn-beijing.volces.com/api/v3` |
+| OpenRouter | `openai/gpt-4.1-mini` | `https://openrouter.ai/api/v1` |
+
+模型清单位于：
+
+```text
+configs/models.yaml
+```
+
+轻量阶段建议先只启用 2-3 个目标模型；正式扩展阶段再打开更多 provider，并记录实际模型版本、调用日期、参数和中转平台。
 
 ## 轻量准备与烟测
 
@@ -165,6 +180,56 @@ python -m frauddistill.experiments.fraud_detection_smoke `
 outputs/fraud_detection_smoke/fraud_detection_smoke_metrics.json
 outputs/fraud_detection_smoke/rule_predictions.jsonl
 ```
+
+## Phase A 补充实验流水线
+
+新增补充实验围绕四类输出组织：
+
+| 步骤 | 输出 | 说明 |
+|---|---|---|
+| Prompt pool | `data/prompts/*.jsonl` | 统一公开数据、hard safe 和反诈教育 prompt |
+| Target generations | `data/generations/*.jsonl` | 多目标 LLM 回答，记录模型、参数、延迟和错误 |
+| Raw votes | `data/labels/raw_votes/*.jsonl` | 规则拒答检测、离线 teacher、后续外部 judge/guard 投票 |
+| Silver labels | `data/labels/silver/*.jsonl` | 聚合为 `silver_high`、`silver_medium`、`ambiguous` |
+
+先做不调用 API 的极小链路测试：
+
+```powershell
+python -m frauddistill.target_llm.generate_responses `
+  --input_file data/unified/fraud_focus_smoke.jsonl `
+  --output_file data/generations/generations_smoke_dryrun.jsonl `
+  --limit 2 `
+  --dry_run
+
+python -m frauddistill.labelers.run_auto_labelers `
+  --input_file data/generations/generations_smoke_dryrun.jsonl `
+  --output_file data/labels/raw_votes/smoke_votes.jsonl
+
+python -m frauddistill.labelers.aggregator `
+  --input_file data/labels/raw_votes/smoke_votes.jsonl `
+  --output_file data/labels/silver/smoke_silver.jsonl
+```
+
+接入真实 API 后，去掉 `--dry_run`，并通过 `configs/models.yaml` 控制启用模型。可用 `--model qwen-plus` 对单个模型做小范围验证。
+
+## 全量数据准备
+
+全量数据准备只构造 prompt pool 和已有 q+y evaluation set，不调用任何模型 API：
+
+```powershell
+python -m frauddistill.data.prepare_full_experiment_data `
+  --output_root data/prepared/full
+```
+
+主要产物：
+
+```text
+data/prepared/full/MANIFEST.md
+data/prepared/full/prompts/all_target_prompts.jsonl
+data/prepared/full/evaluation_qy/
+```
+
+当前全量准备包含 Fraud-R1、OR-Bench、Do-Not-Answer、Aegis、HaluEval、RAGTruth、HaluBench 和 FELM。WildGuardMix 是 Hugging Face gated dataset，需要账号授权后再下载；DetoxBench 暂未发现单一官方可下载数据包，因此不混入非官方数据。
 
 ## 三个主实验
 

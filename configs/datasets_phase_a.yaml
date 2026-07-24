@@ -1,0 +1,18 @@
+phase_a:
+  fraud_r1:
+    total: 300
+    balance_by: ["language", "fraud_category"]
+  fraud_r1_role_play:
+    total: 150
+  or_bench_hard_safe:
+    total: 200
+  do_not_answer:
+    total: 150
+  anti_fraud_synthetic:
+    total: 200
+  external_fraud_distribution:
+    total: 100
+
+smoke:
+  total: 12
+  per_model: 2

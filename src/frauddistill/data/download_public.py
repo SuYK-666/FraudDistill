@@ -31,26 +31,29 @@ def download_or_bench() -> Path:
 
 
 def download_aegis() -> Path:
-    return download_hf_file("nvidia/Aegis-AI-Content-Safety-Dataset-2.0", "data/train-00000-of-00001.parquet", "data/raw/aegis")
+    files = ["train.json", "validation.json", "test.json", "refusals_train.json", "refusals_validation.json"]
+    last = None
+    for filename in files:
+        last = download_hf_file("nvidia/Aegis-AI-Content-Safety-Dataset-2.0", filename, "data/raw/aegis")
+    return last or Path("data/raw/aegis")
 
 
-def download_do_not_answer_repo() -> Path:
-    import subprocess
+def download_do_not_answer() -> Path:
+    download_hf_file("LibrAI/do-not-answer", "data/train-00000-of-00001-6ba0076b818accff.parquet", "data/raw/do_not_answer")
+    return download_hf_file("LibrAI/do-not-answer", "data_en.csv", "data/raw/do_not_answer")
 
-    target = Path("data/raw/do_not_answer/repo")
-    target.parent.mkdir(parents=True, exist_ok=True)
-    if target.exists():
-        return target
-    subprocess.run(
-        ["git", "clone", "--depth", "1", "https://github.com/libr-ai/do-not-answer", str(target)],
-        check=True,
-    )
-    return target
+
+def download_wildguard() -> Path:
+    files = ["train/wildguard_train.parquet", "test/wildguard_test.parquet"]
+    last = None
+    for filename in files:
+        last = download_hf_file("allenai/wildguardmix", filename, "data/raw/wildguard")
+    return last or Path("data/raw/wildguard")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", choices=["halubench", "felm", "or_bench", "aegis", "do_not_answer"], required=True)
+    parser.add_argument("--dataset", choices=["halubench", "felm", "or_bench", "aegis", "do_not_answer", "wildguard"], required=True)
     args = parser.parse_args()
     if args.dataset == "halubench":
         print(download_halubench())
@@ -61,7 +64,9 @@ def main() -> None:
     elif args.dataset == "aegis":
         print(download_aegis())
     elif args.dataset == "do_not_answer":
-        print(download_do_not_answer_repo())
+        print(download_do_not_answer())
+    elif args.dataset == "wildguard":
+        print(download_wildguard())
 
 
 if __name__ == "__main__":
