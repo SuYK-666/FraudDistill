@@ -1489,6 +1489,7 @@ def write_disagreement_files(out: Path, test: list[dict], pred_rows: list[dict])
 
 def write_eval_manifest(out: Path, rows: list[dict], name: str = "eval") -> None:
     (out / "audit").mkdir(parents=True, exist_ok=True)
+    normalized = [ensure_manifest_hashes(row) for row in rows]
     manifest = [
         {
             "manifest": name,
@@ -1502,21 +1503,32 @@ def write_eval_manifest(out: Path, rows: list[dict], name: str = "eval") -> None
             "label_provenance": row.get("label_provenance") or row.get("reference_type"),
             "label": row.get("label"),
         }
-        for row in rows
+        for row in normalized
     ]
     write_jsonl(out / f"{name}_manifest.jsonl", manifest)
     write_json(
         out / "audit" / f"{name}_audit.json",
         {
-            "n": len(rows),
-            "source_counts": Counter(str(row.get("source")) for row in rows),
-            "category_counts": Counter(str(row.get("fraud_category")) for row in rows),
-            "language_counts": Counter(str(row.get("language")) for row in rows),
-            "label_counts": Counter(str(row.get("label")) for row in rows),
-            "duplicate_audit": detailed_duplicate_audit(rows) if rows else {},
+            "n": len(normalized),
+            "source_counts": Counter(str(row.get("source")) for row in normalized),
+            "category_counts": Counter(str(row.get("fraud_category")) for row in normalized),
+            "language_counts": Counter(str(row.get("language")) for row in normalized),
+            "label_counts": Counter(str(row.get("label")) for row in normalized),
+            "duplicate_audit": detailed_duplicate_audit(normalized) if normalized else {},
             "manifest_hash": sha256(json.dumps(manifest, sort_keys=True, ensure_ascii=False)),
         },
     )
+
+
+def ensure_manifest_hashes(row: dict) -> dict:
+    q = str(row.get("user_query") or "")
+    y = str(row.get("target_model_answer") or "")
+    out = dict(row)
+    out.setdefault("prompt_hash", sha256(norm_text(q)))
+    out.setdefault("answer_hash", sha256(norm_text(y)))
+    out.setdefault("split_group", str(row.get("split_group") or row.get("id") or out["prompt_hash"][:24]))
+    out.setdefault("id", str(row.get("id") or sha256(norm_text(q) + "\n" + norm_text(y))[:16]))
+    return out
 
 
 def write_split_manifest(out: Path, splits: dict[str, list[dict]]) -> None:
