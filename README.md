@@ -240,7 +240,16 @@ python scripts/run_high_standard_rerun.py all --bootstrap 500
 python scripts/write_six_experiment_master_report.py
 ```
 
-脚本会按 `smoke -> pilot -> high_standard_full` 执行；smoke/pilot 自动归档，正式结果保留在 `outputs/*/high_standard_full/`。GitHub 上可查看报告副本：
+当前 CCF-A 重定位审查先跑小规模 qwen 版，不直接覆盖为全量结论：
+
+```powershell
+python scripts/run_high_standard_rerun.py small --bootstrap 300 --small-limit 720 --api-provider qwen --api-probe-limit 6
+python scripts/write_six_experiment_master_report.py --run-id ccfa_small_qwen
+```
+
+该命令会先把既有 `outputs/` 内容归档到 `archive/pre_ccfa_small_qwen_rerun_*`，然后只保留本轮小规模输出在 `outputs/*/ccfa_small_qwen/`。实验 1-5 会调用 qwen 生成 teacher probe 原始记录，但这些记录只作为训练期/审计信号，不写入 gold label，也不在 Student 推理时作为特征。实验 6 继续读取当前可用的 qwen、DeepSeek、Kimi、GLM generation bank。
+
+全量版仍可按 `smoke -> pilot -> high_standard_full` 执行；smoke/pilot 自动归档，正式结果保留在 `outputs/*/high_standard_full/`。GitHub 上可查看报告副本：
 
 ```text
 docs/results/SIX_EXPERIMENTS_MASTER_REPORT_中文.md
@@ -251,12 +260,12 @@ docs/reproduction/REPRODUCE_SIX_EXPERIMENTS.md
 
 | 实验 | 输出目录 | 重点 |
 |---|---|---|
-| E1 输入边界消融 | `outputs/exp1_input_ablation/high_standard_full/` | q only、y only、q+y、matched-FPR、matched-Recall、McNemar |
-| E2 现有工作对比 | `outputs/exp2_prior_work_comparison/high_standard_full/` | proxy coverage 与官方 baseline 缺口审计 |
-| E3 Agent/蒸馏消融 | `outputs/exp3_agent_distillation_ablation/high_standard_full/` | nested ablation、leave-one-out、组件压力表、Student 梯度 |
-| E4 unseen 泛化 | `outputs/exp4_unseen/high_standard_full/` | leave-one-category-out 与 hard-safe source holdout |
-| E5 校准 | `outputs/exp5_calibration/high_standard_full/` | Platt、FPR-UCB 阈值、reliability 数据 |
-| E6 多 API | `outputs/exp6_multi_api/high_standard_full/` | 多目标模型 generations、行为指标、detector-dependent 排名 |
+| E1 输入边界消融 | `outputs/exp1_input_ablation/ccfa_small_qwen/` 或 `high_standard_full/` | q only、y only、q+y、matched-FPR、matched-Recall、McNemar |
+| E2 现有工作对比 | `outputs/exp2_prior_work_comparison/ccfa_small_qwen/` 或 `high_standard_full/` | proxy coverage 与官方 baseline 缺口审计 |
+| E3 Agent/蒸馏消融 | `outputs/exp3_agent_distillation_ablation/ccfa_small_qwen/` 或 `high_standard_full/` | nested ablation、leave-one-out、组件压力表、Student 梯度 |
+| E4 unseen 泛化 | `outputs/exp4_unseen/ccfa_small_qwen/` 或 `high_standard_full/` | leave-one-category-out 与 hard-safe source holdout |
+| E5 校准 | `outputs/exp5_calibration/ccfa_small_qwen/` 或 `high_standard_full/` | Platt、FPR-UCB 阈值、reliability 数据 |
+| E6 多 API | `outputs/exp6_multi_api/ccfa_small_qwen/` 或 `high_standard_full/` | 多目标模型 generations、行为指标、detector-dependent 排名 |
 
 `data/`、`outputs/`、`archive/`、模型文件和 `api_keys.py` 均不提交到 GitHub；公开仓库只保留代码、配置、复现说明和报告副本。
 

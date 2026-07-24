@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import hashlib
 import csv
 import json
@@ -34,8 +35,14 @@ def digest(path: Path) -> str:
 
 
 def main() -> None:
-    master = OUT / "SIX_EXPERIMENTS_MASTER_REPORT_中文.md"
-    manifest = OUT / "SIX_EXPERIMENTS_ARTIFACT_MANIFEST.tsv"
+    global RUN
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run-id", default=RUN)
+    args = parser.parse_args()
+    RUN = args.run_id
+    suffix = "SMALL_" if RUN != "high_standard_full" else ""
+    master = OUT / f"SIX_EXPERIMENTS_{suffix}MASTER_REPORT_中文.md"
+    manifest = OUT / f"SIX_EXPERIMENTS_{suffix}ARTIFACT_MANIFEST.tsv"
     artifact_rows = []
     sections = []
     for title, directory, report_name in SPECS:
@@ -47,11 +54,12 @@ def main() -> None:
         sections.append(f"## {title}\n\n运行目录：`{run.relative_to(ROOT)}`\n\n{content}\n")
         for path in sorted(item for item in run.rglob("*") if item.is_file()):
             artifact_rows.append((str(path.relative_to(ROOT)), path.stat().st_size, digest(path)))
-    overview = f"""# FraudDistill 六实验全量总报告
+    report_scope = "全量正式" if RUN == "high_standard_full" else "小规模重跑"
+    overview = f"""# FraudDistill 六实验{report_scope}总报告
 
 ## 运行说明
 
-本报告汇总同一轮 `high_standard_full` 的六组正式输出。每组的原始预测、指标、模型、审计、配置、失败记录和逐实验报告均保留在原运行目录；本总报告不重采样、不覆盖任何原始结果。附带的产物清单记录每个文件的路径、字节数与 SHA-256，用于后续完整性核验。
+本报告汇总同一轮 `{RUN}` 的六组输出。每组的原始预测、指标、模型、审计、配置、失败记录和逐实验报告均保留在原运行目录；本总报告不重采样、不覆盖任何原始结果。附带的产物清单记录每个文件的路径、字节数与 SHA-256，用于后续完整性核验。
 
 ## 总结结论
 
@@ -59,7 +67,7 @@ def main() -> None:
 
 ## 原始产物保留
 
-完整产物清单：`outputs/SIX_EXPERIMENTS_ARTIFACT_MANIFEST.tsv`。清单覆盖本轮每一个配置、预测、表格、模型、审计与报告文件。原始数据仍位于本地 `data/`，按照 `.gitignore` 不提交到 GitHub。
+完整产物清单：`{manifest.relative_to(ROOT)}`。清单覆盖本轮每一个配置、预测、表格、模型、审计与报告文件。原始数据仍位于本地 `data/`，按照 `.gitignore` 不提交到 GitHub。
 """
     master.write_text(overview + "\n".join(sections) + f"\n生成时间：{datetime.now(timezone.utc).isoformat()}\n", encoding="utf-8")
     manifest.write_text("path\tbytes\tsha256\n" + "\n".join(f"{path}\t{size}\t{sha}" for path, size, sha in artifact_rows) + "\n", encoding="utf-8")
@@ -131,17 +139,21 @@ def summary_bullets() -> str:
 
 
 def reproduction_doc() -> str:
-    return """# Reproduce Six Experiments
+    return f"""# Reproduce Six Experiments
 
 本仓库的统一重跑入口：
 
 ```powershell
 pip install -r requirements.txt
 pip install -e .
+python scripts/run_high_standard_rerun.py small --bootstrap 300 --small-limit 720 --api-provider qwen --api-probe-limit 6
+python scripts/write_six_experiment_master_report.py --run-id ccfa_small_qwen
 python scripts/run_high_standard_rerun.py all --bootstrap 500
 python scripts/write_six_experiment_master_report.py
 pytest -q
 ```
+
+本轮小规模审查产物保留在 `outputs/*/ccfa_small_qwen/`；E1-E5 使用 qwen API teacher probe 写入各实验 `raw_outputs/qwen_teacher_probe.jsonl`，实验指标仍保留 gold/silver/proxy 的标签边界。
 
 运行顺序固定为 smoke、pilot、full；smoke/pilot 会自动归档，全量正式产物保留在 `outputs/*/high_standard_full/`。全量重跑前脚本会把已有 `high_standard_full` 归档到 `archive/pre_high_standard_full_rerun_*`。
 
