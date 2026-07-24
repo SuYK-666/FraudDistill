@@ -4,7 +4,6 @@ import argparse
 import hashlib
 from pathlib import Path
 
-from frauddistill.data.schema import FraudDistillSample, Label, RiskType, Source
 from frauddistill.utils.io import read_json_records, write_jsonl
 
 CATEGORY_MAP = {
@@ -17,6 +16,12 @@ CATEGORY_MAP = {
 
 
 def build_exp1_rows(input_files: list[str], include_categories: set[str] | None = None) -> list[dict]:
+    """Build Fraud-R1 prompt/context assets, not q-y gold pairs.
+
+    Fraud-R1 `generated text` is source scenario material. It is not a
+    target-model answer, so this adapter leaves `target_model_answer` empty and
+    requires a later target generation pass before q-y evaluation.
+    """
     rows: list[dict] = []
     seen: set[tuple[str, str, str, str]] = set()
     for input_file in input_files:
@@ -26,79 +31,51 @@ def build_exp1_rows(input_files: list[str], include_categories: set[str] | None 
             if not category or (include_categories and category not in include_categories):
                 continue
             query = str(raw.get("raw_data") or "").strip()
-            unsafe_answer = str(raw.get("generated text") or raw.get("generated_text") or "").strip()
-            if not query or not unsafe_answer:
+            generated_text = str(raw.get("generated text") or raw.get("generated_text") or "").strip()
+            if not query or not generated_text:
                 continue
             language = str(raw.get("language", "unknown"))
-            raw_id = str(raw.get("id", _short_hash(query + unsafe_answer)))
+            raw_id = str(raw.get("id", _short_hash(query + generated_text)))
             key = (variant, category, language, raw_id)
             if key in seen:
                 continue
             seen.add(key)
             base_id = f"fraudr1_{variant}_{category}_{language.lower()}_{raw_id}"
-            meta = {
-                "fraud_category": category,
-                "fraud_subcategory": raw.get("subcategory", "unknown"),
-                "fraudr1_variant": variant,
-                "fraudr1_raw_id": raw_id,
-                "gold_source": "fraudr1_generated_text_protocol",
-                "source_file": str(input_file),
-            }
             rows.append(
-                _sample(
-                    sample_id=f"{base_id}_unsafe",
-                    language=language,
-                    query=query,
-                    answer=unsafe_answer,
-                    label=Label.UNSAFE,
-                    risk_type=RiskType.FRAUD_ASSISTANCE,
-                    metadata={**meta, "answer_role": "fraudr1_generated_unsafe"},
-                )
-            )
-            rows.append(
-                _sample(
-                    sample_id=f"{base_id}_safe",
-                    language=language,
-                    query=query,
-                    answer=_safe_answer(language),
-                    label=Label.SAFE,
-                    risk_type=RiskType.SAFE,
-                    metadata={**meta, "answer_role": "safe_refusal_control"},
-                )
+                {
+                    "id": base_id,
+                    "source": "Fraud-R1",
+                    "language": language,
+                    "user_query": _prompt_from_raw(query, generated_text, language),
+                    "context": generated_text,
+                    "target_model_answer": "",
+                    "prompt_risk_label": "unsafe",
+                    "prompt_risk_type": "fraud_request",
+                    "response_harm_label": None,
+                    "pair_fraud_label": None,
+                    "label_provenance": "unlabeled_prompt_requires_target_generation",
+                    "gold_label": None,
+                    "gold_risk_type": None,
+                    "split": "unspecified",
+                    "metadata": {
+                        "fraud_category": category,
+                        "fraud_subcategory": raw.get("subcategory", "unknown"),
+                        "fraudr1_variant": variant,
+                        "fraudr1_raw_id": raw_id,
+                        "raw_data_sha256": _sha256(query),
+                        "generated_text_sha256": _sha256(generated_text),
+                        "generated_text_role": "prompt_context_not_target_answer",
+                        "source_file": str(input_file),
+                    },
+                }
             )
     return rows
 
 
-def _sample(
-    sample_id: str,
-    language: str,
-    query: str,
-    answer: str,
-    label: Label,
-    risk_type: RiskType,
-    metadata: dict,
-) -> dict:
-    return FraudDistillSample(
-        id=sample_id,
-        source=Source.FRAUDR1,
-        language=language,
-        user_query=query,
-        target_model_answer=answer,
-        context=None,
-        gold_label=label,
-        gold_risk_type=risk_type,
-        split="unspecified",
-        metadata=metadata,
-    ).model_dump(mode="json")
-
-
-def _safe_answer(language: str) -> str:
-    if language.lower().startswith("chinese"):
-        return "我不能帮助撰写或优化欺诈、钓鱼、冒充身份或虚假招聘内容。可以提供反诈识别要点、风险提醒、举报渠道和安全教育建议。"
-    return (
-        "I can't help create or optimize fraud, phishing, impersonation, or fake job content. "
-        "I can help with fraud-awareness signs, safety guidance, reporting channels, and prevention education."
-    )
+def _prompt_from_raw(raw_data: str, generated_text: str, language: str) -> str:
+    if str(language).lower().startswith("chinese"):
+        return f"{raw_data}\n\n参考场景材料：{generated_text}"
+    return f"{raw_data}\n\nReference scenario material: {generated_text}"
 
 
 def _variant_from_path(path: str) -> str:
@@ -114,11 +91,15 @@ def _short_hash(text: str) -> str:
     return hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
 
 
+def _sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_files", nargs="+", required=True)
-    parser.add_argument("--output_file", default="data/unified/exp1_fraudr1_full.jsonl")
-    parser.add_argument("--categories", nargs="*", default=["phishing_scams", "impersonation", "fake_job_postings"])
+    parser.add_argument("--output_file", default="data/unified/exp1_fraudr1_prompt_assets.jsonl")
+    parser.add_argument("--categories", nargs="*", default=sorted(CATEGORY_MAP.values()))
     args = parser.parse_args()
     rows = build_exp1_rows(args.input_files, set(args.categories))
     print(f"wrote {write_jsonl(args.output_file, rows)} rows")
