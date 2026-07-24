@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import csv
 import json
 import shutil
 from datetime import datetime, timezone
@@ -77,12 +78,25 @@ def read_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def read_csv_rows(path: Path) -> list[dict[str, str]]:
+    if not path.exists() or path.stat().st_size == 0:
+        return []
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
 def summary_bullets() -> str:
     lines = []
     e1 = read_json(OUT / "exp1_input_ablation" / RUN / "metrics.json")
     if e1 and "q+y" in e1 and "y_only" in e1:
         gain = e1["q+y"]["macro_f1"] - e1["y_only"]["macro_f1"]
         lines.append(f"- E1：q+y Macro-F1={e1['q+y']['macro_f1']:.4f}，y-only={e1['y_only']['macro_f1']:.4f}，增益={gain:.4f}；AUPRC={e1['q+y']['auprc_unsafe']:.4f}，阈值仅在 dev 上选择。")
+    e1_context = read_csv_rows(OUT / "exp1_input_ablation" / RUN / "tables" / "context_critical_table.csv")
+    if e1_context:
+        qy = next((row for row in e1_context if row.get("Input") == "q+y"), None)
+        yonly = next((row for row in e1_context if row.get("Input") == "y_only"), None)
+        if qy and yonly:
+            lines.append(f"- E1 Track B：Context-Critical paired N={qy.get('N')}，q+y Macro-F1={qy.get('Macro-F1')}，y-only Macro-F1={yonly.get('Macro-F1')}，Pair consistency 见逐实验表；该轨道为 procedural weak benchmark。")
     e2 = read_json(OUT / "exp2_prior_work_comparison" / RUN / "metrics.json")
     if e2 is not None:
         lines.append(f"- E2：共输出 {len(e2)} 行 proxy/coverage 结果；仍需官方 evaluator/checkpoint 才能作为论文主表。")
@@ -90,9 +104,17 @@ def summary_bullets() -> str:
     if e3 and e3.get("student"):
         first, last = e3["student"][0], e3["student"][-1]
         lines.append(f"- E3：Student 从 {first['Variant']} Macro-F1={first['Macro-F1']} 到 {last['Variant']} Macro-F1={last['Macro-F1']}；新增 nested、leave-one-out、组件压力三类表。")
+    e3_stress = read_csv_rows(OUT / "exp3_agent_distillation_ablation" / RUN / "tables" / "stress_agent_ablation.csv")
+    if e3_stress:
+        full = next((row for row in e3_stress if row.get("Variant") == "Full learned"), e3_stress[-1])
+        single = next((row for row in e3_stress if row.get("Variant") == "Single Judge"), e3_stress[0])
+        lines.append(f"- E3 Stress：Full learned Macro-F1={full.get('Macro-F1')}，Single Judge={single.get('Macro-F1')}，用于组件不可替代性压力验证；标签为 procedural weak stress。")
     e4 = read_json(OUT / "exp4_unseen" / RUN / "worst_group_metrics.json")
     if e4:
         lines.append(f"- E4：最弱 held-out 项为 {e4.get('Held-out', 'unknown')}，Macro-F1={e4.get('Macro-F1', '')}，保留类别覆盖限制。")
+    e4_loco = read_csv_rows(OUT / "exp4_unseen" / RUN / "tables" / "procedural_loco5.csv")
+    if e4_loco:
+        lines.append(f"- E4 扩展：procedural five-category LOCO 覆盖 {len(e4_loco)} 类，每类 N={e4_loco[0].get('N')}；source/language holdout 仍显示真实跨源迁移不足。")
     e5 = read_json(OUT / "exp5_calibration" / RUN / "metrics.json")
     if e5:
         lines.append("- E5：输出 raw、Platt 与多档 FPR-UCB 操作点，报告 calibration split/test split 的样本量和 UCB。")
@@ -100,6 +122,11 @@ def summary_bullets() -> str:
     if e6:
         n_models = len(e6.get("student_vs_prompt_reference", []))
         lines.append(f"- E6：覆盖 {n_models} 个已有目标模型 generations；行为指标 FAR/RFR/CRR/ORR 使用独立字段计算，仍标注为 detector-dependent。")
+        lomo = e6.get("leave_one_model_out", [])
+        if lomo:
+            macros = [float(row["Macro-F1"]) for row in lomo if row.get("Macro-F1") not in {"", None}]
+            if macros:
+                lines.append(f"- E6 LOMO：已有 {len(lomo)} 个 held-out model family，Macro-F1 范围 {min(macros):.4f}-{max(macros):.4f}；仍未达到 12 模型 CCF-A 目标。")
     return "\n".join(lines) if lines else "- 本轮指标文件尚未生成。"
 
 
