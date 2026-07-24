@@ -1,0 +1,13 @@
+datasets:
+  - name: Fraud-R1
+    source_url: https://github.com/kaustpradalab/Fraud-R1
+    raw_data_redistributed: false
+    derived_ids_only: true
+  - name: Aegis-AI-Content-Safety-Dataset-2.0
+    source_url: https://huggingface.co/datasets/nvidia/Aegis-AI-Content-Safety-Dataset-2.0
+    raw_data_redistributed: false
+    derived_ids_only: true
+  - name: Do-Not-Answer
+    source_url: https://github.com/libr-ai/do-not-answer
+    raw_data_redistributed: false
+    derived_ids_only: true
