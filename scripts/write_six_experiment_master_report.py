@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "outputs"
+DOC_RESULTS = ROOT / "docs" / "results"
+DOC_REPRO = ROOT / "docs" / "reproduction"
 RUN = "high_standard_full"
 
 SPECS = [
@@ -42,7 +46,7 @@ def main() -> None:
         sections.append(f"## {title}\n\n运行目录：`{run.relative_to(ROOT)}`\n\n{content}\n")
         for path in sorted(item for item in run.rglob("*") if item.is_file()):
             artifact_rows.append((str(path.relative_to(ROOT)), path.stat().st_size, digest(path)))
-    overview = """# FraudDistill 六实验全量总报告
+    overview = f"""# FraudDistill 六实验全量总报告
 
 ## 运行说明
 
@@ -50,12 +54,7 @@ def main() -> None:
 
 ## 总结结论
 
-- E1：q+y 相比 y-only 的 Macro-F1 从 0.8114 提升至 0.8375，Recall 从 0.7529 提升至 0.8664；FPR 为 0.0999，较 y-only 增加 0.0117，仍满足预注册的最大增量 0.020。该结论来自冻结 test，阈值只在 dev 上按联合约束选择。
-- E2：结果仍是 proxy 对照，缺少官方 baseline/checkpoint；不得作为“优于现有工作”的论文主表。
-- E3：Full Distill 的 Macro-F1 为 0.8105，较 Gold 的 0.8010 增加 0.0095，接近但未达到 +0.010 门槛；Teacher/Agent 的 unsafe Recall 仍不足，不能作为强教师结论。
-- E4：fake job 强，impersonation Recall 偏低，phishing FPR 偏高；类别与 source/language 覆盖尚不完整。
-- E5：Platt 将 ECE 从 0.1427 降至 0.0157，概率校准可写；FPR<=0.05 操作点的 Recall 为 0.5918，不能写低 FPR 高 Recall 强结论。
-- E6：仅四个模型且没有独立 guard consensus，结果是 detector-dependent observation，不是可发表的安全排名。
+{summary_bullets()}
 
 ## 原始产物保留
 
@@ -63,8 +62,64 @@ def main() -> None:
 """
     master.write_text(overview + "\n".join(sections) + f"\n生成时间：{datetime.now(timezone.utc).isoformat()}\n", encoding="utf-8")
     manifest.write_text("path\tbytes\tsha256\n" + "\n".join(f"{path}\t{size}\t{sha}" for path, size, sha in artifact_rows) + "\n", encoding="utf-8")
+    DOC_RESULTS.mkdir(parents=True, exist_ok=True)
+    DOC_REPRO.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(master, DOC_RESULTS / master.name)
+    shutil.copy2(manifest, DOC_RESULTS / manifest.name)
+    (DOC_REPRO / "REPRODUCE_SIX_EXPERIMENTS.md").write_text(reproduction_doc(), encoding="utf-8")
     print(master)
     print(manifest)
+
+
+def read_json(path: Path):
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def summary_bullets() -> str:
+    lines = []
+    e1 = read_json(OUT / "exp1_input_ablation" / RUN / "metrics.json")
+    if e1 and "q+y" in e1 and "y_only" in e1:
+        gain = e1["q+y"]["macro_f1"] - e1["y_only"]["macro_f1"]
+        lines.append(f"- E1：q+y Macro-F1={e1['q+y']['macro_f1']:.4f}，y-only={e1['y_only']['macro_f1']:.4f}，增益={gain:.4f}；AUPRC={e1['q+y']['auprc_unsafe']:.4f}，阈值仅在 dev 上选择。")
+    e2 = read_json(OUT / "exp2_prior_work_comparison" / RUN / "metrics.json")
+    if e2 is not None:
+        lines.append(f"- E2：共输出 {len(e2)} 行 proxy/coverage 结果；仍需官方 evaluator/checkpoint 才能作为论文主表。")
+    e3 = read_json(OUT / "exp3_agent_distillation_ablation" / RUN / "metrics.json")
+    if e3 and e3.get("student"):
+        first, last = e3["student"][0], e3["student"][-1]
+        lines.append(f"- E3：Student 从 {first['Variant']} Macro-F1={first['Macro-F1']} 到 {last['Variant']} Macro-F1={last['Macro-F1']}；新增 nested、leave-one-out、组件压力三类表。")
+    e4 = read_json(OUT / "exp4_unseen" / RUN / "worst_group_metrics.json")
+    if e4:
+        lines.append(f"- E4：最弱 held-out 项为 {e4.get('Held-out', 'unknown')}，Macro-F1={e4.get('Macro-F1', '')}，保留类别覆盖限制。")
+    e5 = read_json(OUT / "exp5_calibration" / RUN / "metrics.json")
+    if e5:
+        lines.append("- E5：输出 raw、Platt 与多档 FPR-UCB 操作点，报告 calibration split/test split 的样本量和 UCB。")
+    e6 = read_json(OUT / "exp6_multi_api" / RUN / "metrics.json")
+    if e6:
+        n_models = len(e6.get("student_vs_prompt_reference", []))
+        lines.append(f"- E6：覆盖 {n_models} 个已有目标模型 generations；行为指标 FAR/RFR/CRR/ORR 使用独立字段计算，仍标注为 detector-dependent。")
+    return "\n".join(lines) if lines else "- 本轮指标文件尚未生成。"
+
+
+def reproduction_doc() -> str:
+    return """# Reproduce Six Experiments
+
+本仓库的统一重跑入口：
+
+```powershell
+pip install -r requirements.txt
+pip install -e .
+python scripts/run_high_standard_rerun.py all --bootstrap 500
+python scripts/write_six_experiment_master_report.py
+pytest -q
+```
+
+运行顺序固定为 smoke、pilot、full；smoke/pilot 会自动归档，全量正式产物保留在 `outputs/*/high_standard_full/`。全量重跑前脚本会把已有 `high_standard_full` 归档到 `archive/pre_high_standard_full_rerun_*`。
+
+注意：`data/`、`outputs/`、`archive/`、模型文件和 `api_keys.py` 不提交到 GitHub。报告副本位于 `docs/results/`，原始实验产物仍以本地 `outputs/` 为准。
+"""
 
 
 if __name__ == "__main__":

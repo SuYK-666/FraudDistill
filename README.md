@@ -231,7 +231,36 @@ data/prepared/full/evaluation_qy/
 
 当前全量准备包含 Fraud-R1、OR-Bench、Do-Not-Answer、Aegis、HaluEval、RAGTruth、HaluBench 和 FELM。WildGuardMix 是 Hugging Face gated dataset，需要账号授权后再下载；DetoxBench 暂未发现单一官方可下载数据包，因此不混入非官方数据。
 
-## 三个主实验
+## 六个正式实验入口
+
+本轮论文实验统一入口为：
+
+```powershell
+python scripts/run_high_standard_rerun.py all --bootstrap 500
+python scripts/write_six_experiment_master_report.py
+```
+
+脚本会按 `smoke -> pilot -> high_standard_full` 执行；smoke/pilot 自动归档，正式结果保留在 `outputs/*/high_standard_full/`。GitHub 上可查看报告副本：
+
+```text
+docs/results/SIX_EXPERIMENTS_MASTER_REPORT_中文.md
+docs/reproduction/REPRODUCE_SIX_EXPERIMENTS.md
+```
+
+六个实验分别对应：
+
+| 实验 | 输出目录 | 重点 |
+|---|---|---|
+| E1 输入边界消融 | `outputs/exp1_input_ablation/high_standard_full/` | q only、y only、q+y、matched-FPR、matched-Recall、McNemar |
+| E2 现有工作对比 | `outputs/exp2_prior_work_comparison/high_standard_full/` | proxy coverage 与官方 baseline 缺口审计 |
+| E3 Agent/蒸馏消融 | `outputs/exp3_agent_distillation_ablation/high_standard_full/` | nested ablation、leave-one-out、组件压力表、Student 梯度 |
+| E4 unseen 泛化 | `outputs/exp4_unseen/high_standard_full/` | leave-one-category-out 与 hard-safe source holdout |
+| E5 校准 | `outputs/exp5_calibration/high_standard_full/` | Platt、FPR-UCB 阈值、reliability 数据 |
+| E6 多 API | `outputs/exp6_multi_api/high_standard_full/` | 多目标模型 generations、行为指标、detector-dependent 排名 |
+
+`data/`、`outputs/`、`archive/`、模型文件和 `api_keys.py` 均不提交到 GitHub；公开仓库只保留代码、配置、复现说明和报告副本。
+
+## 旧版三个主实验
 
 | 实验 | 配置 | 目的 |
 |---|---|---|

@@ -28,7 +28,10 @@ def select_qy_threshold_with_ablation_constraints(
         )
         candidates.append((feasible, summary["recall"], summary["macro_f1"], -summary["fpr"], float(threshold), summary))
     feasible = [item for item in candidates if item[0]]
-    chosen = max(feasible or candidates, key=lambda item: (item[1], item[2], item[3]))
+    if feasible:
+        chosen = max(feasible, key=lambda item: (item[1], item[2], item[3]))
+    else:
+        chosen = max(candidates, key=lambda item: (item[2], item[1], item[3]))
     _, _, _, _, threshold, summary = chosen
     return {"threshold": threshold, "constraint_satisfied_on_dev": bool(feasible), **{f"dev_qy_{key}": value for key, value in summary.items()}, **{f"dev_y_only_{key}": value for key, value in baseline.items()}}
 
