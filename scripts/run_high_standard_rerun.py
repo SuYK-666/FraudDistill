@@ -34,6 +34,7 @@ from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
 from frauddistill.data.group_split import grouped_train_dev_test_split
+from frauddistill.eval.threshold_selection import select_qy_threshold_with_ablation_constraints
 from frauddistill.student.pair_tfidf import PairTfidfDetector
 
 
@@ -226,13 +227,19 @@ def run_exp1(rows: list[dict], run_id: str, bootstrap_n: int) -> None:
     modes = ["q_only", "y_only", "q+y"]
     results = {}
     all_predictions = []
+    model = PairTfidfDetector(max_features=120000, C=1.2).fit(train, [r["label"] for r in train])
+    y_dev_scores = model.predict_proba(dev, "y_only")
+    y_threshold = choose_pair_threshold(model, dev, "y_only")
+    qy_dev_scores = model.predict_proba(dev, "q+y")
+    qy_selection = select_qy_threshold_with_ablation_constraints(
+        [row["label"] for row in dev], qy_dev_scores.tolist(), y_dev_scores.tolist(), y_threshold
+    )
     for mode in modes:
         # One shared dual-channel architecture; only the branch masks differ.
-        model = PairTfidfDetector(max_features=120000, C=1.2).fit(train, [r["label"] for r in train])
-        threshold = choose_pair_threshold(model, dev, mode)
+        threshold = float(qy_selection["threshold"]) if mode == "q+y" else choose_pair_threshold(model, dev, mode)
         scores = model.predict_proba(test, mode)
         preds = preds_from_scores(scores, threshold)
-        results[mode] = {"threshold": threshold, **metrics(test, preds), "ci": bootstrap_ci(test, preds, bootstrap_n)}
+        results[mode] = {"threshold": threshold, **({"dev_constraint": qy_selection} if mode == "q+y" else {}), **metrics(test, preds), "ci": bootstrap_ci(test, preds, bootstrap_n)}
         all_predictions.extend(attach_predictions(test, preds, mode, "tfidf_logreg"))
         joblib.dump(model, out / "models" / f"{mode.replace('+','y')}.joblib")
     write_jsonl(out / "predictions.jsonl", all_predictions)
@@ -241,7 +248,7 @@ def run_exp1(rows: list[dict], run_id: str, bootstrap_n: int) -> None:
     write_json(out / "confusion_matrix.json", {m: confusion(test, [p for p in all_predictions if p["input_mode"] == m]) for m in modes})
     write_csv(out / "tables" / "main_table.csv", [{"Input": m, **display(results[m])} for m in modes])
     write_disagreement_files(out, test, all_predictions)
-    write_config(out, "exp1_input_ablation", {"n_train": len(train), "n_dev": len(dev), "n_test": len(test), "modes": modes})
+    write_config(out, "exp1_input_ablation", {"n_train": len(train), "n_dev": len(dev), "n_test": len(test), "modes": modes, "qy_dev_constraint": qy_selection})
     best_single = max(results["q_only"]["macro_f1"], results["y_only"]["macro_f1"])
     analysis = [
         f"测试集 N={len(test)}。q+y Macro-F1={results['q+y']['macro_f1']:.4f}，最佳单侧 Macro-F1={best_single:.4f}，差值={results['q+y']['macro_f1']-best_single:.4f}。",
