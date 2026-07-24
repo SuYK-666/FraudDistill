@@ -17,6 +17,8 @@ archive/
 data/
 !src/frauddistill/data/
 !src/frauddistill/data/**
+src/**/__pycache__/
+src/**/*.py[cod]
 third_party/
 experiments/**/split_manifest/
 experiments/**/raw_outputs/
