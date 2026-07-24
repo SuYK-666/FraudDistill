@@ -385,6 +385,7 @@ def publish_docs(out: Path, audit: dict) -> None:
     report = build_report(audit)
     report_path = DOC_RESULTS / "DATA_JUDGE_GATE_V2_1_MASTER_REPORT_中文.md"
     report_path.write_text(report, encoding="utf-8")
+    write_artifact_manifest(DOC_RESULTS / "DATA_JUDGE_GATE_V2_1_ARTIFACT_MANIFEST.tsv", audit["artifacts"])
     go = [
         {"Gate": "G0 active runner uses qy_v3", "Status": "PASS", "Evidence": "load_all_rows prefers data/processed/qy_v3/judged_pairs_v3.jsonl"},
         {"Gate": "G0 explicit generation input", "Status": "PASS", "Evidence": "input_freeze.json stores explicit path and SHA-256; no mtime lookup"},
@@ -402,8 +403,22 @@ def publish_docs(out: Path, audit: dict) -> None:
         "guard_public_gold_metrics.csv",
         "guard_pairwise_agreement.csv",
         "guard_language_audit.csv",
+        "guard_model_lock.yaml",
+        "target_llm_behavior_with_ci.csv",
+        "metrics_by_seed.csv",
+        "bootstrap_ci.csv",
+        "eval_manifest_hash.txt",
+        "student_model_sha256.txt",
     ]:
         shutil.copy2(out / name, DOC_RESULTS / f"DATA_JUDGE_GATE_V2_1_{name}")
+
+
+def write_artifact_manifest(path: Path, artifacts: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["path", "bytes", "sha256"])
+        writer.writeheader()
+        writer.writerows(artifacts)
 
 
 def build_report(audit: dict) -> str:
