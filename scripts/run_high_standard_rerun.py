@@ -1488,6 +1488,7 @@ def write_disagreement_files(out: Path, test: list[dict], pred_rows: list[dict])
 
 
 def write_eval_manifest(out: Path, rows: list[dict], name: str = "eval") -> None:
+    (out / "audit").mkdir(parents=True, exist_ok=True)
     manifest = [
         {
             "manifest": name,
@@ -1519,6 +1520,7 @@ def write_eval_manifest(out: Path, rows: list[dict], name: str = "eval") -> None
 
 
 def write_split_manifest(out: Path, splits: dict[str, list[dict]]) -> None:
+    (out / "audit").mkdir(parents=True, exist_ok=True)
     rows = []
     for split, items in splits.items():
         for row in items:
