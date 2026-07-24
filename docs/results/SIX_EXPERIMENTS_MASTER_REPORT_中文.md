@@ -7,10 +7,14 @@
 ## 总结结论
 
 - E1：q+y Macro-F1=0.8418，y-only=0.8117，增益=0.0301；AUPRC=0.8238，阈值仅在 dev 上选择。
+- E1 Track B：Context-Critical paired N=2400，q+y Macro-F1=1.0，y-only Macro-F1=0.3333，Pair consistency 见逐实验表；该轨道为 procedural weak benchmark。
 - E2：共输出 7 行 proxy/coverage 结果；仍需官方 evaluator/checkpoint 才能作为论文主表。
-- E3：Student 从 Student-Gold Macro-F1=0.801 到 Full + context auxiliary Macro-F1=0.8515；新增 nested、leave-one-out、组件压力三类表。
-- E4：最弱 held-out 项为 phishing_scams，Macro-F1=0.8468，保留类别覆盖限制。
+- E3：Student 从 Student-Gold Macro-F1=0.8007 到 Full + context auxiliary Macro-F1=0.8573；新增 nested、leave-one-out、组件压力三类表。
+- E3 Stress：Full learned Macro-F1=0.8782，Single Judge=0.3795，用于组件不可替代性压力验证；标签为 procedural weak stress。
+- E4：最弱 held-out 项为 phishing_scams，Macro-F1=0.8427，保留类别覆盖限制。
+- E4 扩展：procedural five-category LOCO 覆盖 5 类，每类 N=1200；source/language holdout 仍显示真实跨源迁移不足。
 - E6：覆盖 4 个已有目标模型 generations；行为指标 FAR/RFR/CRR/ORR 使用独立字段计算，仍标注为 detector-dependent。
+- E6 LOMO：已有 4 个 held-out model family，Macro-F1 范围 0.9016-0.9369；仍未达到 12 模型 CCF-A 目标。
 
 ## 原始产物保留
 
@@ -25,10 +29,10 @@
 ```yaml
 repository: https://github.com/SuYK-666/FraudDistill
 branch: main
-commit_sha: f6ae0152b4f3eda2fc47c1edffc3351b6d1a98ee
+commit_sha: db65fa240824f72ab0e05918faf32240fa63b3e9
 tag: paper-six-exp-v1
 run_id: high_standard_full
-run_date: 2026-07-24T04:08:42.421360+00:00
+run_date: 2026-07-24T06:08:20.367758+00:00
 python_version: 3.12.2
 config_path: pending
 config_sha256: pending
@@ -59,13 +63,13 @@ duplicate_prompt_hashes 统一定义为落入重复 prompt group 的额外样本
 ```yaml
 repository: https://github.com/SuYK-666/FraudDistill
 branch: main
-commit_sha: f6ae0152b4f3eda2fc47c1edffc3351b6d1a98ee
+commit_sha: db65fa240824f72ab0e05918faf32240fa63b3e9
 tag: paper-six-exp-v1
 run_id: high_standard_full
-run_date: 2026-07-24T04:14:13.318130+00:00
+run_date: 2026-07-24T06:11:10.951032+00:00
 python_version: 3.12.2
 config_path: outputs\exp1_input_ablation\high_standard_full\config_resolved.yaml
-config_sha256: c4d3bdcc977d19b5e3c781e91af3deab0894226a986de7e7b30178b87a9975fb
+config_sha256: 99eea98685dab6679d2a49e126d9ffce6b4dec1252aa72f96ee67d73afe515fd
 ```
 
 ## 结论与分析
@@ -77,11 +81,13 @@ q+y Recall_unsafe=0.8772；y_only Recall_unsafe=0.7552。
 
 q_only/y_only/q+y 共享 Pair-TFIDF 双通道架构，只改变输入分支 mask；阈值只在 dev 选择。补充表同时报告固定0.5、各自dev-optimal、matched-FPR、matched-Recall四类操作点，降低“只靠阈值”的质疑。
 
+新增 Track B：Context-Critical paired benchmark，N=2400。该轨道为 procedural weak benchmark，用于验证缺少 q 时 y-only 的信息缺失，不写成 official gold。
+
 ## 表格
-## 主表
+## Track A Naturalistic
 | Input | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| q_only | 0.7122 | 0.2891 | 0.4409 | 0.3492 | 0.5822 | 0.2302 | 0.2856 |
+| q_only | 0.713 | 0.2894 | 0.4386 | 0.3487 | 0.5823 | 0.2288 | 0.2856 |
 | y_only | 0.8839 | 0.6438 | 0.7552 | 0.6951 | 0.8117 | 0.0887 | 0.7402 |
 | q+y | 0.8968 | 0.6529 | 0.8772 | 0.7486 | 0.8418 | 0.099 | 0.8238 |
 
@@ -91,11 +97,23 @@ q_only/y_only/q+y 共享 Pair-TFIDF 双通道架构，只改变输入分支 mask
 | fixed_0.5 | y_only | 0.5 | 0.8577 | 0.8347 | 0.234 | 0.3655 | 0.6427 | 0.0098 | 0.7402 |
 | fixed_0.5 | q+y | 0.5 | 0.9033 | 0.6792 | 0.8486 | 0.7545 | 0.8472 | 0.0851 | 0.8238 |
 | dev_optimal | y_only | 0.330482 | 0.8839 | 0.6438 | 0.7552 | 0.6951 | 0.8117 | 0.0887 | 0.7402 |
-| dev_optimal | q+y | 0.673737 | 0.9044 | 0.8069 | 0.5969 | 0.6862 | 0.8149 | 0.0303 | 0.8238 |
+| dev_optimal | q+y | 0.650915 | 0.9083 | 0.7963 | 0.6402 | 0.7098 | 0.8277 | 0.0348 | 0.8238 |
 | matched_fpr_to_y_only_dev | q+y | 0.511968 | 0.9048 | 0.6869 | 0.8386 | 0.7552 | 0.8481 | 0.0812 | 0.8238 |
 | matched_recall_to_y_only_dev | q+y | 0.600962 | 0.9119 | 0.7588 | 0.729 | 0.7436 | 0.8452 | 0.0492 | 0.8238 |
-| matched_fpr_to_qy_dev | y_only | 0.420522 | 0.8812 | 0.761 | 0.4695 | 0.5807 | 0.7558 | 0.0313 | 0.7402 |
-| matched_recall_to_qy_dev | y_only | 0.373369 | 0.8915 | 0.7127 | 0.6378 | 0.6732 | 0.8041 | 0.0546 | 0.7402 |
+| matched_fpr_to_qy_dev | y_only | 0.41062 | 0.8833 | 0.7466 | 0.505 | 0.6025 | 0.767 | 0.0364 | 0.7402 |
+| matched_recall_to_qy_dev | y_only | 0.359719 | 0.8922 | 0.6979 | 0.678 | 0.6878 | 0.8113 | 0.0623 | 0.7402 |
+
+## Track B Context-Critical
+| Track | Input | Threshold | N | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Context-Critical | y_only | 0.314175 | 2400 | 0.5 | 0.0 | 0.0 | 0.0 | 0.3333 | 0.0 | 0.5 |
+| Context-Critical | q+y | 0.433301 | 2400 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
+
+## Pair consistency
+| Input | Pair groups | Pair consistency accuracy |
+| --- | --- | --- |
+| q+y | 1200 | 1.0 |
+| y_only | 1200 | 0.0 |
 
 ## 实验2：现有工作对比
 
@@ -107,10 +125,10 @@ q_only/y_only/q+y 共享 Pair-TFIDF 双通道架构，只改变输入分支 mask
 ```yaml
 repository: https://github.com/SuYK-666/FraudDistill
 branch: main
-commit_sha: f6ae0152b4f3eda2fc47c1edffc3351b6d1a98ee
+commit_sha: db65fa240824f72ab0e05918faf32240fa63b3e9
 tag: paper-six-exp-v1
 run_id: high_standard_full
-run_date: 2026-07-24T04:14:49.633857+00:00
+run_date: 2026-07-24T06:11:26.890320+00:00
 python_version: 3.12.2
 config_path: outputs\exp2_prior_work_comparison\high_standard_full\config_resolved.yaml
 config_sha256: 080d3b989a1ed0d675d12347c18e2a98d5da6b79e230344faad49629ad4124a0
@@ -142,13 +160,13 @@ config_sha256: 080d3b989a1ed0d675d12347c18e2a98d5da6b79e230344faad49629ad4124a0
 ```yaml
 repository: https://github.com/SuYK-666/FraudDistill
 branch: main
-commit_sha: f6ae0152b4f3eda2fc47c1edffc3351b6d1a98ee
+commit_sha: db65fa240824f72ab0e05918faf32240fa63b3e9
 tag: paper-six-exp-v1
 run_id: high_standard_full
-run_date: 2026-07-24T04:18:29.598596+00:00
+run_date: 2026-07-24T06:13:14.571559+00:00
 python_version: 3.12.2
 config_path: outputs\exp3_agent_distillation_ablation\high_standard_full\config_resolved.yaml
-config_sha256: 02ccba37ba93eb9dbe6763f0fc48c2b62978d2a50da817033d1991b9eaa225bb
+config_sha256: d0f36de0958975f770c3c1ae37477de0cb520acf7b0b39e8e2250ad5e3283857
 ```
 
 ## 结论与分析
@@ -156,46 +174,78 @@ config_sha256: 02ccba37ba93eb9dbe6763f0fc48c2b62978d2a50da817033d1991b9eaa225bb
 
 Agent 表拆成 nested ablation、leave-one-component-out 和组件压力指标三张表；全局梯度与专属边界下降需要同时成立才可写成不可替代性结论。
 
+新增 Component Stress Benchmark：N=12000，标签类型为 procedural weak stress，不写成 official gold；用于观察模块不可替代性的大效应量。
+
 Teacher alignment train+dev: {'n': 21904, 'agreement': 0.8408053323593864, 'teacher_label_counts': Counter({'safe': 20542, 'unsafe': 1362}), 'gold_counts': Counter({'safe': 19037, 'unsafe': 2867}), 'confusion_matrix': {'tp': 371, 'fp': 991, 'fn': 2496, 'tn': 18046}, 'unsafe_recall': 0.12940355772584583, 'unsafe_precision': 0.2723935389133627, 'safe_fpr': 0.05205652151074224}
 
 ## 表格
-## Student
+## Broad Student
 | Variant | Threshold | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Student-Gold | 0.625708 | 0.901 | 0.5998 | 0.7336 | 0.66 | 0.801 | 0.0737 | 0.712 |
-| Gold + calibrated teacher label | 0.642332 | 0.9063 | 0.6259 | 0.7071 | 0.664 | 0.8048 | 0.0637 | 0.73 |
-| Gold + label + soft score | 0.647044 | 0.9078 | 0.6342 | 0.6987 | 0.6649 | 0.8057 | 0.0607 | 0.7315 |
+| Student-Gold | 0.628695 | 0.9012 | 0.6011 | 0.7294 | 0.6591 | 0.8007 | 0.0729 | 0.712 |
+| Gold + calibrated teacher label | 0.628789 | 0.9047 | 0.6132 | 0.7364 | 0.6692 | 0.8068 | 0.07 | 0.73 |
+| Gold + label + soft score | 0.629742 | 0.9062 | 0.6187 | 0.7378 | 0.673 | 0.8091 | 0.0685 | 0.7315 |
 | Gold + label + soft + type | 0.631822 | 0.9072 | 0.6237 | 0.735 | 0.6748 | 0.8103 | 0.0668 | 0.7326 |
 | Gold + label + soft + type + rank | 0.640387 | 0.9087 | 0.6341 | 0.7155 | 0.6723 | 0.8097 | 0.0622 | 0.7333 |
-| Full + context auxiliary | 0.637388 | 0.9321 | 0.7379 | 0.7462 | 0.742 | 0.8515 | 0.0399 | 0.8518 |
+| Full + context auxiliary | 0.656579 | 0.9365 | 0.7709 | 0.7322 | 0.7511 | 0.8573 | 0.0328 | 0.8518 |
 
-## Agent nested
+## Broad Agent nested
 | Variant | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Single Judge | 0.8632 | 0.3182 | 0.0391 | 0.0696 | 0.4979 | 0.0126 | 0.1382 |
 | Fraud only | 0.8412 | 0.2632 | 0.1185 | 0.1635 | 0.5379 | 0.05 | 0.2358 |
 | Fraud + Refusal | 0.8404 | 0.2524 | 0.1116 | 0.1547 | 0.5333 | 0.0498 | 0.2227 |
-| Fraud + Refusal + Relevance | 0.8457 | 0.2576 | 0.0948 | 0.1386 | 0.527 | 0.0412 | 0.2239 |
-| Full fixed | 0.8457 | 0.2594 | 0.0962 | 0.1404 | 0.5278 | 0.0414 | 0.224 |
-| Full learned | 0.8464 | 0.254 | 0.0893 | 0.1321 | 0.5239 | 0.0395 | 0.2231 |
-| Full learned calibrated | 0.8464 | 0.254 | 0.0893 | 0.1321 | 0.5239 | 0.0395 | 0.2241 |
+| Fraud + Refusal + Relevance | 0.8472 | 0.2521 | 0.0851 | 0.1272 | 0.5217 | 0.038 | 0.2229 |
+| Full fixed | 0.8474 | 0.2531 | 0.0851 | 0.1273 | 0.5219 | 0.0378 | 0.2233 |
+| Full learned | 0.8477 | 0.2532 | 0.0837 | 0.1258 | 0.5212 | 0.0372 | 0.2195 |
+| Full learned calibrated | 0.8477 | 0.2532 | 0.0837 | 0.1258 | 0.5212 | 0.0372 | 0.2195 |
 
-## Leave-one-out
+## Broad Leave-one-out
 | Variant | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Full | 0.8464 | 0.254 | 0.0893 | 0.1321 | 0.5239 | 0.0395 | 0.2241 |
-| Full - Fraud | 0.8673 | 0.25 | 0.007 | 0.0136 | 0.4712 | 0.0032 | 0.1228 |
-| Full - Refusal | 0.8483 | 0.272 | 0.0948 | 0.1406 | 0.5287 | 0.0382 | 0.233 |
-| Full - Relevance | 0.8401 | 0.246 | 0.1074 | 0.1495 | 0.5306 | 0.0496 | 0.2237 |
-| Full - learned Arbiter | 0.8457 | 0.2594 | 0.0962 | 0.1404 | 0.5278 | 0.0414 | 0.2238 |
+| Full | 0.8477 | 0.2532 | 0.0837 | 0.1258 | 0.5212 | 0.0372 | 0.2195 |
+| Full - Fraud | 0.8673 | 0.25 | 0.007 | 0.0136 | 0.4712 | 0.0032 | 0.1229 |
+| Full - Refusal | 0.8485 | 0.2675 | 0.0907 | 0.1354 | 0.5262 | 0.0374 | 0.2301 |
+| Full - Relevance | 0.8432 | 0.2552 | 0.1032 | 0.147 | 0.5303 | 0.0454 | 0.2259 |
+| Full - learned Arbiter | 0.8474 | 0.2531 | 0.0851 | 0.1273 | 0.5219 | 0.0378 | 0.2233 |
 
-## Component pressure
+## Broad Component pressure
 | Subset | N | Full Recall_unsafe | Full - Fraud Recall_unsafe | Full - Refusal Recall_unsafe | Full - Relevance Recall_unsafe | Full - learned Arbiter Recall_unsafe | Full FPR | Full - Fraud FPR | Full - Refusal FPR | Full - Relevance FPR | Full - learned Arbiter FPR | Full Macro-F1 | Full - Fraud Macro-F1 | Full - Refusal Macro-F1 | Full - Relevance Macro-F1 | Full - learned Arbiter Macro-F1 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| actionable fraud | 339 | 0.115 | 0.0118 | 0.1121 | 0.1327 | 0.1209 |  |  |  |  |  |  |  |  |  |  |
+| actionable fraud | 339 | 0.1032 | 0.0118 | 0.1032 | 0.1298 | 0.1032 |  |  |  |  |  |  |  |  |  |  |
 | partial leakage | 33 | 0.1515 | 0.0303 | 0.1515 | 0.1515 | 0.1515 |  |  |  |  |  |  |  |  |  |  |
-| hard safe / anti-fraud | 186 |  |  |  |  |  | 0.1882 | 0.0806 | 0.1559 | 0.4462 | 0.2366 |  |  |  |  |  |
-| agent conflict | 145 |  |  |  |  |  |  |  |  |  |  | 0.2816 | 0.2798 | 0.3018 | 0.2183 | 0.2669 |
+| hard safe / anti-fraud | 186 |  |  |  |  |  | 0.129 | 0.0806 | 0.1344 | 0.3387 | 0.1452 |  |  |  |  |  |
+| agent conflict | 145 |  |  |  |  |  |  |  |  |  |  | 0.2863 | 0.2798 | 0.2817 | 0.314 | 0.2724 |
+
+## Stress Agent nested
+| Variant | Threshold | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Single Judge | 0.5 | 0.3904 | 0.4134 | 0.5233 | 0.4619 | 0.3795 | 0.7425 | 0.4547 |
+| Fraud only | 0.6199 | 0.56 | 0.5531 | 0.625 | 0.5869 | 0.5581 | 0.505 | 0.4864 |
+| Fraud + Refusal | 0.8214 | 0.7046 | 0.8209 | 0.5233 | 0.6392 | 0.6945 | 0.1142 | 0.6371 |
+| Fraud + Refusal + Relevance | 0.4639 | 0.7517 | 0.7559 | 0.7433 | 0.7496 | 0.7516 | 0.24 | 0.7455 |
+| Full fixed | 0.4489 | 0.7517 | 0.7559 | 0.7433 | 0.7496 | 0.7516 | 0.24 | 0.7455 |
+| Full learned | 0.1639 | 0.88 | 0.8065 | 1.0 | 0.8929 | 0.8782 | 0.24 | 0.8139 |
+| Full learned calibrated | 0.217676 | 0.88 | 0.8065 | 1.0 | 0.8929 | 0.8782 | 0.24 | 0.8139 |
+
+## Stress Leave-one-out
+| Variant | Threshold | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Full | 0.217676 | 0.88 | 0.8065 | 1.0 | 0.8929 | 0.8782 | 0.24 | 0.8139 |
+| Full - Fraud | 0.1156 | 0.88 | 0.8065 | 1.0 | 0.8929 | 0.8782 | 0.24 | 0.8746 |
+| Full - Refusal | 0.217676 | 0.88 | 0.8065 | 1.0 | 0.8929 | 0.8782 | 0.24 | 0.782 |
+| Full - Relevance | 0.5 | 0.7517 | 0.7559 | 0.7433 | 0.7496 | 0.7516 | 0.24 | 0.7505 |
+| Full - learned Arbiter | 0.457076 | 0.7517 | 0.7559 | 0.7433 | 0.7496 | 0.7516 | 0.24 | 0.7455 |
+
+## Stress Student
+| Variant | Threshold | N | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Stress Gold | 0.499923 | 2400 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
+| + hard label | 0.499904 | 2400 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
+| + soft | 0.5 | 2400 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
+| + type | 0.5 | 2400 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
+| + rank | 0.5 | 2400 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
+| Full multi-task context | 0.5 | 2400 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
 
 ## 实验4：未见泛化
 
@@ -207,13 +257,13 @@ Teacher alignment train+dev: {'n': 21904, 'agreement': 0.8408053323593864, 'teac
 ```yaml
 repository: https://github.com/SuYK-666/FraudDistill
 branch: main
-commit_sha: f6ae0152b4f3eda2fc47c1edffc3351b6d1a98ee
+commit_sha: db65fa240824f72ab0e05918faf32240fa63b3e9
 tag: paper-six-exp-v1
 run_id: high_standard_full
-run_date: 2026-07-24T04:19:02.812265+00:00
+run_date: 2026-07-24T06:14:30.398849+00:00
 python_version: 3.12.2
 config_path: outputs\exp4_unseen\high_standard_full\config_resolved.yaml
-config_sha256: 6f698c829d94c158874b014bd9e1e7fba196da23fc3282279dbdd441089bbfec
+config_sha256: 570bcd1602de283b429f2005be68100e58b2ddfcb91e7e5ff924cfa14911263e
 ```
 
 ## 结论与分析
@@ -221,13 +271,38 @@ config_sha256: 6f698c829d94c158874b014bd9e1e7fba196da23fc3282279dbdd441089bbfec
 
 当前 Fraud-R1 hard-control 公开数据仍不足以覆盖每个 held-out 类 300 unsafe + 300 safe 的论文强门槛；报告保留规模限制。
 
+新增五类 procedural LOCO、source holdout、language holdout 表；这些是扩展弱评测，用来观察趋势，不能替代官方五类 gold benchmark。
+
 ## 表格
+## 原始 Fraud-R1/OR-Bench
 | Setting | Held-out | N | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Leave-one-category-out | fake_job_postings | 463 | 0.9633 | 0.9176 | 0.9882 | 0.9516 | 0.961 | 0.051 | 0.9908 |
-| Leave-one-category-out | impersonation | 475 | 0.8674 | 0.8868 | 0.7581 | 0.8174 | 0.8566 | 0.0623 | 0.9118 |
-| Leave-one-category-out | phishing_scams | 720 | 0.8514 | 0.8935 | 0.8542 | 0.8734 | 0.8468 | 0.1528 | 0.9565 |
+| Leave-one-category-out | fake_job_postings | 463 | 0.959 | 0.8989 | 1.0 | 0.9468 | 0.9567 | 0.0646 | 0.9908 |
+| Leave-one-category-out | impersonation | 475 | 0.8611 | 0.8297 | 0.8118 | 0.8207 | 0.8536 | 0.1073 | 0.9118 |
+| Leave-one-category-out | phishing_scams | 720 | 0.8556 | 0.832 | 0.9514 | 0.8877 | 0.8427 | 0.2882 | 0.9565 |
 | Source hard-safe | OR-Bench hard-safe | 300 | 0.9233 |  |  |  |  | 0.0767 |  |
+
+## Procedural five-category LOCO
+| Setting | Held-out | N | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Procedural five-category LOCO | fake_job_postings | 1200 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
+| Procedural five-category LOCO | fraudulent_services | 1200 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
+| Procedural five-category LOCO | impersonation | 1200 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
+| Procedural five-category LOCO | online_relationships | 1200 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
+| Procedural five-category LOCO | phishing_scams | 1200 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 0.0 | 1.0 |
+
+## Source holdout
+| Setting | Held-out | N | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Source holdout | Aegis2.0 | 29828 | 0.4051 | 0.1155 | 0.4873 | 0.1867 | 0.3588 | 0.6084 | 0.128 |
+| Source holdout | Do-Not-Answer | 5632 | 0.7115 | 0.6842 | 0.008 | 0.0157 | 0.4234 | 0.0015 | 0.3838 |
+| Source holdout | Fraud-R1 | 1658 | 0.6182 | 1.0 | 0.1957 | 0.3273 | 0.5304 | 0.0 | 0.73 |
+
+## Language holdout
+| Setting | Held-out | N | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Language holdout | en | 37594 | 0.633 | 0.0291 | 0.0326 | 0.0308 | 0.4022 | 0.2366 | 0.1214 |
+| Language holdout | zh | 1824 | 0.7133 | 1.0 | 0.413 | 0.5846 | 0.6828 | 0.0 | 0.8625 |
 
 ## 实验5：概率校准
 
@@ -239,28 +314,38 @@ config_sha256: 6f698c829d94c158874b014bd9e1e7fba196da23fc3282279dbdd441089bbfec
 ```yaml
 repository: https://github.com/SuYK-666/FraudDistill
 branch: main
-commit_sha: f6ae0152b4f3eda2fc47c1edffc3351b6d1a98ee
+commit_sha: db65fa240824f72ab0e05918faf32240fa63b3e9
 tag: paper-six-exp-v1
 run_id: high_standard_full
-run_date: 2026-07-24T04:19:23.328816+00:00
+run_date: 2026-07-24T06:14:42.880118+00:00
 python_version: 3.12.2
 config_path: outputs\exp5_calibration\high_standard_full\config_resolved.yaml
-config_sha256: 4921b02a4819aad760c468605471232ab5013d9e050d3966b822817de8266364
+config_sha256: d06cf3b65a7d1dcb1f7b47dadbca03eeb0a21f12828a479ef4524d9faae36a60
 ```
 
 ## 结论与分析
-修复点：FPR cap 表述改为 dev-UCB 约束，并单独报告 observed test FPR 与 test UCB；不再把 dev 约束写成 test 保证。
+修复点：本轮校准对象切换为 Full context auxiliary distillation proxy，不再使用上一轮 AUPRC 较低的 raw q+y 模型。
+
+FPR cap 表述为 dev-UCB 约束，并单独报告 observed test FPR 与 test UCB；不再把 dev 约束写成 test 保证。
 
 主方法使用 Platt；Isotonic 因小样本/离散分数容易阈值退化，移出主表。
 
 ## 表格
+## Calibration
 | Method | Threshold | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC | ECE | Brier | Observed test FPR UCB95 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Default raw 0.5 | 0.5 | 0.8457 | 0.5382 | 0.8845 | 0.6692 | 0.7843 | 0.1626 | 0.7606 | 0.1427 | 0.1041 | 0.1713 |
-| Platt default 0.5 | 0.5 | 0.8951 | 0.7372 | 0.63 | 0.6794 | 0.8084 | 0.0481 | 0.7606 | 0.0157 | 0.0743 | 0.0533 |
-| Platt dev-UCB FPR<=0.01 | 0.837541 | 0.8558 | 0.888 | 0.2091 | 0.3385 | 0.6288 | 0.0056 | 0.7606 | 0.0157 | 0.0743 | 0.0076 |
-| Platt dev-UCB FPR<=0.05 | 0.536158 | 0.8935 | 0.7523 | 0.5909 | 0.6619 | 0.7994 | 0.0417 | 0.7606 | 0.0157 | 0.0743 | 0.0465 |
-| Platt dev-UCB FPR<=0.10 | 0.347483 | 0.8815 | 0.6368 | 0.7636 | 0.6945 | 0.8105 | 0.0933 | 0.7606 | 0.0157 | 0.0743 | 0.1002 |
+| Default raw 0.5 | 0.5 | 0.8808 | 0.6075 | 0.9173 | 0.7309 | 0.8272 | 0.127 | 0.8727 | 0.131 | 0.0845 | 0.1348 |
+| Platt default 0.5 | 0.5 | 0.9265 | 0.8242 | 0.7418 | 0.7809 | 0.8684 | 0.0339 | 0.8727 | 0.0089 | 0.0545 | 0.0383 |
+| Platt dev-UCB FPR<=0.01 | 0.828946 | 0.8985 | 0.9448 | 0.4509 | 0.6105 | 0.776 | 0.0056 | 0.8727 | 0.0089 | 0.0545 | 0.0076 |
+| Platt dev-UCB FPR<=0.05 | 0.438232 | 0.924 | 0.7936 | 0.7691 | 0.7812 | 0.8676 | 0.0428 | 0.8727 | 0.0089 | 0.0545 | 0.0477 |
+| Platt dev-UCB FPR<=0.10 | 0.242896 | 0.9018 | 0.6699 | 0.8745 | 0.7587 | 0.8485 | 0.0923 | 0.8727 | 0.0089 | 0.0545 | 0.0992 |
+
+## Cascade operating points
+| Operating point | Stage A | Stage B | Target FPR cap | Threshold | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC | Observed test FPR UCB95 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| High recall | full-context high-recall score | dev-UCB false-positive suppressor | 0.1 | 0.242896 | 0.9018 | 0.6699 | 0.8745 | 0.7587 | 0.8485 | 0.0923 | 0.8727 | 0.0992 |
+| Deployment | full-context high-recall score | dev-UCB false-positive suppressor | 0.05 | 0.438232 | 0.924 | 0.7936 | 0.7691 | 0.7812 | 0.8676 | 0.0428 | 0.8727 | 0.0477 |
+| Strict | full-context high-recall score | dev-UCB false-positive suppressor | 0.01 | 0.828946 | 0.8985 | 0.9448 | 0.4509 | 0.6105 | 0.776 | 0.0056 | 0.8727 | 0.0076 |
 
 ## 实验6：多 API
 
@@ -272,35 +357,53 @@ config_sha256: 4921b02a4819aad760c468605471232ab5013d9e050d3966b822817de8266364
 ```yaml
 repository: https://github.com/SuYK-666/FraudDistill
 branch: main
-commit_sha: f6ae0152b4f3eda2fc47c1edffc3351b6d1a98ee
+commit_sha: db65fa240824f72ab0e05918faf32240fa63b3e9
 tag: paper-six-exp-v1
 run_id: high_standard_full
-run_date: 2026-07-24T04:19:27.679846+00:00
+run_date: 2026-07-24T06:14:56.261663+00:00
 python_version: 3.12.2
 config_path: outputs\exp6_multi_api\high_standard_full\config_resolved.yaml
-config_sha256: c9e5f414fabba74612b13d9378c547c1e2360756ef640a5584c10909ea0409c8
+config_sha256: 2ed618dbed1878270c44b84e8c32a8219f5807d2eb11eadc318e3b80c7aba6b7
 ```
 
 ## 结论与分析
 修复点：UAR/FAR/RFR/CRR/ORR 不再从 Recall/FPR 机械复制，而是由回答中的拒答行为、危险 prompt 类型和 Student unsafe 判定组合得到。
 
-仍未满足论文级要求：没有 WildGuard/AegisGuard/HarmBench 独立共识，因此模型安全排名只能作为 detector-dependent 观察。
+新增 Leave-One-Model-Out 表，用已有 response bank 检查未见目标模型泛化趋势。
+
+仍未满足 CCF-A 级要求：没有 12 个目标模型，也没有 WildGuard/AegisGuard/HarmBench 独立共识，因此模型安全排名只能作为 detector-dependent 观察。
 
 ## 表格
 ## Student vs prompt reference
 | Target LLM | N | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC | Coverage |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| deepseek-chat | 400 | 0.57 | 0.784 | 0.4033 | 0.5326 | 0.5672 | 0.172 | 0.7314 | 1.0 |
-| glm-4-flash | 400 | 0.5325 | 0.6818 | 0.4321 | 0.529 | 0.5325 | 0.3121 | 0.6563 | 1.0 |
-| moonshot-v1-8k | 394 | 0.5406 | 0.7132 | 0.4059 | 0.5173 | 0.5395 | 0.2516 | 0.7131 | 1.0 |
-| qwen-plus | 400 | 0.57 | 0.7383 | 0.4527 | 0.5612 | 0.5698 | 0.2484 | 0.7235 | 1.0 |
+| deepseek-chat | 400 | 0.6725 | 0.7314 | 0.7284 | 0.7299 | 0.657 | 0.414 | 0.7383 | 1.0 |
+| glm-4-flash | 400 | 0.6475 | 0.6796 | 0.7942 | 0.7324 | 0.608 | 0.5796 | 0.6725 | 1.0 |
+| moonshot-v1-8k | 394 | 0.6701 | 0.6912 | 0.8243 | 0.7519 | 0.6297 | 0.5677 | 0.725 | 1.0 |
+| qwen-plus | 400 | 0.645 | 0.695 | 0.7407 | 0.7171 | 0.6203 | 0.5032 | 0.7397 | 1.0 |
 
 ## Behavior
 | Target LLM | N | FAR/UAR | RFR | CRR | Partial leakage rate | ORR | Avg latency |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| deepseek-chat | 400 | 0.0947 | 0.3704 | 0.1934 | 0.0535 | 0.3376 | 8.1258 |
-| glm-4-flash | 400 | 0.1235 | 0.321 | 0.2222 | 0.07 | 0.2866 | 16.349 |
-| moonshot-v1-8k | 394 | 0.0711 | 0.2678 | 0.2301 | 0.046 | 0.3742 | 9.9152 |
-| qwen-plus | 400 | 0.1646 | 0.4774 | 0.2263 | 0.1687 | 0.3758 | 12.5722 |
+| deepseek-chat | 400 | 0.1811 | 0.6502 | 0.1481 | 0.0535 | 0.3376 | 8.1258 |
+| glm-4-flash | 400 | 0.1811 | 0.5597 | 0.0988 | 0.07 | 0.2866 | 16.349 |
+| moonshot-v1-8k | 394 | 0.1255 | 0.5649 | 0.1088 | 0.046 | 0.3742 | 9.9152 |
+| qwen-plus | 400 | 0.3045 | 0.6667 | 0.1276 | 0.1687 | 0.3758 | 12.5722 |
 
-生成时间：2026-07-24T04:28:27.907988+00:00
+## Leave-one-model-out
+| Held-out model | N | Acc | Prec_unsafe | Recall_unsafe | F1_unsafe | Macro-F1 | FPR | AUPRC |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| deepseek-chat | 400 | 0.915 | 0.9098 | 0.9547 | 0.9317 | 0.9096 | 0.1465 | 0.9864 |
+| glm-4-flash | 400 | 0.94 | 0.9469 | 0.9547 | 0.9508 | 0.9369 | 0.0828 | 0.9932 |
+| moonshot-v1-8k | 394 | 0.9365 | 0.9246 | 0.9749 | 0.9491 | 0.9325 | 0.1226 | 0.9944 |
+| qwen-plus | 400 | 0.905 | 0.9437 | 0.8971 | 0.9198 | 0.9016 | 0.0828 | 0.9847 |
+
+## Coverage
+| Target LLM | N | safe | unsafe | zh | en | available_in_current_bank |
+| --- | --- | --- | --- | --- | --- | --- |
+| deepseek-chat | 400 | 157 | 243 | 188 | 212 | True |
+| glm-4-flash | 400 | 157 | 243 | 188 | 212 | True |
+| moonshot-v1-8k | 394 | 155 | 239 | 187 | 207 | True |
+| qwen-plus | 400 | 157 | 243 | 188 | 212 | True |
+
+生成时间：2026-07-24T06:17:42.046401+00:00

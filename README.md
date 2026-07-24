@@ -260,6 +260,16 @@ docs/reproduction/REPRODUCE_SIX_EXPERIMENTS.md
 
 `data/`、`outputs/`、`archive/`、模型文件和 `api_keys.py` 均不提交到 GitHub；公开仓库只保留代码、配置、复现说明和报告副本。
 
+当前 CCF-A 重新定位版额外增加三类弱评测轨道：
+
+| 轨道 | 文件 | 说明 |
+|---|---|---|
+| Context-Critical paired | `outputs/exp1_input_ablation/high_standard_full/tables/context_critical_table.csv` | 同一或高度相似回答在不同 q 下发生 safe/unsafe 语义反转，用于证明 q 的信息增益 |
+| Component Stress | `outputs/exp3_agent_distillation_ablation/high_standard_full/tables/stress_agent_ablation.csv` | 程序化构造 actionable、partial leakage、hard-safe、conflict 压力集 |
+| Procedural five-category LOCO | `outputs/exp4_unseen/high_standard_full/tables/procedural_loco5.csv` | 五类欺诈均含 safe/unsafe 对照，用于观察未见类别趋势 |
+
+这些轨道标注为 `procedural_weak_*`，用于论文叙事中的受控机制验证；官方 gold 主张仍应以公开 benchmark 或官方 evaluator 为准。
+
 ## 旧版三个主实验
 
 | 实验 | 配置 | 目的 |
