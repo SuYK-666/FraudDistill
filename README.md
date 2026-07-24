@@ -249,6 +249,17 @@ python scripts/write_six_experiment_master_report.py --run-id ccfa_small_qwen
 
 该命令会先把既有 `outputs/` 内容归档到 `archive/pre_ccfa_small_qwen_rerun_*`，然后只保留本轮小规模输出在 `outputs/*/ccfa_small_qwen/`。实验 1-5 会调用 qwen 生成 teacher probe 原始记录，但这些记录只作为训练期/审计信号，不写入 gold label，也不在 Student 推理时作为特征。实验 6 继续读取当前可用的 qwen、DeepSeek、Kimi、GLM generation bank。
 
+小样本复盘后的下一步是中等规模 gate，不直接跑最终全量：
+
+```powershell
+git status --short
+python scripts/run_high_standard_rerun.py gate --bootstrap 500 --api-provider qwen --api-probe-limit 12
+python scripts/write_six_experiment_master_report.py --run-id ccfa_medium_gate
+pytest -q
+```
+
+Gate 版会先归档旧 `outputs/`，再保留 `outputs/*/ccfa_medium_gate/`。该流程修复了四类 P0 协议问题：分组切分不丢行、E5 四路 group-disjoint calibration split、E3 Student 推理只输入 q+y、E6 新回复不继承 prompt gold 而改写 `prompt_risk_label`、`response_harm_label`、`pair_fraud_label`。
+
 全量版仍可按 `smoke -> pilot -> high_standard_full` 执行；smoke/pilot 自动归档，正式结果保留在 `outputs/*/high_standard_full/`。GitHub 上可查看报告副本：
 
 ```text

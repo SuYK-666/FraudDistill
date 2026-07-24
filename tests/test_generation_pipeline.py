@@ -39,3 +39,7 @@ generation:
     assert rows[0]["target_model"] == "qwen-plus"
     assert rows[0]["metadata"]["dry_run"] is True
     assert rows[0]["target_model_answer"]
+    assert "gold_label" not in rows[0]
+    assert rows[0]["prompt_risk_label"] == "safe"
+    assert rows[0]["response_harm_label"] is None
+    assert rows[0]["pair_fraud_label"] is None

@@ -128,8 +128,9 @@ def summary_bullets() -> str:
         lines.append("- E5：输出 raw、Platt 与多档 FPR-UCB 操作点，报告 calibration split/test split 的样本量和 UCB。")
     e6 = read_json(OUT / "exp6_multi_api" / RUN / "metrics.json")
     if e6:
-        n_models = len(e6.get("student_vs_prompt_reference", []))
-        lines.append(f"- E6：覆盖 {n_models} 个已有目标模型 generations；行为指标 FAR/RFR/CRR/ORR 使用独立字段计算，仍标注为 detector-dependent。")
+        e6_main = e6.get("student_vs_pair_silver", e6.get("student_vs_prompt_reference", []))
+        n_models = len(e6_main)
+        lines.append(f"- E6：覆盖 {n_models} 个已有目标模型 generations；新回复不继承 prompt gold，主表改为 student_vs_pair_silver；仍需开放 guard 共识替换 deterministic proxy。")
         lomo = e6.get("leave_one_model_out", [])
         if lomo:
             macros = [float(row["Macro-F1"]) for row in lomo if row.get("Macro-F1") not in {"", None}]
