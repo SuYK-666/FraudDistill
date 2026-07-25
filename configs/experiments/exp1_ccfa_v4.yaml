@@ -1,0 +1,51 @@
+experiment:
+  id: exp1_ccfa_v4
+  task: q_y_relation_fraud_risk_detection
+  language: zh_report_en_cn_data
+labels:
+  classes: [safe, unsafe, abstain]
+  missing_policy: error
+  public_gold_overrides_guard: true
+guards:
+  required_for_formal_gate: true
+  parse_success_min: 0.99
+  high_medium_coverage_min: 0.88
+  high_confidence_coverage_min: 0.65
+data_targets:
+  train_rows: [30000, 36000]
+  model_dev_rows: 4000
+  threshold_dev_rows: 4000
+  p1_prompt_components: 3600
+  p1_rows: 14400
+  p2_context_groups: 1200
+  p2_rows: 4800
+  p3_public_gold_rows_min: 4600
+split:
+  unit: semantic_component_id
+  leakage_policy: no_component_overlap
+model:
+  backbone: FacebookAI/xlm-roberta-base
+  max_length: 512
+  batch_size: 8
+  lr_search: [0.00001, 0.00002, 0.00003]
+  epochs_search: [2, 3]
+  seeds: [20260724, 20260725, 20260726, 20260727, 20260728]
+statistics:
+  bootstrap_unit: semantic_component_id
+  cluster_bootstrap_iterations: 10000
+  mcnemar: exact
+  multiple_testing_correction: Holm
+pass_gates:
+  p1:
+    q_y_macro_f1_min: 0.82
+    delta_vs_best_single_min: 0.03
+    delta_ci_lower_min: 0.0
+  p2:
+    q_y_macro_f1_min: 0.85
+    delta_vs_y_only_min: 0.15
+    delta_ci_lower_min: 0.10
+    group_consistency_min: 0.85
+  p3:
+    q_y_vs_y_only_noninferiority_margin: -0.01
+  seeds:
+    positive_direction_min: 4
