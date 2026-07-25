@@ -21,6 +21,10 @@ def format_pair_text(row: dict, mode: str) -> str:
     return f"Question: {query}\nAnswer: {answer}"
 
 
+def pair_texts(rows: list[dict], mode: str) -> list[str]:
+    return [format_pair_text(row, mode) for row in rows]
+
+
 @dataclass
 class TrainResult:
     threshold: float
@@ -57,7 +61,7 @@ class XLMRPairCrossEncoder:
         from transformers import get_linear_schedule_with_warmup
 
         torch = self.torch
-        texts = [format_pair_text(row, mode) for row in rows]
+        texts = pair_texts(rows, mode)
         y = torch.tensor([1 if label == "unsafe" else 0 for label in labels], dtype=torch.long)
         encoded = self.tokenizer(texts, truncation=True, padding=True, max_length=self.max_length, return_tensors="pt")
         dataset = TensorDataset(encoded["input_ids"], encoded["attention_mask"], y)
@@ -81,7 +85,7 @@ class XLMRPairCrossEncoder:
         from torch.utils.data import DataLoader, TensorDataset
 
         torch = self.torch
-        texts = [format_pair_text(row, mode) for row in rows]
+        texts = pair_texts(rows, mode)
         encoded = self.tokenizer(texts, truncation=True, padding=True, max_length=self.max_length, return_tensors="pt")
         dataset = TensorDataset(encoded["input_ids"], encoded["attention_mask"])
         loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
@@ -110,4 +114,3 @@ def select_threshold(labels: list[str], scores: list[float]) -> TrainResult:
 
 def labels_from_scores(scores: list[float], threshold: float) -> list[str]:
     return ["unsafe" if score >= threshold else "safe" for score in scores]
-

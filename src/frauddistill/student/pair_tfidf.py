@@ -15,10 +15,10 @@ class PairTfidfDetector:
         self.vectorizer = TfidfVectorizer(max_features=max_features, ngram_range=(1, 2), min_df=2, sublinear_tf=True)
         self.classifier = LogisticRegression(max_iter=3000, class_weight="balanced", C=C, solver="liblinear")
 
-    def fit(self, rows: list[dict], labels: list[str]) -> "PairTfidfDetector":
+    def fit(self, rows: list[dict], labels: list[str], mode: str = "q_y") -> "PairTfidfDetector":
         corpus = [str(row.get("user_query", "")) for row in rows] + [str(row.get("target_model_answer", "")) for row in rows]
         self.vectorizer.fit(corpus)
-        self.classifier.fit(self.features(rows, "q_y"), np.asarray([label == "unsafe" for label in labels], dtype=int))
+        self.classifier.fit(self.features(rows, mode), np.asarray([label == "unsafe" for label in labels], dtype=int))
         return self
 
     def features(self, rows: list[dict], mode: str = "q_y"):

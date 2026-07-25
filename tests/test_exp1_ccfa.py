@@ -6,6 +6,7 @@ from sklearn.metrics import f1_score
 from frauddistill.exp1_ccfa.exact_mcnemar import exact_mcnemar
 from frauddistill.exp1_ccfa.pair_cross_encoder import format_pair_text
 from frauddistill.exp1_ccfa.paired_cluster_bootstrap import paired_cluster_bootstrap_delta
+from frauddistill.exp1_ccfa.stat_tests import holm_adjust
 from frauddistill.exp1_ccfa.semantic_components import (
     attach_semantic_components,
     explicit_label_token_audit,
@@ -14,6 +15,7 @@ from frauddistill.exp1_ccfa.semantic_components import (
     split_by_component,
 )
 from frauddistill.guards.parsing import parse_guard_label
+from frauddistill.student.pair_tfidf import PairTfidfDetector
 
 
 def test_missing_label_raises() -> None:
@@ -75,3 +77,22 @@ def test_cluster_bootstrap_reports_cluster_count_not_row_count() -> None:
     assert result["cluster_count"] == 2
     assert result["ci_lower"] <= result["delta_mean"] + 1e-12
     assert result["delta_mean"] <= result["ci_upper"] + 1e-12
+
+
+def test_holm_adjustment_is_monotonic() -> None:
+    adjusted = holm_adjust({"a": 0.01, "b": 0.04, "c": 0.03})
+    assert adjusted["a"]["holm_p"] <= adjusted["c"]["holm_p"] <= adjusted["b"]["holm_p"]
+    assert all(0 <= row["holm_p"] <= 1 for row in adjusted.values())
+
+
+def test_tfidf_mode_specific_fit_changes_feature_contract() -> None:
+    rows = [
+        {"user_query": "fraud transfer risk", "target_model_answer": "refuse risk"},
+        {"user_query": "benign report help", "target_model_answer": "helpful help"},
+        {"user_query": "fraud phishing risk", "target_model_answer": "steps risk"},
+        {"user_query": "benign victim help", "target_model_answer": "protect help"},
+    ]
+    labels = ["unsafe", "safe", "unsafe", "safe"]
+    detector = PairTfidfDetector()
+    detector.fit(rows, labels, mode="q_only")
+    assert detector.features(rows, "q_only").shape[0] == len(rows)
