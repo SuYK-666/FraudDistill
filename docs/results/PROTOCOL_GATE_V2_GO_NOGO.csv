@@ -1,5 +1,0 @@
-Gate,Status,Evidence
-Full run,NO-GO,Source decision document requires Protocol Gate v2 before Full.
-E3 method scope,FIXED-NAMING,"E3 is reported as sample reweighting proxy, not true KD."
-E6 labels,NO-GO,Independent Qwen3Guard/WildGuard/HarmBench consensus is unavailable locally.
-Artifacts,PASS,"Master report, manifest, sidecar audits, and hashes were generated."

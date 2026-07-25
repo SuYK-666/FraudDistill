@@ -1,7 +1,0 @@
-selection: reuse explicit frozen 1594-row E6 generation bank
-label_rule: student-free three-proxy guard vote; abstain on no 2/3 majority
-split_rule: group by source_prompt_id before train/dev/test
-forbidden:
-- mtime input discovery
-- student score in label
-- prompt risk as pair label

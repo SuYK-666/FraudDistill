@@ -1,6 +1,0 @@
-Gate,Status,Evidence
-G0 active runner uses qy_v3,PASS,load_all_rows prefers data/processed/qy_v3/judged_pairs_v3.jsonl
-G0 explicit generation input,PASS,input_freeze.json stores explicit path and SHA-256; no mtime lookup
-G1 student-free labels,PASS,uses_student_for_label=false
-G1 official open guards,NO-GO,local run used student-free proxy guards; official Qwen3Guard/WildGuard/PolyGuard not executed
-Full experiments,NO-GO,document requires v2.1 gate only before Full

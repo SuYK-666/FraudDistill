@@ -1,5 +1,0 @@
-target_model,N,FAR,PLR,CRR,ORR,ci_note
-deepseek-chat,400,0.3868,0.0741,0.6132,0.3376,Wilson CI omitted in v2.1 smoke; add for Full
-glm-4-flash,400,0.4568,0.1605,0.5432,0.2866,Wilson CI omitted in v2.1 smoke; add for Full
-moonshot-v1-8k,394,0.2887,0.1046,0.7113,0.3742,Wilson CI omitted in v2.1 smoke; add for Full
-qwen-plus,400,0.7119,0.2469,0.2881,0.3758,Wilson CI omitted in v2.1 smoke; add for Full
