@@ -41,14 +41,15 @@ class XLMRPairCrossEncoder:
         lr: float = 2e-5,
         epochs: int = 1,
         seed: int = 0,
+        local_files_only: bool = True,
     ):
         import torch
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
         torch.manual_seed(seed)
         self.torch = torch
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=local_files_only)
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2, local_files_only=local_files_only)
         self.max_length = max_length
         self.batch_size = batch_size
         self.lr = lr
@@ -84,6 +85,8 @@ class XLMRPairCrossEncoder:
     def predict_scores(self, rows: list[dict], mode: str) -> list[float]:
         from torch.utils.data import DataLoader, TensorDataset
 
+        if not rows:
+            return []
         torch = self.torch
         texts = pair_texts(rows, mode)
         encoded = self.tokenizer(texts, truncation=True, padding=True, max_length=self.max_length, return_tensors="pt")
