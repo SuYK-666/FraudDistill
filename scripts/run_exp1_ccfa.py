@@ -22,6 +22,7 @@ from frauddistill.eval.metrics import binary_metrics
 from frauddistill.exp1_ccfa.exact_mcnemar import exact_mcnemar
 from frauddistill.exp1_ccfa.pair_cross_encoder import INPUT_MODES, XLMRPairCrossEncoder, labels_from_scores, select_threshold
 from frauddistill.exp1_ccfa.paired_cluster_bootstrap import paired_cluster_bootstrap_delta
+from frauddistill.exp1_ccfa.public_gold import build_p3_from_local_qy, polyguard_rows, write_p3_manifest
 from frauddistill.exp1_ccfa.semantic_components import (
     attach_semantic_components,
     explicit_label_token_audit,
@@ -37,7 +38,7 @@ from frauddistill.utils.io import read_jsonl, write_jsonl
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Experiment 1 CCF-A q-y boundary runner")
-    parser.add_argument("command", choices=["preflight", "smoke", "e1_1_dev", "e1_1_corrected", "guard_audit", "e1_2_pilot", "freeze_full", "full_eval"])
+    parser.add_argument("command", choices=["preflight", "smoke", "e1_1_dev", "e1_1_corrected", "build_public_gold", "evaluate_panel", "guard_audit", "e1_2_pilot", "freeze_full", "full_eval"])
     parser.add_argument("--config", default="configs/experiments/exp1_ccfa_v4.yaml")
     parser.add_argument("--input", default="data/processed/qy_v3/judged_pairs_v3.jsonl")
     parser.add_argument("--output_dir", default="")
@@ -60,6 +61,8 @@ def main() -> None:
 
     if args.command == "preflight":
         result = preflight(args.input, config_path, config, output_dir)
+    elif args.command == "build_public_gold":
+        result = build_public_gold(config_path, config, output_dir)
     elif args.command == "guard_audit":
         result = guard_audit(config_path, config, output_dir)
     elif args.command in {"e1_2_pilot", "freeze_full", "full_eval"}:
@@ -70,7 +73,7 @@ def main() -> None:
             rows = rows[: min(len(rows), args.limit or 60)]
             args.bootstrap_iterations = min(args.bootstrap_iterations, 200)
             seeds = [args.seed]
-        elif args.command == "e1_1_corrected":
+        elif args.command in {"e1_1_corrected", "evaluate_panel"}:
             seeds = parse_seeds(args.seeds, default=[20260724, 20260725, 20260726])
             args.bootstrap_iterations = max(args.bootstrap_iterations, 10000)
         else:
@@ -108,6 +111,47 @@ def guard_audit(config_path: Path, config: dict, output_dir: Path) -> dict:
         "required_artifacts": ["guard_raw_outputs.jsonl", "guard_consensus.jsonl", "guard_audit_metrics.json"],
     }
     write_common_artifacts(output_dir, [], config, result)
+    return result
+
+
+def build_public_gold(config_path: Path, config: dict, output_dir: Path) -> dict:
+    ensure_dirs(output_dir)
+    input_files = [
+        ROOT / "data" / "prepared" / "full" / "evaluation_qy" / "aegis_qy.jsonl",
+        ROOT / "data" / "prepared" / "full" / "evaluation_qy" / "do_not_answer_qy.jsonl",
+    ]
+    target_min = int(config["data_targets"]["p3_public_gold_rows_min"])
+    rows = []
+    try:
+        rows.extend(polyguard_rows(max_rows=1325))
+    except Exception as exc:
+        (output_dir / "data" / "polyguard_download_error.txt").write_text(str(exc), encoding="utf-8")
+    local_target = max(4614, target_min) - len(rows)
+    if local_target > 0:
+        rows.extend(build_p3_from_local_qy(input_files, max_rows=local_target))
+    rows = attach_semantic_components(rows[: max(4614, target_min)])
+    output_file = output_dir / "data" / "p3_external_public_gold.jsonl"
+    write_p3_manifest(output_file, rows)
+    labels: dict[str, int] = {}
+    sources: dict[str, int] = {}
+    for row in rows:
+        labels[row["exp1_label"]] = labels.get(row["exp1_label"], 0) + 1
+        sources[str(row.get("source"))] = sources.get(str(row.get("source")), 0) + 1
+    result = {
+        "identity": run_identity(config_path, ""),
+        "experiment": config["experiment"]["id"],
+        "command": "build_public_gold",
+        "rows": len(rows),
+        "components": len({row["semantic_component_id"] for row in rows}),
+        "by_label": labels,
+        "by_source": sources,
+        "output_file": str(output_file),
+        "p3_min_rows": target_min,
+        "p3_row_gate": len(rows) >= target_min,
+        "label_provenance": "external_public_official_gold",
+        "formal_gate_status": "DATA_READY" if len(rows) >= target_min else "NO_GO",
+    }
+    write_common_artifacts(output_dir, rows, config, result)
     return result
 
 
