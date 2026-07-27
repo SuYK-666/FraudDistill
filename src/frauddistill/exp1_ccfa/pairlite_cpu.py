@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from scipy.sparse import csr_matrix, hstack
+from sklearn.preprocessing import normalize
 from sklearn.feature_extraction import FeatureHasher
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import SGDClassifier
@@ -13,14 +14,17 @@ from sklearn.linear_model import SGDClassifier
 from frauddistill.student.relation_features import cross_qy_features, unary_text_features
 
 
-PAIRLITE_LEVELS = ("L0", "L1", "L2")
+PAIRLITE_LEVELS = ("B0", "B1", "R1", "R2", "L0", "L1", "L2")
 PAIRLITE_INPUT_MODES = ("q_only", "y_only", "q_y")
 _TOKEN_RE = re.compile(r"[a-z0-9_]+|[\u4e00-\u9fff]", re.I)
 
 
 @dataclass
 class PairLiteProfile:
-    fit_seconds: float
+    total_wall_seconds: float
+    vectorizer_fit_seconds: float
+    feature_build_seconds: float
+    classifier_fit_seconds: float
     train_rows: int
     feature_dim: int
     train_nnz: int
@@ -47,7 +51,11 @@ class PairLiteCPUDetector:
         char_features: int = 100000,
         hash_features: int = 262144,
         top_k_cross: int = 12,
+        char_weight: float = 1.0,
+        cross_weight: float = 1.0,
+        scalar_weight: float = 1.0,
     ):
+        level = _canonical_level(level)
         if level not in PAIRLITE_LEVELS:
             raise ValueError(f"unknown PairLite level: {level}")
         self.level = level
@@ -57,6 +65,9 @@ class PairLiteCPUDetector:
         self.seed = seed
         self.hash_features = hash_features
         self.top_k_cross = top_k_cross
+        self.char_weight = char_weight
+        self.cross_weight = cross_weight
+        self.scalar_weight = scalar_weight
         self.word_vectorizer = TfidfVectorizer(
             analyzer="word",
             ngram_range=(1, 2),
@@ -88,18 +99,28 @@ class PairLiteCPUDetector:
         self.profile: PairLiteProfile | None = None
 
     def fit(self, rows: list[dict], labels: list[str], mode: str = "q_y") -> "PairLiteCPUDetector":
+        total_started = time.perf_counter()
         corpus = [str(row.get("user_query", "")) for row in rows] + [str(row.get("target_model_answer", "")) for row in rows]
+        vectorizer_started = time.perf_counter()
         self.word_vectorizer.fit(corpus)
-        if self.level in {"L1", "L2"}:
+        if self.level in {"B1", "R1", "R2"}:
             self.char_vectorizer.fit(corpus)
-        started = time.perf_counter()
+        vectorizer_seconds = time.perf_counter() - vectorizer_started
+        feature_started = time.perf_counter()
         features = self.features(rows, mode)
+        feature_seconds = time.perf_counter() - feature_started
+        classifier_started = time.perf_counter()
         self.classifier.fit(features, np.asarray([label == "unsafe" for label in labels], dtype=np.int8))
+        classifier_seconds = time.perf_counter() - classifier_started
         self.profile = PairLiteProfile(
-            fit_seconds=time.perf_counter() - started,
+            total_wall_seconds=time.perf_counter() - total_started,
+            vectorizer_fit_seconds=vectorizer_seconds,
+            feature_build_seconds=feature_seconds,
+            classifier_fit_seconds=classifier_seconds,
             train_rows=len(rows),
             feature_dim=features.shape[1],
             train_nnz=int(features.nnz),
+            peak_ram_mb=_rss_mb(),
         )
         return self
 
@@ -131,23 +152,37 @@ class PairLiteCPUDetector:
         return self._unary_features(answers)
 
     def cross_qy_features(self, queries: list[str], answers: list[str]):
+        n_rows = len(queries)
+        if self.level in {"B0", "B1"}:
+            return csr_matrix((n_rows, self._cross_dim()), dtype=np.float32)
         q_word = self.word_vectorizer.transform(queries)
         y_word = self.word_vectorizer.transform(answers)
-        blocks = [abs(q_word - y_word), q_word.multiply(y_word), csr_matrix(cross_qy_features(queries, answers), dtype=np.float32)]
-        if self.level == "L2":
-            blocks.append(self.hasher.transform(self._hashed_cross_tokens(q, y) for q, y in zip(queries, answers)))
+        product = q_word.multiply(y_word)
+        scalars = csr_matrix(cross_qy_features(queries, answers), dtype=np.float32) * self.scalar_weight
+        blocks = [product * self.cross_weight, scalars]
+        if self.level == "R2":
+            blocks.append(self.hasher.transform(self._hashed_cross_tokens(q, y) for q, y in zip(queries, answers)) * self.cross_weight)
         return hstack(blocks, format="csr", dtype=np.float32)
 
     def _unary_features(self, texts: list[str]):
-        blocks = [self.word_vectorizer.transform(texts), csr_matrix(unary_text_features(texts), dtype=np.float32)]
-        if self.level in {"L1", "L2"}:
-            blocks.insert(1, self.char_vectorizer.transform(texts))
+        word = normalize(self.word_vectorizer.transform(texts), norm="l2", copy=False)
+        blocks = [word, csr_matrix(unary_text_features(texts), dtype=np.float32)]
+        if self.level in {"B1", "R1", "R2"}:
+            char = normalize(self.char_vectorizer.transform(texts), norm="l2", copy=False) * self.char_weight
+            blocks.insert(1, char)
         return hstack(blocks, format="csr", dtype=np.float32)
 
     def _hashed_cross_tokens(self, query: str, answer: str) -> list[str]:
+        if not query.strip() or not answer.strip():
+            return []
         q_tokens = _top_tokens(query, self.top_k_cross)
         y_tokens = _top_tokens(answer, self.top_k_cross)
         return [f"q={q}|y={y}" for q in q_tokens for y in y_tokens]
+
+    def _cross_dim(self) -> int:
+        return int(getattr(self.word_vectorizer, "vocabulary_", {}) and len(self.word_vectorizer.vocabulary_) or self.word_vectorizer.max_features or 0) + 10 + (
+            self.hash_features if self.level == "R2" else 0
+        )
 
 
 def _top_tokens(text: str, limit: int) -> list[str]:
@@ -155,3 +190,16 @@ def _top_tokens(text: str, limit: int) -> list[str]:
     for token in _TOKEN_RE.findall(text.lower()):
         counts[token] = counts.get(token, 0) + 1
     return [token for token, _ in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:limit]]
+
+
+def _canonical_level(level: str) -> str:
+    return {"L0": "B0", "L1": "B1", "L2": "R2"}.get(level, level)
+
+
+def _rss_mb() -> float | None:
+    try:
+        import psutil
+
+        return float(psutil.Process().memory_info().rss / (1024 * 1024))
+    except Exception:
+        return None

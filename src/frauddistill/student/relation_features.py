@@ -63,6 +63,9 @@ def unary_text_features(texts: list[str]) -> np.ndarray:
 def cross_qy_features(queries: list[str], answers: list[str]) -> np.ndarray:
     result = []
     for query, answer in zip(queries, answers):
+        if not query.strip() or not answer.strip():
+            result.append([0.0] * len(CROSS_FEATURE_NAMES))
+            continue
         q = query.lower()
         y = answer.lower()
         q_tokens = set(_tokens(q))

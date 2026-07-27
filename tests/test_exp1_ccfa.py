@@ -147,6 +147,35 @@ def test_pairlite_cross_block_changes_when_either_side_changes() -> None:
     assert (baseline - changed_y).nnz > 0
 
 
+def test_pairlite_cross_block_zero_boundary() -> None:
+    rows = [
+        {"user_query": "phishing transfer risk", "target_model_answer": "send code now"},
+        {"user_query": "benign report help", "target_model_answer": "report safely"},
+        {"user_query": "credential scam", "target_model_answer": "use this script"},
+        {"user_query": "victim prevention", "target_model_answer": "do not share otp"},
+    ]
+    model = PairLiteCPUDetector(level="R2", word_features=100, char_features=100, hash_features=64, seed=1).fit(
+        rows, ["unsafe", "safe", "unsafe", "safe"], mode="q_y"
+    )
+    empty_y = model.cross_qy_features([row["user_query"] for row in rows], [""] * len(rows))
+    empty_q = model.cross_qy_features([""] * len(rows), [row["target_model_answer"] for row in rows])
+    assert empty_y.nnz == 0
+    assert empty_q.nnz == 0
+
+
+def test_pairlite_b0_b1_have_no_cross_block() -> None:
+    rows = [
+        {"user_query": "phishing transfer risk", "target_model_answer": "send code now"},
+        {"user_query": "benign report help", "target_model_answer": "report safely"},
+        {"user_query": "credential scam", "target_model_answer": "use this script"},
+        {"user_query": "victim prevention", "target_model_answer": "do not share otp"},
+    ]
+    labels = ["unsafe", "safe", "unsafe", "safe"]
+    for level in ("B0", "B1"):
+        model = PairLiteCPUDetector(level=level, word_features=100, char_features=100, hash_features=64, seed=1).fit(rows, labels, mode="q_y")
+        assert model.cross_qy_features([row["user_query"] for row in rows], [row["target_model_answer"] for row in rows]).nnz == 0
+
+
 def test_polyguard_same_base_id_across_languages_share_component() -> None:
     rows = attach_semantic_components(
         [
