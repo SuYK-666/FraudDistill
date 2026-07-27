@@ -4,6 +4,7 @@ import csv
 from dataclasses import dataclass
 from pathlib import Path
 
+import networkx as nx
 import numpy as np
 from frauddistill.exp1_ccfa.nuisance_single_view import NuisanceScores
 
@@ -105,28 +106,33 @@ def min_cost_match(edges: list[tuple], unsafe: list[dict], safe: list[dict], tar
         return []
     unsafe_components = component_representatives(unsafe)
     safe_components = component_representatives(safe)
-    used_components: set[str] = set()
-    matched: list[tuple[int, int, float]] = []
-    for edge in sorted(edges, key=lambda item: float(item[2])):
+    graph = nx.Graph()
+    payload: dict[tuple[str, str], tuple[int, int, float]] = {}
+    large = 1_000_000.0
+    for edge in edges:
         unsafe_component_pos, safe_component_pos, cost = int(edge[0]), int(edge[1]), float(edge[2])
         if unsafe_component_pos >= len(unsafe_components) or safe_component_pos >= len(safe_components):
             continue
         unsafe_component = unsafe_components[unsafe_component_pos]
         safe_component = safe_components[safe_component_pos]
-        if unsafe_component in used_components or safe_component in used_components:
+        if unsafe_component == safe_component:
             continue
         if len(edge) >= 5:
             ui, si = int(edge[3]), int(edge[4])
         else:
             ui, si = unsafe_component_pos, safe_component_pos
-        if str(unsafe[ui].get("semantic_component_id")) in used_components or str(safe[si].get("semantic_component_id")) in used_components:
-            continue
-        used_components.add(str(unsafe[ui].get("semantic_component_id")))
-        used_components.add(str(safe[si].get("semantic_component_id")))
-        matched.append((ui, si, cost))
-        if len(matched) >= target:
-            break
-    return matched
+        key = tuple(sorted((unsafe_component, safe_component)))
+        current = payload.get(key)
+        if current is None or cost < current[2]:
+            payload[key] = (ui, si, cost)
+            graph.add_edge(unsafe_component, safe_component, weight=large - cost)
+    matched_edges = nx.algorithms.matching.max_weight_matching(graph, maxcardinality=True, weight="weight")
+    matched = []
+    for left, right in matched_edges:
+        key = tuple(sorted((str(left), str(right))))
+        if key in payload:
+            matched.append(payload[key])
+    return sorted(matched, key=lambda item: item[2])[:target]
 
 
 def materialize_matches(matches: list[tuple[int, int, float]], unsafe: list[dict], safe: list[dict]) -> list[dict]:
