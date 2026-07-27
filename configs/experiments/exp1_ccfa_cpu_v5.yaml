@@ -117,11 +117,11 @@ data_policy:
     largest_source_max: 0.50
     target_largest_source_max: 0.40
     max_source_rows_p1: 400
-    edge_top_k_per_unsafe: 80
+    edge_top_k_per_unsafe: 200
     matching_weights:
       q: 1.0
       y: 1.5
-      length: 0.20
+      length: 2.00
       refusal: 0.25
       cross_source_penalty: 0.20
       cross_language_penalty: 0.50
