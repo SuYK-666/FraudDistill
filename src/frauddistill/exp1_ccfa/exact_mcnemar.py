@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from math import comb
+from scipy.stats import binomtest
 
 
 def exact_mcnemar(y_true: list[str], pred_a: list[str], pred_b: list[str]) -> dict[str, float | int]:
@@ -16,6 +16,5 @@ def exact_mcnemar(y_true: list[str], pred_a: list[str], pred_b: list[str]) -> di
         elif b_correct and not a_correct:
             c += 1
     n = b + c
-    p_value = 1.0 if n == 0 else min(1.0, 2.0 * sum(comb(n, i) * (0.5**n) for i in range(0, min(b, c) + 1)))
+    p_value = 1.0 if n == 0 else binomtest(min(b, c), n=n, p=0.5, alternative="two-sided").pvalue
     return {"b": b, "c": c, "discordant": n, "p_value": float(p_value)}
-
