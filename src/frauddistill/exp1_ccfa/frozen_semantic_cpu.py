@@ -26,6 +26,7 @@ class FrozenSemanticCPUDetector:
         encoder_config: dict,
         cache_dir: str,
         c: float = 1.0,
+        relation_weight: float = 1.0,
         max_iter: int = 200,
         seed: int = 20260724,
     ):
@@ -34,6 +35,7 @@ class FrozenSemanticCPUDetector:
         self.level = level
         self.cache = FrozenEmbeddingCache(cache_dir, encoder_config)
         self.c = c
+        self.relation_weight = relation_weight
         self.max_iter = max_iter
         self.seed = seed
         self.classifier = LogisticRegression(C=c, max_iter=max_iter, class_weight="balanced", random_state=seed, solver="liblinear")
@@ -52,8 +54,10 @@ class FrozenSemanticCPUDetector:
     def features(self, rows: list[dict], mode: str = "q_y") -> np.ndarray:
         if mode not in SEMANTIC_INPUT_MODES:
             raise ValueError(f"unknown input mode: {mode}")
-        q = self.cache.encode([str(row.get("user_query", "")) for row in rows])
-        y = self.cache.encode([str(row.get("target_model_answer", "")) for row in rows])
+        query_prefix = str(self.cache.config.get("query_prefix", self.cache.config.get("prefix", "")))
+        passage_prefix = str(self.cache.config.get("passage_prefix", self.cache.config.get("prefix", "")))
+        q = self.cache.encode([str(row.get("user_query", "")) for row in rows], prefix=query_prefix)
+        y = self.cache.encode([str(row.get("target_model_answer", "")) for row in rows], prefix=passage_prefix)
         zeros = np.zeros_like(q)
         if mode == "q_only":
             return np.hstack([q, zeros, self._zero_relation(q)])
@@ -65,15 +69,14 @@ class FrozenSemanticCPUDetector:
         if self.level == "S0":
             return self._zero_relation(q)
         product = q * y
-        diff = q - y
+        abs_diff = np.abs(q - y)
         cosine = np.sum(q * y, axis=1, keepdims=True)
-        scalars = np.asarray([_scalar_features(row) for row in rows], dtype=np.float32)
-        return np.hstack([product, diff, cosine, scalars]).astype(np.float32)
+        return (np.hstack([abs_diff, product, cosine]) * float(getattr(self, "relation_weight", 1.0))).astype(np.float32)
 
     def _zero_relation(self, q: np.ndarray) -> np.ndarray:
         if self.level == "S0":
             return np.zeros((q.shape[0], 0), dtype=np.float32)
-        return np.zeros((q.shape[0], q.shape[1] * 2 + 4), dtype=np.float32)
+        return np.zeros((q.shape[0], q.shape[1] * 2 + 1), dtype=np.float32)
 
     def save(self, path: str) -> None:
         joblib.dump(self, path)
@@ -86,8 +89,7 @@ class FrozenSemanticCPUDetector:
 def _scalar_features(row: dict) -> list[float]:
     q = str(row.get("user_query", "")).lower()
     y = str(row.get("target_model_answer", "")).lower()
-    fraud_prompt = 1.0 if row.get("prompt_risk_domain") == "fraud_core" else 0.0
     refusal = 1.0 if any(token in y for token in ("can't", "cannot", "sorry", "not able", "illegal", "won't")) else 0.0
     action = 1.0 if any(token in y for token in ("step", "first", "then", "use", "send", "click", "password", "credential")) else 0.0
     ratio = len(y) / max(len(q), 1)
-    return [ratio, refusal * fraud_prompt, action * fraud_prompt, fraud_prompt]
+    return [ratio, refusal, action]

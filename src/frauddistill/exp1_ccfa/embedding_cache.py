@@ -13,6 +13,8 @@ def cache_fingerprint(texts: list[str], config: dict) -> str:
         "revision": config.get("revision", "main"),
         "tokenizer_revision": config.get("tokenizer_revision", config.get("revision", "main")),
         "prefix": config.get("prefix", ""),
+        "query_prefix": config.get("query_prefix", ""),
+        "passage_prefix": config.get("passage_prefix", ""),
         "max_length": int(config.get("max_length", 256)),
         "pooling": config.get("pooling", "mean"),
         "normalize": bool(config.get("normalize", True)),
@@ -30,31 +32,41 @@ class FrozenEmbeddingCache:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.config = dict(config)
 
-    def encode(self, texts: list[str]) -> np.ndarray:
-        fingerprint = cache_fingerprint(texts, self.config)
+    def encode(self, texts: list[str], prefix: str | None = None) -> np.ndarray:
+        config = dict(self.config)
+        if prefix is not None:
+            config["prefix"] = prefix
+        fingerprint = cache_fingerprint(texts, config)
         path = self.cache_dir / f"{fingerprint}.npy"
         meta_path = self.cache_dir / f"{fingerprint}.json"
         if path.exists():
             return np.load(path)
-        vectors = self._encode_uncached(texts)
+        vectors = self._encode_uncached(texts, config)
         np.save(path, vectors)
-        meta_path.write_text(json.dumps({"fingerprint": fingerprint, "config": self.config, "rows": len(texts)}, ensure_ascii=False, indent=2), encoding="utf-8")
+        meta_path.write_text(json.dumps({"fingerprint": fingerprint, "config": config, "rows": len(texts)}, ensure_ascii=False, indent=2), encoding="utf-8")
         return vectors
 
-    def _encode_uncached(self, texts: list[str]) -> np.ndarray:
+    def _encode_uncached(self, texts: list[str], config: dict) -> np.ndarray:
         import torch
         from tqdm import tqdm
         from transformers import AutoModel, AutoTokenizer
 
-        model_id = self.config["model_id"]
-        revision = self.config.get("revision", "main")
-        tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
+        model_id = config["model_id"]
+        revision = config.get("revision", "main")
+        tokenizer_revision = config.get("tokenizer_revision", revision)
+        tokenizer = AutoTokenizer.from_pretrained(model_id, revision=tokenizer_revision)
         model = AutoModel.from_pretrained(model_id, revision=revision)
         model.eval()
         model.to(torch.device("cpu"))
-        prefix = str(self.config.get("prefix", ""))
-        max_length = int(self.config.get("max_length", 256))
-        batch_size = int(self.config.get("batch_size", 128))
+        prefix = str(config.get("prefix", ""))
+        max_length = int(config.get("max_length", 256))
+        batch_size = int(config.get("batch_size", 128))
+        pooling = str(config.get("pooling", "mean"))
+        if pooling != "mean":
+            raise ValueError(f"unsupported pooling for FrozenEmbeddingCache: {pooling}")
+        dtype = str(config.get("dtype", "float32"))
+        if dtype != "float32":
+            raise ValueError(f"unsupported dtype for FrozenEmbeddingCache: {dtype}")
         vectors = []
         with torch.no_grad():
             for start in tqdm(range(0, len(texts), batch_size), desc=f"encode {model_id}", leave=False):
@@ -63,7 +75,7 @@ class FrozenEmbeddingCache:
                 output = model(**encoded)
                 mask = encoded["attention_mask"].unsqueeze(-1).expand(output.last_hidden_state.size()).float()
                 pooled = (output.last_hidden_state * mask).sum(dim=1) / torch.clamp(mask.sum(dim=1), min=1e-9)
-                if self.config.get("normalize", True):
+                if config.get("normalize", True):
                     pooled = torch.nn.functional.normalize(pooled, p=2, dim=1)
                 vectors.append(pooled.cpu().numpy().astype(np.float32))
         return np.vstack(vectors)

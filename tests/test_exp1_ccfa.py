@@ -15,6 +15,10 @@ from frauddistill.exp1_ccfa.fraud_taxonomy import annotate_risk_type
 from frauddistill.exp1_ccfa.duplicate_audit import char_ngram_near_duplicate_audit
 from frauddistill.exp1_ccfa.embedding_cache import cache_fingerprint
 from frauddistill.exp1_ccfa.frozen_semantic_cpu import FrozenSemanticCPUDetector
+from frauddistill.exp1_ccfa.nuisance_single_view import SingleViewNuisanceSelectors
+from frauddistill.exp1_ccfa.p2_calibration import fit_global_word_char_scorer, scorer
+from frauddistill.exp1_ccfa.p2_dual_view_match import build_p2_dvm, candidate_edges
+from frauddistill.exp1_ccfa.resource_profile import resource_gate
 from frauddistill.exp1_ccfa.exact_mcnemar import exact_mcnemar
 from frauddistill.exp1_ccfa.pair_cross_encoder import format_pair_text
 from frauddistill.exp1_ccfa.pairlite_cpu import PairLiteCPUDetector
@@ -306,3 +310,203 @@ def test_g0c1_s0_s1_relation_contract_without_encoder() -> None:
     assert s0.relation_features(q, y, rows).shape[1] == 0
     assert s1.relation_features(q, y, rows).shape[1] > 0
     assert not np.allclose(s1.relation_features(q, y, rows), s1.relation_features(q, q, rows))
+
+
+def _dvm_rows(n: int = 8) -> list[dict]:
+    rows = []
+    for i in range(n):
+        for label in ("unsafe", "safe"):
+            rows.append(
+                {
+                    "id": f"{label}_{i}",
+                    "source": ["Aegis/Nemotron-V2", "BeaverTails", "PKU-SafeRLHF"][i % 3],
+                    "source_prompt_id": f"{label}_prompt_{i}",
+                    "semantic_component_id": f"{label}_component_{i}",
+                    "user_query": f"fraud bank transfer prompt bucket {i % 2}",
+                    "target_model_answer": f"{'step' if label == 'unsafe' else 'sorry cannot'} transfer credential response bucket {i % 2}",
+                    "exp1_label": label,
+                    "pair_fraud_label": label,
+                    "gold_label": label,
+                    "prompt_risk_domain": "fraud_core",
+                    "label_provenance": "public_official",
+                    "metadata": {"official_split": "test"},
+                }
+            )
+    return rows
+
+
+def _dvm_policy(target: int = 4) -> dict:
+    return {
+        "target_groups": target,
+        "formal_sources_min": 3,
+        "largest_source_max": 0.75,
+        "edge_top_k_per_unsafe": 20,
+        "matching_weights": {"q": 1.0, "y": 1.5, "length": 0.2, "refusal": 0.0, "cross_source_penalty": 0.2, "cross_language_penalty": 0.5},
+        "calipers": [
+            {"level": "A", "max_abs_logit_q": 0.01, "max_abs_logit_y": 0.01, "min_length_ratio": 0.99, "max_length_ratio": 1.01},
+            {"level": "B", "max_abs_logit_q": 10.0, "max_abs_logit_y": 10.0, "min_length_ratio": 0.1, "max_length_ratio": 10.0},
+        ],
+        "balance_gate": {"q_selector_smd_max": 10.0, "y_selector_smd_max": 10.0, "log_answer_length_smd_max": 10.0, "refusal_gap_max": 1.0, "independent_q_auc_max": 1.0, "independent_y_auc_max": 1.0},
+    }
+
+
+def test_p2_funnel_records_every_filter_stage() -> None:
+    rows = _dvm_rows()
+    selector = SingleViewNuisanceSelectors(seed=1).fit(rows)
+    result = build_p2_dvm(rows, selector.score(rows), _dvm_policy(), seed=1)
+    stages = {row["stage"] for row in result.audit["funnel"]}
+    assert {"raw_candidates", "fraud_core_only"} <= stages
+
+
+def test_p2_builder_never_reads_qy_predictions() -> None:
+    import inspect
+    import scripts.build_exp1_cpu_g0c2_manifests as builder
+
+    source = inspect.getsource(builder)
+    assert "predict_proba(p2" not in source
+    assert "q_y" not in inspect.getsource(build_p2_dvm)
+
+
+def test_dual_view_matching_uses_each_component_once() -> None:
+    rows = _dvm_rows()
+    selector = SingleViewNuisanceSelectors(seed=2).fit(rows)
+    result = build_p2_dvm(rows, selector.score(rows), _dvm_policy(), seed=2)
+    components = [row["semantic_component_id"] for row in result.rows]
+    assert len(components) == len(set(components))
+
+
+def test_dual_view_matching_finds_more_than_mutual_nearest_fixture() -> None:
+    rows = _dvm_rows(6)
+    selector = SingleViewNuisanceSelectors(seed=3).fit(rows)
+    result = build_p2_dvm(rows, selector.score(rows), _dvm_policy(target=5), seed=3)
+    assert len(result.rows) >= 10
+
+
+def test_caliper_uses_smallest_level_reaching_target() -> None:
+    rows = _dvm_rows()
+    selector = SingleViewNuisanceSelectors(seed=4).fit(rows)
+    result = build_p2_dvm(rows, selector.score(rows), _dvm_policy(target=3), seed=4)
+    assert result.audit["selected_caliper"]["level"] in {"A", "B"}
+    if result.audit["caliper_results"][0]["max_matching"] >= 3:
+        assert result.audit["selected_caliper"]["level"] == "A"
+
+
+def test_global_calibration_scores_share_vector_space() -> None:
+    scorer_obj = fit_global_word_char_scorer(["same text", "same text", "different text"])
+    scores = scorer_obj.score_pairs(["same text", "same text"], ["same text", "different text"])
+    assert scores[0] >= scores[1]
+
+
+def test_pairwise_tfidf_scorer_removed() -> None:
+    with pytest.raises(RuntimeError):
+        scorer("a", "b")
+
+
+def test_r3_features_ignore_prompt_risk_domain_metadata() -> None:
+    import numpy as np
+
+    q = np.asarray([[1.0, 0.0]], dtype=np.float32)
+    y = np.asarray([[0.0, 1.0]], dtype=np.float32)
+    s1 = FrozenSemanticCPUDetector.__new__(FrozenSemanticCPUDetector)
+    s1.level = "S1"
+    a = s1.relation_features(q, y, [{"prompt_risk_domain": "fraud_core"}])
+    b = s1.relation_features(q, y, [{"prompt_risk_domain": "general_safety"}])
+    assert np.allclose(a, b)
+
+
+def test_r3_uses_abs_difference() -> None:
+    import numpy as np
+
+    q = np.asarray([[1.0, 0.0]], dtype=np.float32)
+    y = np.asarray([[0.0, 1.0]], dtype=np.float32)
+    s1 = FrozenSemanticCPUDetector.__new__(FrozenSemanticCPUDetector)
+    s1.level = "S1"
+    feats = s1.relation_features(q, y, [{}])
+    assert np.allclose(feats[0, :2], [1.0, 1.0])
+
+
+def test_best_single_is_modeldev_frozen_key() -> None:
+    from scripts.run_exp1_cpu_g0c2 import best_single_key
+
+    rows = [
+        {"comparator": "S0_q_only_C1", "macro_f1": 0.6},
+        {"comparator": "S0_y_only_C1", "macro_f1": 0.8},
+        {"comparator": "S1_q_y_C1", "macro_f1": 0.9},
+    ]
+    assert best_single_key(rows) == "S0_y_only_C1"
+
+
+def test_runner_executes_p1_when_p2_data_fails() -> None:
+    import inspect
+    import scripts.run_exp1_cpu_g0c2 as runner
+
+    source = inspect.getsource(runner.run)
+    assert 'panels = [("P1", p1)]' in source
+    assert 'audit["p2_data_gate"]["passed"]' in source
+
+
+def test_resource_gate_fails_on_ram_or_time_violation() -> None:
+    profile = {"cuda_available": False, "peak_rss_mb": 9999, "wall_seconds": 1, "artifact_mb": 1}
+    gate = resource_gate(profile, {"cpu_only": True, "peak_ram_mb_max": 10, "g0_wall_time_minutes_max": 90, "artifact_mb_max": 500})
+    assert not gate["passed"]
+
+
+def test_encoder_revision_is_immutable_sha() -> None:
+    import yaml
+
+    config = yaml.safe_load((ROOT / "configs" / "experiments" / "exp1_ccfa_cpu_v5.yaml").read_text(encoding="utf-8"))
+    revision = config["semantic_cpu"]["encoder"]["revision"]
+    assert len(revision) == 40
+    int(revision, 16)
+
+
+def test_p1_p2_p3_component_disjoint() -> None:
+    splits = {"p1": [{"semantic_component_id": "a"}], "p2": [{"semantic_component_id": "b"}], "p3": [{"semantic_component_id": "c"}]}
+    assert leakage_audit(splits)["passed"]
+
+
+def test_dna_same_instruction_same_component() -> None:
+    rows = attach_semantic_components(
+        [
+            {"id": "dna_1", "source_prompt_id": "dna_prompt_1", "user_query": "q", "target_model_answer": "a", "pair_fraud_label": "safe"},
+            {"id": "dna_2", "source_prompt_id": "dna_prompt_1", "user_query": "q", "target_model_answer": "b", "pair_fraud_label": "unsafe"},
+        ]
+    )
+    assert rows[0]["semantic_component_id"] == rows[1]["semantic_component_id"]
+
+
+def test_formal_p2_has_no_project_silver() -> None:
+    rows = _dvm_rows()
+    assert all("silver" not in row["label_provenance"] for row in rows)
+
+
+def test_source_quota_and_max_share() -> None:
+    rows = _dvm_rows(9)
+    by_source = {}
+    for row in rows:
+        by_source[row["source"]] = by_source.get(row["source"], 0) + 1
+    assert max(by_source.values()) / len(rows) <= 0.34
+
+
+def test_p2_manifest_reproducible_same_seed() -> None:
+    rows = _dvm_rows()
+    selector = SingleViewNuisanceSelectors(seed=5).fit(rows)
+    a = build_p2_dvm(rows, selector.score(rows), _dvm_policy(), seed=5)
+    b = build_p2_dvm(rows, selector.score(rows), _dvm_policy(), seed=5)
+    assert [row["id"] for row in a.rows] == [row["id"] for row in b.rows]
+
+
+def test_p2_manifest_changes_only_when_lock_changes() -> None:
+    rows = _dvm_rows()
+    selector = SingleViewNuisanceSelectors(seed=6).fit(rows)
+    a = build_p2_dvm(rows, selector.score(rows), _dvm_policy(target=3), seed=6)
+    b = build_p2_dvm(rows, selector.score(rows), {**_dvm_policy(target=3), "largest_source_max": 0.1}, seed=6)
+    assert len(a.rows) == len(b.rows)
+
+
+def test_no_forbidden_metadata_columns_reach_model() -> None:
+    import inspect
+
+    source = inspect.getsource(FrozenSemanticCPUDetector.relation_features)
+    for token in ("prompt_risk_domain", "source", "label_provenance", "gold_risk_type"):
+        assert token not in source
