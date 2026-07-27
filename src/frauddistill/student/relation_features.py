@@ -5,28 +5,101 @@ import re
 import numpy as np
 
 
-FEATURE_NAMES = ["refusal", "refusal_with_steps", "step_count", "credential_or_payment", "urgency", "safe_education", "query_answer_overlap", "template_or_script", "imperative_ratio", "query_fraud_context"]
+UNARY_FEATURE_NAMES = [
+    "length_log",
+    "token_count_log",
+    "has_refusal",
+    "has_safe_education",
+    "has_fraud_terms",
+    "has_credential_terms",
+    "has_template_terms",
+    "imperative_ratio",
+]
 
-_REFUSAL = ("cannot help", "can't help", "i can't", "无法帮助", "不能帮助", "拒绝")
-_SAFE = ("prevent", "recognize", "report", "stay safe", "防范", "识别", "举报", "反诈")
-_FRAUD = ("phishing", "impersonat", "credential", "verification code", "诈骗", "钓鱼", "冒充", "验证码", "转账", "押金")
+CROSS_FEATURE_NAMES = [
+    "token_overlap_q_share",
+    "token_overlap_y_share",
+    "length_ratio_minmax",
+    "both_have_fraud_terms",
+    "q_fraud_y_credentials",
+    "q_fraud_y_template",
+    "q_fraud_y_refusal",
+    "q_safe_y_refusal",
+    "refusal_with_prompt_overlap",
+    "step_terms_with_q_fraud",
+]
+
+_REFUSAL = ("cannot help", "can't help", "i can't", "unable to help", "do not", "will not", "refuse")
+_SAFE = ("prevent", "recognize", "report", "stay safe", "law enforcement", "victim", "avoid")
+_FRAUD = ("phishing", "impersonat", "credential", "verification code", "transfer", "payment", "account", "scam", "fraud")
+_CREDENTIAL = ("password", "credential", "verification", "bank", "payment", "transfer", "account", "otp")
+_TEMPLATE = ("template", "script", "message", "email", "sms", "pretend", "spoof")
+_IMPERATIVE = re.compile(r"\b(?:send|use|ask|tell|click|provide|pretend|write|create|call|transfer)\b", re.I)
+_STEP = re.compile(r"(?:^|\s)(?:\d+[.)]|first|then|step|next)\b", re.I)
+_TOKEN = re.compile(r"[a-z0-9_]+|[\u4e00-\u9fff]")
+
+
+def unary_text_features(texts: list[str]) -> np.ndarray:
+    rows = []
+    for text in texts:
+        lower = text.lower()
+        tokens = _tokens(lower)
+        token_count = max(1, len(tokens))
+        rows.append(
+            [
+                np.log1p(len(text)) / 10.0,
+                np.log1p(token_count) / 5.0,
+                float(_contains(lower, _REFUSAL)),
+                float(_contains(lower, _SAFE)),
+                float(_contains(lower, _FRAUD)),
+                float(_contains(lower, _CREDENTIAL)),
+                float(_contains(lower, _TEMPLATE)),
+                min(len(_IMPERATIVE.findall(lower)) / token_count, 1.0),
+            ]
+        )
+    return np.asarray(rows, dtype=np.float32)
+
+
+def cross_qy_features(queries: list[str], answers: list[str]) -> np.ndarray:
+    result = []
+    for query, answer in zip(queries, answers):
+        q = query.lower()
+        y = answer.lower()
+        q_tokens = set(_tokens(q))
+        y_tokens = set(_tokens(y))
+        overlap = q_tokens & y_tokens
+        q_len = max(1, len(query))
+        y_len = max(1, len(answer))
+        q_fraud = _contains(q, _FRAUD)
+        q_safe = _contains(q, _SAFE)
+        y_refusal = _contains(y, _REFUSAL)
+        y_credentials = _contains(y, _CREDENTIAL)
+        y_template = _contains(y, _TEMPLATE)
+        result.append(
+            [
+                len(overlap) / max(1, len(q_tokens)),
+                len(overlap) / max(1, len(y_tokens)),
+                min(q_len, y_len) / max(q_len, y_len),
+                float(q_fraud and _contains(y, _FRAUD)),
+                float(q_fraud and y_credentials),
+                float(q_fraud and y_template),
+                float(q_fraud and y_refusal),
+                float(q_safe and y_refusal),
+                float(y_refusal and len(overlap) > 0),
+                float(q_fraud and bool(_STEP.search(y))),
+            ]
+        )
+    return np.asarray(result, dtype=np.float32)
 
 
 def relation_feature_matrix(queries: list[str], answers: list[str]) -> np.ndarray:
-    result = []
-    for query, answer in zip(queries, answers):
-        q, a = query.lower(), answer.lower()
-        refusal = _contains(a, _REFUSAL)
-        steps = len(re.findall(r"(?:^|\s)(?:\d+[.)]|first|then|step|首先|然后|第[一二三四五])", a))
-        safe = _contains(a, _SAFE)
-        q_tokens, a_tokens = set(re.findall(r"[a-z0-9_\u4e00-\u9fff]+", q)), set(re.findall(r"[a-z0-9_\u4e00-\u9fff]+", a))
-        overlap = len(q_tokens & a_tokens) / max(1, len(q_tokens))
-        credentials = _contains(a, ("password", "credential", "verification", "验证码", "账号", "银行卡", "payment", "转账"))
-        urgency = _contains(a, ("urgent", "immediately", "freeze", "立即", "马上", "紧急", "冻结"))
-        template = _contains(a, ("template", "script", "模板", "话术"))
-        imperative = len(re.findall(r"\b(?:send|use|ask|tell|click|provide|pretend)\b|请|使用|发送|提供|伪装", a)) / max(1, len(re.findall(r"\w+|[\u4e00-\u9fff]", a)))
-        result.append([float(refusal), float(refusal and steps > 0), min(steps / 5, 1), float(credentials), float(urgency), float(safe), overlap, float(template), imperative, float(_contains(q, _FRAUD))])
-    return np.asarray(result, dtype=np.float32)
+    """Backward-compatible name for strictly cross-side features."""
+
+    return cross_qy_features(queries, answers)
+
+
+def _tokens(text: str) -> list[str]:
+    return _TOKEN.findall(text)
 
 
 def _contains(text: str, terms: tuple[str, ...]) -> bool:

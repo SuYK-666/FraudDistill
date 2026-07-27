@@ -5,7 +5,7 @@ from scipy.sparse import csr_matrix, hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
-from .relation_features import relation_feature_matrix
+from .relation_features import cross_qy_features, unary_text_features
 
 
 class PairTfidfDetector:
@@ -27,14 +27,30 @@ class PairTfidfDetector:
             raise ValueError(f"unknown input mode: {mode}")
         queries = [str(row.get("user_query", "")) for row in rows]
         answers = [str(row.get("target_model_answer", "")) for row in rows]
+        q = self.unary_q_features(queries)
+        y = self.unary_y_features(answers)
+        xy = self.cross_qy_features(queries, answers)
+        zero_q = csr_matrix(q.shape, dtype=q.dtype)
+        zero_y = csr_matrix(y.shape, dtype=y.dtype)
+        zero_xy = csr_matrix(xy.shape, dtype=xy.dtype)
+        if mode == "q_only":
+            return hstack([q, zero_y, zero_xy], format="csr")
+        if mode == "y_only":
+            return hstack([zero_q, y, zero_xy], format="csr")
+        return hstack([q, y, xy], format="csr")
+
+    def unary_q_features(self, queries: list[str]):
+        q = self.vectorizer.transform(queries)
+        return hstack([q, csr_matrix(unary_text_features(queries))], format="csr")
+
+    def unary_y_features(self, answers: list[str]):
+        y = self.vectorizer.transform(answers)
+        return hstack([y, csr_matrix(unary_text_features(answers))], format="csr")
+
+    def cross_qy_features(self, queries: list[str], answers: list[str]):
         q = self.vectorizer.transform(queries)
         y = self.vectorizer.transform(answers)
-        zero = csr_matrix(q.shape, dtype=q.dtype)
-        if mode == "q_only":
-            return hstack([q, zero, zero, zero, csr_matrix((len(rows), 10))], format="csr")
-        if mode == "y_only":
-            return hstack([zero, y, zero, zero, csr_matrix((len(rows), 10))], format="csr")
-        return hstack([q, y, abs(q - y), q.multiply(y), csr_matrix(relation_feature_matrix(queries, answers))], format="csr")
+        return hstack([abs(q - y), q.multiply(y), csr_matrix(cross_qy_features(queries, answers))], format="csr")
 
     def predict_proba(self, rows: list[dict], mode: str = "q_y") -> np.ndarray:
         return self.classifier.predict_proba(self.features(rows, mode))[:, 1]

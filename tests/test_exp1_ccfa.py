@@ -3,8 +3,10 @@ from __future__ import annotations
 import pytest
 from sklearn.metrics import f1_score
 
+from frauddistill.exp1_ccfa.public_gold import aegis_test_rows, polyguard_language_component_audit
 from frauddistill.exp1_ccfa.exact_mcnemar import exact_mcnemar
 from frauddistill.exp1_ccfa.pair_cross_encoder import format_pair_text
+from frauddistill.exp1_ccfa.pairlite_cpu import PairLiteCPUDetector
 from frauddistill.exp1_ccfa.paired_cluster_bootstrap import paired_cluster_bootstrap_delta
 from frauddistill.exp1_ccfa.stat_tests import holm_adjust
 from frauddistill.exp1_ccfa.semantic_components import (
@@ -96,3 +98,92 @@ def test_tfidf_mode_specific_fit_changes_feature_contract() -> None:
     detector = PairTfidfDetector()
     detector.fit(rows, labels, mode="q_only")
     assert detector.features(rows, "q_only").shape[0] == len(rows)
+
+
+def test_pairlite_q_only_does_not_read_answer() -> None:
+    rows = [
+        {"user_query": "phishing transfer risk", "target_model_answer": "send code now"},
+        {"user_query": "benign report help", "target_model_answer": "report safely"},
+        {"user_query": "credential scam", "target_model_answer": "use this script"},
+        {"user_query": "victim prevention", "target_model_answer": "do not share otp"},
+    ]
+    model = PairLiteCPUDetector(level="L2", word_features=100, char_features=100, hash_features=64, seed=1).fit(
+        rows, ["unsafe", "safe", "unsafe", "safe"], mode="q_only"
+    )
+    changed = [dict(row, target_model_answer=f"changed answer {idx}") for idx, row in enumerate(rows)]
+    diff = model.features(rows, "q_only") - model.features(changed, "q_only")
+    assert diff.nnz == 0
+
+
+def test_pairlite_y_only_does_not_read_query() -> None:
+    rows = [
+        {"user_query": "phishing transfer risk", "target_model_answer": "send code now"},
+        {"user_query": "benign report help", "target_model_answer": "report safely"},
+        {"user_query": "credential scam", "target_model_answer": "use this script"},
+        {"user_query": "victim prevention", "target_model_answer": "do not share otp"},
+    ]
+    model = PairLiteCPUDetector(level="L2", word_features=100, char_features=100, hash_features=64, seed=1).fit(
+        rows, ["unsafe", "safe", "unsafe", "safe"], mode="y_only"
+    )
+    changed = [dict(row, user_query=f"changed query {idx}") for idx, row in enumerate(rows)]
+    diff = model.features(rows, "y_only") - model.features(changed, "y_only")
+    assert diff.nnz == 0
+
+
+def test_pairlite_cross_block_changes_when_either_side_changes() -> None:
+    rows = [
+        {"user_query": "phishing transfer risk", "target_model_answer": "send code now"},
+        {"user_query": "benign report help", "target_model_answer": "report safely"},
+        {"user_query": "credential scam", "target_model_answer": "use this script"},
+        {"user_query": "victim prevention", "target_model_answer": "do not share otp"},
+    ]
+    model = PairLiteCPUDetector(level="L2", word_features=100, char_features=100, hash_features=64, seed=1).fit(
+        rows, ["unsafe", "safe", "unsafe", "safe"], mode="q_y"
+    )
+    baseline = model.cross_qy_features([row["user_query"] for row in rows], [row["target_model_answer"] for row in rows])
+    changed_q = model.cross_qy_features([f"changed query {idx}" for idx, _ in enumerate(rows)], [row["target_model_answer"] for row in rows])
+    changed_y = model.cross_qy_features([row["user_query"] for row in rows], [f"changed answer {idx}" for idx, _ in enumerate(rows)])
+    assert (baseline - changed_q).nnz > 0
+    assert (baseline - changed_y).nnz > 0
+
+
+def test_polyguard_same_base_id_across_languages_share_component() -> None:
+    rows = attach_semantic_components(
+        [
+            {
+                "id": "p3_polyguard_7_english",
+                "source_prompt_id": "polyguard_7",
+                "language": "English",
+                "user_query": "q en",
+                "target_model_answer": "a en",
+                "pair_fraud_label": "safe",
+                "metadata": {"source_base_id": "7"},
+            },
+            {
+                "id": "p3_polyguard_7_chinese",
+                "source_prompt_id": "polyguard_7",
+                "language": "Chinese",
+                "user_query": "q zh",
+                "target_model_answer": "a zh",
+                "pair_fraud_label": "safe",
+                "metadata": {"source_base_id": "7"},
+            },
+        ]
+    )
+    assert rows[0]["semantic_component_id"] == rows[1]["semantic_component_id"]
+    assert polyguard_language_component_audit(rows)["passed"]
+
+
+def test_aegis_p3_uses_official_test_split_only() -> None:
+    rows = aegis_test_rows("data/raw/aegis/test.json")
+    assert len(rows) == 1964
+    assert {row["metadata"]["official_split"] for row in rows} == {"test"}
+    assert all("train" not in row["source_prompt_id"] and "validation" not in row["source_prompt_id"] for row in rows)
+
+
+def test_frozen_panel_predict_path_does_not_fit() -> None:
+    import inspect
+    from scripts.run_exp1_ccfa import predict_frozen_panel
+
+    source = inspect.getsource(predict_frozen_panel)
+    assert ".fit(" not in source

@@ -9,6 +9,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import joblib
 import yaml
 from sklearn.metrics import f1_score
 from tqdm import tqdm
@@ -19,10 +20,12 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from frauddistill.eval.metrics import binary_metrics
+from frauddistill.exp1_ccfa.duplicate_audit import duplicate_audit
 from frauddistill.exp1_ccfa.exact_mcnemar import exact_mcnemar
 from frauddistill.exp1_ccfa.pair_cross_encoder import INPUT_MODES, XLMRPairCrossEncoder, labels_from_scores, select_threshold
+from frauddistill.exp1_ccfa.pairlite_cpu import PAIRLITE_LEVELS, PairLiteCPUDetector
 from frauddistill.exp1_ccfa.paired_cluster_bootstrap import paired_cluster_bootstrap_delta
-from frauddistill.exp1_ccfa.public_gold import build_p3_from_local_qy, polyguard_rows, write_p3_manifest
+from frauddistill.exp1_ccfa.public_gold import build_p3_from_local_qy, build_p3_v1, polyguard_rows, write_p3_manifest
 from frauddistill.exp1_ccfa.semantic_components import (
     attach_semantic_components,
     explicit_label_token_audit,
@@ -38,14 +41,17 @@ from frauddistill.utils.io import read_jsonl, write_jsonl
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Experiment 1 CCF-A q-y boundary runner")
-    parser.add_argument("command", choices=["preflight", "smoke", "e1_1_dev", "e1_1_corrected", "build_public_gold", "evaluate_panel", "guard_audit", "e1_2_pilot", "freeze_full", "full_eval"])
+    parser.add_argument("command", choices=["preflight", "smoke", "cpu_smoke", "g0_probe", "e1_1_dev", "e1_1_corrected", "build_public_gold", "evaluate_panel", "fit_from_frozen_train_splits", "predict_frozen_panel", "guard_audit", "e1_2_pilot", "freeze_full", "full_eval"])
     parser.add_argument("--config", default="configs/experiments/exp1_ccfa_v4.yaml")
     parser.add_argument("--input", default="data/processed/qy_v3/judged_pairs_v3.jsonl")
     parser.add_argument("--output_dir", default="")
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--seed", type=int, default=20260724)
     parser.add_argument("--seeds", default="")
-    parser.add_argument("--backend", choices=["xlmr", "tfidf_dev"], default="xlmr")
+    parser.add_argument("--backend", choices=["xlmr", "tfidf_dev", "pairlite_cpu"], default="xlmr")
+    parser.add_argument("--pairlite_level", choices=list(PAIRLITE_LEVELS), default="L2")
+    parser.add_argument("--model_dir", default="")
+    parser.add_argument("--panel", default="")
     parser.add_argument("--epochs", type=int, default=0)
     parser.add_argument("--batch_size", type=int, default=0)
     parser.add_argument("--lr", type=float, default=0.0)
@@ -63,16 +69,25 @@ def main() -> None:
         result = preflight(args.input, config_path, config, output_dir)
     elif args.command == "build_public_gold":
         result = build_public_gold(config_path, config, output_dir)
+    elif args.command == "fit_from_frozen_train_splits":
+        result = fit_from_frozen_train_splits(config_path, config, output_dir, args)
+    elif args.command == "predict_frozen_panel":
+        result = predict_frozen_panel(config_path, config, output_dir, args)
     elif args.command == "guard_audit":
         result = guard_audit(config_path, config, output_dir)
     elif args.command in {"e1_2_pilot", "freeze_full", "full_eval"}:
         result = gated_not_ready(args.command, config_path, config, output_dir, args)
     else:
         rows = load_rows(args.input, args.limit)
-        if args.command == "smoke":
+        if args.command in {"smoke", "cpu_smoke"}:
             rows = rows[: min(len(rows), args.limit or 60)]
             args.bootstrap_iterations = min(args.bootstrap_iterations, 200)
             seeds = [args.seed]
+            if args.command == "cpu_smoke" and args.backend == "xlmr":
+                args.backend = "pairlite_cpu"
+        elif args.command == "g0_probe":
+            seeds = parse_seeds(args.seeds, default=[20260724, 20260725, 20260726])
+            args.bootstrap_iterations = max(args.bootstrap_iterations, 1000)
         elif args.command in {"e1_1_corrected", "evaluate_panel"}:
             seeds = parse_seeds(args.seeds, default=[20260724, 20260725, 20260726])
             args.bootstrap_iterations = max(args.bootstrap_iterations, 10000)
@@ -116,6 +131,27 @@ def guard_audit(config_path: Path, config: dict, output_dir: Path) -> dict:
 
 def build_public_gold(config_path: Path, config: dict, output_dir: Path) -> dict:
     ensure_dirs(output_dir)
+    if config["experiment"]["id"] == "exp1_ccfa_cpu_v5":
+        rows, p3_audit = build_p3_v1(ROOT / "data" / "raw" / "aegis" / "test.json", polyguard_base_ids=1325)
+        output_file = output_dir / "data" / "p3_external_public_gold_v1.jsonl"
+        write_p3_manifest(output_file, rows)
+        labels = _count_by(rows, "exp1_label")
+        sources = _count_by(rows, "source")
+        result = {
+            "identity": run_identity(config_path, ""),
+            "experiment": config["experiment"]["id"],
+            "command": "build_public_gold",
+            "rows": len(rows),
+            "components": len({row["semantic_component_id"] for row in rows}),
+            "by_label": labels,
+            "by_source": sources,
+            "output_file": str(output_file),
+            "p3_audit": p3_audit,
+            "formal_gate_status": "DATA_READY" if p3_audit["passed"] else "NO_GO",
+        }
+        write_common_artifacts(output_dir, rows, config, result)
+        return result
+
     input_files = [
         ROOT / "data" / "prepared" / "full" / "evaluation_qy" / "aegis_qy.jsonl",
         ROOT / "data" / "prepared" / "full" / "evaluation_qy" / "do_not_answer_qy.jsonl",
@@ -179,6 +215,7 @@ def run_multiseed(rows: list[dict], config_path: Path, config: dict, output_dir:
         train, model_dev, threshold_dev, split_audit = split_by_component(rows, seed)
         if not split_audit["passed"]:
             raise RuntimeError(f"semantic component leakage detected for seed {seed}: {split_audit}")
+        duplicate = duplicate_audit({"train": train, "model_dev": model_dev, "threshold_dev": threshold_dev})
         predictions_by_mode: dict[str, list[dict]] = {}
         metrics_rows: list[dict] = []
         selected_configs: dict[str, dict] = {}
@@ -196,7 +233,8 @@ def run_multiseed(rows: list[dict], config_path: Path, config: dict, output_dir:
         (seed_dir / "statistics" / "mode_comparisons.json").write_text(json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8")
         (seed_dir / "training_selected_config.json").write_text(json.dumps(selected_configs, ensure_ascii=False, indent=2), encoding="utf-8")
         (seed_dir / "split_leakage_audit.json").write_text(json.dumps(split_audit, ensure_ascii=False, indent=2), encoding="utf-8")
-        seed_summaries.append({"seed": seed, "split_audit": split_audit, "development_gate": gate})
+        (seed_dir / "data" / "duplicate_audit.json").write_text(json.dumps(duplicate, ensure_ascii=False, indent=2), encoding="utf-8")
+        seed_summaries.append({"seed": seed, "split_audit": split_audit, "duplicate_audit": duplicate, "development_gate": gate})
     summary = summarize_seeds(all_metric_rows, seed_summaries)
     write_metrics(output_dir / "tables" / "metrics_by_seed.csv", all_metric_rows)
     (output_dir / "tables" / "metrics_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -224,16 +262,28 @@ def train_and_predict_mode(
     seed: int,
 ) -> tuple[list[dict], dict]:
     labels = [row["exp1_label"] for row in train]
-    lr = float(args.lr or config["model"]["lr_search"][1])
-    epochs = int(args.epochs or config["model"]["epochs_search"][0])
-    batch_size = int(args.batch_size or config["model"]["batch_size"])
     if args.backend == "tfidf_dev":
         model = PairTfidfDetector()
         model.fit(train, labels, mode=mode)
         dev_scores = model.predict_proba(model_dev, mode).tolist()
         selected = {"backend": "tfidf_dev", "mode_specific_fit": True}
         scores = model.predict_proba(threshold_dev, mode).tolist()
+    elif args.backend == "pairlite_cpu":
+        model = PairLiteCPUDetector(
+            level=args.pairlite_level,
+            alpha=float(args.lr or config.get("pairlite_cpu", {}).get("default_alpha", 3e-5)),
+            l1_ratio=float(config.get("pairlite_cpu", {}).get("default_l1_ratio", 0.05)),
+            max_iter=int(args.epochs or config.get("pairlite_cpu", {}).get("default_max_iter", 40)),
+            seed=seed,
+        )
+        model.fit(train, labels, mode=mode)
+        dev_scores = model.predict_proba(model_dev, mode).tolist()
+        selected = {"backend": "pairlite_cpu", "level": args.pairlite_level, "profile": model.profile.__dict__ if model.profile else {}}
+        scores = model.predict_proba(threshold_dev, mode).tolist()
     else:
+        lr = float(args.lr or config["model"]["lr_search"][1])
+        epochs = int(args.epochs or config["model"]["epochs_search"][0])
+        batch_size = int(args.batch_size or config["model"]["batch_size"])
         model = XLMRPairCrossEncoder(
             model_name=config["model"]["backbone"],
             max_length=int(config["model"]["max_length"]),
@@ -263,6 +313,81 @@ def train_and_predict_mode(
         }
         for row, pred, score in zip(threshold_dev, pred_labels, scores)
     ], {**selected, "threshold": threshold}
+
+
+def fit_from_frozen_train_splits(config_path: Path, config: dict, output_dir: Path, args: argparse.Namespace) -> dict:
+    rows = attach_semantic_components(load_rows(args.input, args.limit))
+    train, model_dev, threshold_dev, split_audit = split_by_component(rows, args.seed)
+    if not split_audit["passed"]:
+        raise RuntimeError(f"semantic component leakage detected: {split_audit}")
+    model_dir = Path(args.model_dir or output_dir / "models")
+    model_dir.mkdir(parents=True, exist_ok=True)
+    artifacts = []
+    for mode in tqdm(INPUT_MODES, desc="fit frozen modes"):
+        model = PairLiteCPUDetector(level=args.pairlite_level, seed=args.seed)
+        model.fit(train, [row["exp1_label"] for row in train], mode=mode)
+        dev_scores = model.predict_proba(model_dev, mode).tolist()
+        threshold = select_threshold([row["exp1_label"] for row in model_dev], dev_scores).threshold if model_dev else 0.5
+        artifact = model_dir / f"pairlite_{args.pairlite_level}_{mode}_seed{args.seed}.joblib"
+        joblib.dump({"model": model, "mode": mode, "threshold": threshold, "seed": args.seed, "config": config}, artifact, compress=3)
+        artifacts.append({"mode": mode, "artifact": str(artifact), "threshold": threshold, "profile": model.profile.__dict__ if model.profile else {}})
+    result = {
+        "identity": run_identity(config_path, args.input),
+        "experiment": config["experiment"]["id"],
+        "command": "fit_from_frozen_train_splits",
+        "backend": "pairlite_cpu",
+        "level": args.pairlite_level,
+        "split_audit": split_audit,
+        "duplicate_audit": duplicate_audit({"train": train, "model_dev": model_dev, "threshold_dev": threshold_dev}),
+        "artifacts": artifacts,
+    }
+    write_common_artifacts(output_dir, rows, config, result)
+    return result
+
+
+def predict_frozen_panel(config_path: Path, config: dict, output_dir: Path, args: argparse.Namespace) -> dict:
+    if not args.model_dir:
+        raise ValueError("--model_dir is required for predict_frozen_panel")
+    panel_path = Path(args.panel or args.input)
+    rows = attach_semantic_components(load_rows(str(panel_path), args.limit))
+    predictions_by_mode = {}
+    metric_rows = []
+    for mode in tqdm(INPUT_MODES, desc="predict frozen panel"):
+        artifact = Path(args.model_dir) / f"pairlite_{args.pairlite_level}_{mode}_seed{args.seed}.joblib"
+        payload = joblib.load(artifact)
+        model = payload["model"]
+        threshold = float(payload["threshold"])
+        scores = model.predict_proba(rows, mode).tolist()
+        preds = labels_from_scores(scores, threshold)
+        predictions = [
+            {
+                "id": row["id"],
+                "semantic_component_id": row["semantic_component_id"],
+                "gold_label": row["exp1_label"],
+                "pred_label": pred,
+                "pred_score": score,
+                "threshold": threshold,
+                "input_mode": mode,
+                "source": row.get("source"),
+            }
+            for row, pred, score in zip(rows, preds, scores)
+        ]
+        predictions_by_mode[mode] = predictions
+        write_jsonl(output_dir / "predictions" / f"{mode}.jsonl", predictions)
+        metric_rows.append({"seed": args.seed, "panel": panel_path.stem, "input_mode": mode, **metrics_for_predictions(predictions)})
+    write_metrics(output_dir / "tables" / "frozen_panel_metrics.csv", metric_rows)
+    result = {
+        "identity": run_identity(config_path, str(panel_path)),
+        "experiment": config["experiment"]["id"],
+        "command": "predict_frozen_panel",
+        "panel": str(panel_path),
+        "rows": len(rows),
+        "components": len({row["semantic_component_id"] for row in rows}),
+        "metrics": metric_rows,
+        "fit_called": False,
+    }
+    write_common_artifacts(output_dir, rows, config, result)
+    return result
 
 
 def compare_modes(predictions_by_mode: dict[str, list[dict]], iterations: int, seed: int) -> dict:
@@ -440,6 +565,14 @@ def load_rows(path: str, limit: int) -> list[dict]:
     if not rows:
         raise ValueError(f"empty input: {path}")
     return rows
+
+
+def _count_by(rows: list[dict], field: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        key = str(row.get(field))
+        counts[key] = counts.get(key, 0) + 1
+    return counts
 
 
 if __name__ == "__main__":
