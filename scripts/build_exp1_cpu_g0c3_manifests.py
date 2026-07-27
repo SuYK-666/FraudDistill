@@ -191,6 +191,15 @@ def select_p1_after_p2(rows: list[dict], seed: int, blocked: set[str], blocked_t
             keys |= text_key_set([row])
             if sum(1 for item in selected if item["exp1_label"] == label) >= target:
                 break
+        if sum(1 for item in selected if item["exp1_label"] == label) < target:
+            for row in sorted(candidates, key=lambda item: (_hash(f"{seed}:p1fill:{label}:{item['source']}:{item['id']}"))):
+                if row["semantic_component_id"] in used or text_key_hit(row, keys):
+                    continue
+                selected.append(row)
+                used.add(row["semantic_component_id"])
+                keys |= text_key_set([row])
+                if sum(1 for item in selected if item["exp1_label"] == label) >= target:
+                    break
     return sorted(selected, key=lambda item: _hash(f"{seed}:p1out:{item['id']}"))
 
 

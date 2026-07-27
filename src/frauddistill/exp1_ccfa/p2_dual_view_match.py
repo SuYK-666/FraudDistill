@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-from scipy.optimize import linear_sum_assignment
-
 from frauddistill.exp1_ccfa.nuisance_single_view import NuisanceScores
 
 
@@ -105,27 +103,30 @@ def candidate_edges(unsafe: list[dict], safe: list[dict], caliper: dict, policy:
 def min_cost_match(edges: list[tuple], unsafe: list[dict], safe: list[dict], target: int) -> list[tuple[int, int, float]]:
     if not edges:
         return []
-    unsafe_ids = sorted({int(edge[0]) for edge in edges})
-    safe_ids = sorted({int(edge[1]) for edge in edges})
-    u_pos = {idx: pos for pos, idx in enumerate(unsafe_ids)}
-    s_pos = {idx: pos for pos, idx in enumerate(safe_ids)}
-    penalty = 1e6
-    matrix = np.full((len(unsafe_ids), len(safe_ids)), penalty, dtype=np.float64)
-    payload: dict[tuple[int, int], tuple[int, int, float]] = {}
-    for edge in edges:
-        ui, si, cost = int(edge[0]), int(edge[1]), float(edge[2])
-        matrix[u_pos[ui], s_pos[si]] = min(matrix[u_pos[ui], s_pos[si]], cost)
-        if len(edge) >= 5:
-            payload[(ui, si)] = (int(edge[3]), int(edge[4]), cost)
-    rows, cols = linear_sum_assignment(matrix)
-    matched = []
-    for r, c in zip(rows, cols):
-        if matrix[r, c] >= penalty:
+    unsafe_components = component_representatives(unsafe)
+    safe_components = component_representatives(safe)
+    used_components: set[str] = set()
+    matched: list[tuple[int, int, float]] = []
+    for edge in sorted(edges, key=lambda item: float(item[2])):
+        unsafe_component_pos, safe_component_pos, cost = int(edge[0]), int(edge[1]), float(edge[2])
+        if unsafe_component_pos >= len(unsafe_components) or safe_component_pos >= len(safe_components):
             continue
-        ui = unsafe_ids[r]
-        si = safe_ids[c]
-        matched.append(payload.get((ui, si), (ui, si, float(matrix[r, c]))))
-    return sorted(matched, key=lambda item: item[2])[:target]
+        unsafe_component = unsafe_components[unsafe_component_pos]
+        safe_component = safe_components[safe_component_pos]
+        if unsafe_component in used_components or safe_component in used_components:
+            continue
+        if len(edge) >= 5:
+            ui, si = int(edge[3]), int(edge[4])
+        else:
+            ui, si = unsafe_component_pos, safe_component_pos
+        if str(unsafe[ui].get("semantic_component_id")) in used_components or str(safe[si].get("semantic_component_id")) in used_components:
+            continue
+        used_components.add(str(unsafe[ui].get("semantic_component_id")))
+        used_components.add(str(safe[si].get("semantic_component_id")))
+        matched.append((ui, si, cost))
+        if len(matched) >= target:
+            break
+    return matched
 
 
 def materialize_matches(matches: list[tuple[int, int, float]], unsafe: list[dict], safe: list[dict]) -> list[dict]:
