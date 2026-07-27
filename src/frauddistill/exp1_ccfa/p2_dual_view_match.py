@@ -64,10 +64,12 @@ def build_p2_dvm(
 def candidate_edges(unsafe: list[dict], safe: list[dict], caliper: dict, policy: dict) -> list[tuple[int, int, float]]:
     weights = policy["matching_weights"]
     top_k = int(policy.get("edge_top_k_per_unsafe", 80))
-    edges: list[tuple[int, int, float]] = []
-    for ui, u in enumerate(unsafe):
-        local: list[tuple[int, float]] = []
-        for si, s in enumerate(safe):
+    unsafe_components = component_representatives(unsafe)
+    safe_components = component_representatives(safe)
+    best_by_component_pair: dict[tuple[str, str], tuple[int, int, float]] = {}
+    for ui_row, u in enumerate(unsafe):
+        local: list[tuple[int, dict, float]] = []
+        for si_row, s in enumerate(safe):
             if u["semantic_component_id"] == s["semantic_component_id"]:
                 continue
             dq = abs(float(u["_p2_q_logit"]) - float(s["_p2_q_logit"]))
@@ -85,25 +87,44 @@ def candidate_edges(unsafe: list[dict], safe: list[dict], caliper: dict, policy:
                 + float(weights["cross_source_penalty"]) * (str(u.get("source")) != str(s.get("source")))
                 + float(weights["cross_language_penalty"]) * (str(u.get("language", "en")) != str(s.get("language", "en")))
             )
-            local.append((si, float(cost)))
-        for si, cost in sorted(local, key=lambda item: item[1])[:top_k]:
-            edges.append((ui, si, cost))
+            local.append((si_row, s, float(cost)))
+        for si_row, s, cost in sorted(local, key=lambda item: item[2])[:top_k]:
+            key = (str(u["semantic_component_id"]), str(s["semantic_component_id"]))
+            current = best_by_component_pair.get(key)
+            if current is None or cost < current[2]:
+                best_by_component_pair[key] = (ui_row, si_row, cost)
+    unsafe_pos = {component: idx for idx, component in enumerate(unsafe_components)}
+    safe_pos = {component: idx for idx, component in enumerate(safe_components)}
+    edges: list[tuple[int, int, float]] = []
+    for (u_component, s_component), (u_row, s_row, cost) in best_by_component_pair.items():
+        if u_component in unsafe_pos and s_component in safe_pos:
+            edges.append((unsafe_pos[u_component], safe_pos[s_component], cost, u_row, s_row))  # type: ignore[arg-type]
     return edges
 
 
-def min_cost_match(edges: list[tuple[int, int, float]], unsafe: list[dict], safe: list[dict], target: int) -> list[tuple[int, int, float]]:
+def min_cost_match(edges: list[tuple], unsafe: list[dict], safe: list[dict], target: int) -> list[tuple[int, int, float]]:
     if not edges:
         return []
-    unsafe_ids = sorted({ui for ui, _, _ in edges})
-    safe_ids = sorted({si for _, si, _ in edges})
+    unsafe_ids = sorted({int(edge[0]) for edge in edges})
+    safe_ids = sorted({int(edge[1]) for edge in edges})
     u_pos = {idx: pos for pos, idx in enumerate(unsafe_ids)}
     s_pos = {idx: pos for pos, idx in enumerate(safe_ids)}
     penalty = 1e6
     matrix = np.full((len(unsafe_ids), len(safe_ids)), penalty, dtype=np.float64)
-    for ui, si, cost in edges:
+    payload: dict[tuple[int, int], tuple[int, int, float]] = {}
+    for edge in edges:
+        ui, si, cost = int(edge[0]), int(edge[1]), float(edge[2])
         matrix[u_pos[ui], s_pos[si]] = min(matrix[u_pos[ui], s_pos[si]], cost)
+        if len(edge) >= 5:
+            payload[(ui, si)] = (int(edge[3]), int(edge[4]), cost)
     rows, cols = linear_sum_assignment(matrix)
-    matched = [(unsafe_ids[r], safe_ids[c], float(matrix[r, c])) for r, c in zip(rows, cols) if matrix[r, c] < penalty]
+    matched = []
+    for r, c in zip(rows, cols):
+        if matrix[r, c] >= penalty:
+            continue
+        ui = unsafe_ids[r]
+        si = safe_ids[c]
+        matched.append(payload.get((ui, si), (ui, si, float(matrix[r, c]))))
     return sorted(matched, key=lambda item: item[2])[:target]
 
 
@@ -202,9 +223,23 @@ def same_component_pairs(rows: list[dict]) -> int:
     return sum(1 for comps in by_group.values() if len(comps) < 2)
 
 
-def edge_to_row(edge: tuple[int, int, float], unsafe: list[dict], safe: list[dict]) -> dict:
-    ui, si, cost = edge
-    return {"unsafe_id": unsafe[ui]["id"], "safe_id": safe[si]["id"], "unsafe_source": unsafe[ui].get("source"), "safe_source": safe[si].get("source"), "cost": cost}
+def edge_to_row(edge: tuple[int, int, float] | tuple[int, int, float, int, int], unsafe: list[dict], safe: list[dict]) -> dict:
+    if len(edge) == 5:
+        unsafe_component_pos, safe_component_pos, cost, ui, si = edge
+    else:
+        unsafe_component_pos, safe_component_pos, cost = edge
+        ui, si = unsafe_component_pos, safe_component_pos
+    return {
+        "unsafe_id": unsafe[ui]["id"],
+        "safe_id": safe[si]["id"],
+        "unsafe_component_id": unsafe[ui].get("semantic_component_id"),
+        "safe_component_id": safe[si].get("semantic_component_id"),
+        "unsafe_component_pos": unsafe_component_pos,
+        "safe_component_pos": safe_component_pos,
+        "unsafe_source": unsafe[ui].get("source"),
+        "safe_source": safe[si].get("source"),
+        "cost": cost,
+    }
 
 
 def exclusion_report(candidates: list[dict], selected: list[dict]) -> list[dict]:
@@ -218,11 +253,23 @@ def exclusion_report(candidates: list[dict], selected: list[dict]) -> list[dict]
 
 def _with_scores(row: dict, scores: NuisanceScores, idx: int) -> dict:
     item = dict(row)
+    item["_p2_row_index"] = idx
     item["_p2_q_prob"] = float(scores.q_prob[idx])
     item["_p2_y_prob"] = float(scores.y_prob[idx])
     item["_p2_q_logit"] = float(scores.q_logit[idx])
     item["_p2_y_logit"] = float(scores.y_logit[idx])
     return item
+
+
+def component_representatives(rows: list[dict]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for row in rows:
+        component = str(row.get("semantic_component_id"))
+        if component not in seen:
+            seen.add(component)
+            out.append(component)
+    return out
 
 
 def _component_count(rows: list[dict]) -> int:

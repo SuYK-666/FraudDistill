@@ -70,6 +70,7 @@ data_policy:
   g0c_id: G0c Data-Corrected Confirmation
   g0c1_id: G0c.1 P2 Calibration + R3 Release Candidate
   g0c2_id: G0c.2 P1 Model Unlock + P2 Dual-View Matched Challenge Panel
+  g0c3_id: G0c.3 Final Freeze Full-Scale Admission
   p1_allowed_sources:
     - BeaverTails:30k_test
     - BeaverTails:330k_test
@@ -104,8 +105,12 @@ data_policy:
     source_pair_types_min: 3
   saferlhf:
     dataset_id: PKU-Alignment/PKU-SafeRLHF
-    revision: main
+    revision: 9421ffafec3fa40a1f1a7d567b4d525079477ecb
     license: CC-BY-NC-4.0
+  dataset_revisions:
+    PKU-SafeRLHF: 9421ffafec3fa40a1f1a7d567b4d525079477ecb
+    BeaverTails: 8401fe609d288129cc684a9b3be6a93e41cfe678
+    Aegis-AI-Content-Safety-Dataset-2.0: d86bb8bedff51d25ac834ab7838f1cc61acb7a2c
   p2_dvm:
     target_groups: 300
     formal_sources_min: 3
@@ -131,13 +136,14 @@ data_policy:
       y_selector_smd_max: 0.10
       log_answer_length_smd_max: 0.10
       refusal_gap_max: 0.10
-      independent_q_auc_max: 0.68
-      independent_y_auc_max: 0.72
+      independent_q_auc_max: 0.60
+      independent_y_auc_max: 0.60
+    limited_groups_min: 200
 threshold_policy:
   unsafe_recall_min: 0.72
   fpr_max: 0.25
 semantic_cpu:
-  levels: [S0, S1]
+  levels: [S0, S1, S2]
   input_modes: [q_only, y_only, q_y]
   encoder:
     model_id: intfloat/multilingual-e5-small
@@ -151,10 +157,14 @@ semantic_cpu:
     backend: transformers
     dtype: float32
   classifier:
-    c_grid: [0.3, 1.0, 3.0, 10.0]
-    relation_weight_grid: [1.0, 2.0, 4.0]
+    c_grid: [1.0]
+    relation_weight_grid: [1.0]
     max_iter: 200
     class_weight: balanced
+  joint_pair:
+    enabled: true
+    max_length: 384
+    pair_prefix: "query: "
   modeldev_gate:
     s1_qy_macro_f1_min: 0.80
     s1_delta_best_single_min: 0.02
