@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections import defaultdict
-
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.neighbors import NearestNeighbors
 
 
 _SPACE = re.compile(r"\s+")
@@ -34,7 +33,7 @@ def duplicate_audit(splits: dict[str, list[dict]]) -> dict:
     }
 
 
-def char_ngram_near_duplicate_audit(splits: dict[str, list[dict]], threshold: float = 0.92, block_prefix: int = 8) -> dict:
+def char_ngram_near_duplicate_audit(splits: dict[str, list[dict]], threshold: float = 0.92, top_k: int = 5) -> dict:
     records: list[tuple[str, str, str]] = []
     for split_name, rows in splits.items():
         for row in rows:
@@ -46,39 +45,35 @@ def char_ngram_near_duplicate_audit(splits: dict[str, list[dict]], threshold: fl
         return {"passed": True, "hit_count": 0, "threshold": threshold, "examples": []}
     vectorizer = TfidfVectorizer(analyzer="char", ngram_range=(5, 5), min_df=1, norm="l2")
     matrix = vectorizer.fit_transform([record[2] for record in records])
-    blocks: dict[str, list[int]] = defaultdict(list)
-    for index, (_, _, text) in enumerate(records):
-        blocks[_sha1(text[:128])[:block_prefix]].append(index)
-        blocks[_sha1(text[-128:])[:block_prefix]].append(index)
+    nn = NearestNeighbors(n_neighbors=min(top_k + 1, len(records)), metric="cosine")
+    nn.fit(matrix)
+    distances, indices = nn.kneighbors(matrix)
     hits: list[dict] = []
     seen: set[tuple[int, int]] = set()
-    for indices in blocks.values():
-        unique = sorted(set(indices))
-        if len(unique) < 2:
-            continue
-        sub = matrix[unique]
-        sim = (sub @ sub.T).toarray()
-        for i_pos in range(len(unique)):
-            for j_pos in range(i_pos + 1, len(unique)):
-                i = unique[i_pos]
-                j = unique[j_pos]
-                if (i, j) in seen:
-                    continue
-                seen.add((i, j))
-                if records[i][0] == records[j][0]:
-                    continue
-                score = float(sim[i_pos, j_pos])
-                if score >= threshold:
-                    hits.append(
-                        {
-                            "type": "char_5gram_cosine",
-                            "similarity": score,
-                            "first_split": records[i][0],
-                            "first_id": records[i][1],
-                            "second_split": records[j][0],
-                            "second_id": records[j][1],
-                        }
-                    )
+    for i, row_indices in enumerate(indices):
+        for distance, j in zip(distances[i], row_indices):
+            j = int(j)
+            if i == j:
+                continue
+            first, second = sorted((i, j))
+            if (first, second) in seen:
+                continue
+            seen.add((first, second))
+            if records[first][0] == records[second][0]:
+                continue
+            score = 1.0 - float(distance)
+            if score < threshold:
+                continue
+            hits.append(
+                {
+                    "type": "char_5gram_cosine",
+                    "similarity": score,
+                    "first_split": records[first][0],
+                    "first_id": records[first][1],
+                    "second_split": records[second][0],
+                    "second_id": records[second][1],
+                }
+            )
     hits = sorted(hits, key=lambda row: -float(row["similarity"]))
     return {"passed": not hits, "hit_count": len(hits), "threshold": threshold, "examples": hits[:50]}
 

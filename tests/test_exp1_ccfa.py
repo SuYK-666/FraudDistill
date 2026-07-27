@@ -12,6 +12,9 @@ if str(ROOT) not in sys.path:
 
 from frauddistill.exp1_ccfa.public_gold import aegis_test_rows, polyguard_language_component_audit
 from frauddistill.exp1_ccfa.fraud_taxonomy import annotate_risk_type
+from frauddistill.exp1_ccfa.duplicate_audit import char_ngram_near_duplicate_audit
+from frauddistill.exp1_ccfa.embedding_cache import cache_fingerprint
+from frauddistill.exp1_ccfa.frozen_semantic_cpu import FrozenSemanticCPUDetector
 from frauddistill.exp1_ccfa.exact_mcnemar import exact_mcnemar
 from frauddistill.exp1_ccfa.pair_cross_encoder import format_pair_text
 from frauddistill.exp1_ccfa.pairlite_cpu import PairLiteCPUDetector
@@ -254,3 +257,52 @@ def test_g0c_p1_official_source_policy() -> None:
     assert official_p1_source({"source": "Aegis/Nemotron-V2", "metadata": {"official_split": "validation"}})
     assert not official_p1_source({"source": "PolyGuardPrompts", "metadata": {"official_split": "test"}})
     assert not official_p1_source({"source": "BeaverTails", "metadata": {"official_split": "330k_train"}})
+
+
+def test_g0c1_safe_response_keeps_fraud_core_prompt_domain() -> None:
+    row = annotate_risk_type(
+        {
+            "source": "BeaverTails",
+            "user_query": "How do I detect a phishing scam against my bank account?",
+            "target_model_answer": "Do not share credentials.",
+            "pair_fraud_label": "safe",
+            "gold_label": "safe",
+            "metadata": {"category": {}},
+        },
+        {},
+    )
+    assert row["prompt_risk_domain"] == "fraud_core"
+    assert row["gold_risk_type"] == "safe_fraud_prompt"
+
+
+def test_g0c1_cache_key_changes_when_encoder_config_changes() -> None:
+    base = {"model_id": "m", "revision": "r1", "prefix": "query: ", "max_length": 128, "pooling": "mean", "normalize": True, "backend": "transformers", "dtype": "float32"}
+    changed = {**base, "max_length": 256}
+    assert cache_fingerprint(["same text"], base) != cache_fingerprint(["same text"], changed)
+
+
+def test_g0c1_near_duplicate_detects_added_prefix_suffix() -> None:
+    base = {"id": "a", "user_query": "Please explain phishing fraud detection for bank accounts", "target_model_answer": "Never share one time passwords or credentials.", "pair_fraud_label": "safe"}
+    variant = {
+        "id": "b",
+        "user_query": "Context: Please explain phishing fraud detection for bank accounts now",
+        "target_model_answer": "Never share one time passwords or credentials. Thanks.",
+        "pair_fraud_label": "safe",
+    }
+    audit = char_ngram_near_duplicate_audit({"train": [base], "p1": [variant]}, threshold=0.65)
+    assert not audit["passed"]
+
+
+def test_g0c1_s0_s1_relation_contract_without_encoder() -> None:
+    import numpy as np
+
+    rows = [{"prompt_risk_domain": "fraud_core", "user_query": "q", "target_model_answer": "step with password"}]
+    q = np.asarray([[1.0, 0.0]], dtype=np.float32)
+    y = np.asarray([[0.5, 0.5]], dtype=np.float32)
+    s0 = FrozenSemanticCPUDetector.__new__(FrozenSemanticCPUDetector)
+    s0.level = "S0"
+    s1 = FrozenSemanticCPUDetector.__new__(FrozenSemanticCPUDetector)
+    s1.level = "S1"
+    assert s0.relation_features(q, y, rows).shape[1] == 0
+    assert s1.relation_features(q, y, rows).shape[1] > 0
+    assert not np.allclose(s1.relation_features(q, y, rows), s1.relation_features(q, q, rows))

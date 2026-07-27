@@ -67,6 +67,7 @@ statistics:
 data_policy:
   taxonomy_path: configs/data/FRAUD_TAXONOMY_LOCK.yaml
   g0c_id: G0c Data-Corrected Confirmation
+  g0c1_id: G0c.1 P2 Calibration + R3 Release Candidate
   p1_allowed_sources:
     - BeaverTails:30k_test
     - BeaverTails:330k_test
@@ -88,9 +89,47 @@ data_policy:
     mutual_nearest_rate_min: 0.80
     length_ratio_min: 0.67
     length_ratio_max: 1.50
+  p2_calibration:
+    controls_per_group: 100
+    mean_y_percentile_min: 0.95
+    p10_y_percentile_min: 0.80
+    mean_q_percentile_max: 0.65
+    mean_collision_gap_min: 0.30
+    p10_collision_gap_min: 0.0
+    independent_y_beats_control_min: 0.90
+    independent_y_gt_q_min: 0.85
+    largest_source_pair_max: 0.60
+    source_pair_types_min: 3
+  saferlhf:
+    dataset_id: PKU-Alignment/PKU-SafeRLHF
+    revision: main
+    license: CC-BY-NC-4.0
 threshold_policy:
   unsafe_recall_min: 0.72
   fpr_max: 0.25
+semantic_cpu:
+  levels: [S0, S1]
+  input_modes: [q_only, y_only, q_y]
+  encoder:
+    model_id: intfloat/multilingual-e5-small
+    revision: main
+    prefix: "query: "
+    max_length: 256
+    pooling: mean
+    normalize: true
+    backend: transformers
+    dtype: float32
+  classifier:
+    c_grid: [0.3, 1.0, 3.0]
+    max_iter: 200
+    class_weight: balanced
+  modeldev_gate:
+    s1_qy_macro_f1_min: 0.80
+    s1_delta_best_single_min: 0.02
+    s1_delta_s0_qy_min: 0.015
+    unsafe_recall_min: 0.72
+    fpr_max: 0.25
+    positive_seeds_min: 3
 resource_gates:
   cpu_only: true
   peak_ram_mb_max: 8192

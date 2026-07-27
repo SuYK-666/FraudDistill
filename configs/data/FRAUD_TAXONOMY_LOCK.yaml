@@ -5,9 +5,10 @@ policy: >
   samples. Broad unsafe labels remain valid for binary safety training only
   when the manifest explicitly records their risk type.
 beavertails:
-  fraud_primary_categories:
+  fraud_core_categories:
     - financial_crime,property_crime,theft
     - privacy_violation
+  fraud_adjacent_categories:
     - non_violent_unethical_behavior
     - misinformation_regarding_ethics,laws_and_safety
   general_robustness_categories:
@@ -22,8 +23,7 @@ beavertails:
     - health_consultation
     - government_decision
 aegis:
-  fraud_primary_keywords:
-    - criminal planning
+  fraud_core_keywords:
     - financial crime
     - fraud
     - scam
@@ -31,6 +31,8 @@ aegis:
     - privacy
     - impersonation
     - credential
+  fraud_adjacent_keywords:
+    - criminal planning
     - manipulation
     - deception
     - social engineering
@@ -45,6 +47,14 @@ aegis:
     - harassment
     - regulated goods
 project_silver:
-  default_risk_type: fraud_primary
+  default_prompt_risk_domain: fraud_core
+saferlhf:
+  fraud_core_categories:
+    - Economic Crime
+    - Privacy Violation
+    - Cybercrime
+    - White-Collar Crime
+  fraud_adjacent_categories:
+    - Mental Manipulation
 unknown:
-  default_risk_type: general_robustness
+  default_prompt_risk_domain: general_safety
