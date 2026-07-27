@@ -78,10 +78,12 @@ def candidate_edges(unsafe: list[dict], safe: list[dict], caliper: dict, policy:
                 continue
             if not (float(caliper["min_length_ratio"]) <= ratio <= float(caliper["max_length_ratio"])):
                 continue
+            log_len_gap = np.log(max(len(str(u.get("target_model_answer", ""))), 1)) - np.log(max(len(str(s.get("target_model_answer", ""))), 1))
             cost = (
                 float(weights["q"]) * dq
                 + float(weights["y"]) * dy
                 + float(weights["length"]) * abs(np.log(max(ratio, 1e-9)))
+                + float(weights.get("length_balance_bias", 0.0)) * log_len_gap
                 + float(weights["refusal"]) * abs(refusal_feature(u) - refusal_feature(s))
                 + float(weights["cross_source_penalty"]) * (str(u.get("source")) != str(s.get("source")))
                 + float(weights["cross_language_penalty"]) * (str(u.get("language", "en")) != str(s.get("language", "en")))
