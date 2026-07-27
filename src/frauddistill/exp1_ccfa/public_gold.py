@@ -36,7 +36,7 @@ def build_p3_from_local_qy(input_files: Iterable[str | Path], max_rows: int = 46
                 "target_model_answer": answer,
                 "pair_fraud_label": label,
                 "gold_label": label,
-                "gold_risk_type": "fraud_assistance" if label == "unsafe" else "safe",
+                "gold_risk_type": "external_public_content_safety_unsafe" if label == "unsafe" else "safe",
                 "label_provenance": "external_public_official_gold",
                 "source_prompt_id": component,
                 "metadata": {
@@ -124,7 +124,7 @@ def aegis_test_rows(path: str | Path = "data/raw/aegis/test.json") -> list[dict]
                 "target_model_answer": answer,
                 "pair_fraud_label": label,
                 "gold_label": label,
-                "gold_risk_type": "fraud_assistance" if label == "unsafe" else "safe",
+                "gold_risk_type": _aegis_risk_type(item, label),
                 "label_provenance": "external_public_official_gold",
                 "source_prompt_id": source_id,
                 "metadata": {
@@ -185,7 +185,7 @@ def polyguard_rows(base_id_count: int = 1325, seed: int = 20260726, max_rows: in
                     "target_model_answer": answer,
                     "pair_fraud_label": label,
                     "gold_label": label,
-                    "gold_risk_type": "fraud_assistance" if label == "unsafe" else "safe",
+                    "gold_risk_type": "external_public_content_safety_unsafe" if label == "unsafe" else "safe",
                     "label_provenance": "external_public_official_gold",
                     "source_prompt_id": source_id,
                     "metadata": {
@@ -233,6 +233,30 @@ def _sha1(text: str) -> str:
 
 def _polyguard_label(item: dict) -> str | None:
     return _safe_unsafe_label(item.get("response_label") or item.get("response_harm_label"))
+
+
+def _aegis_risk_type(item: dict, label: str) -> str:
+    if label == "safe":
+        return "safe"
+    haystack = str(item.get("violated_categories") or "").lower()
+    fraud_terms = (
+        "criminal planning",
+        "financial crime",
+        "fraud",
+        "scam",
+        "pii",
+        "privacy",
+        "impersonation",
+        "credential",
+        "manipulation",
+        "deception",
+        "social engineering",
+        "illegal activity",
+        "evasion",
+    )
+    if any(term in haystack for term in fraud_terms):
+        return "fraud_primary"
+    return "external_public_content_safety_unsafe"
 
 
 def _safe_unsafe_label(value: object) -> str | None:

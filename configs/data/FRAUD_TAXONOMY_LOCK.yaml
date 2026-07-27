@@ -1,0 +1,50 @@
+version: E1_CPU_v5_G0c
+locked_at: "2026-07-27"
+policy: >
+  This lock separates fraud-primary samples from broad content-safety unsafe
+  samples. Broad unsafe labels remain valid for binary safety training only
+  when the manifest explicitly records their risk type.
+beavertails:
+  fraud_primary_categories:
+    - financial_crime,property_crime,theft
+    - privacy_violation
+    - non_violent_unethical_behavior
+    - misinformation_regarding_ethics,laws_and_safety
+  general_robustness_categories:
+    - hate_speech,offensive_language
+    - discrimination,stereotype,injustice
+    - violence,aiding_and_abetting,incitement
+    - terrorism,organized_crime
+    - sexual_content
+    - self_harm
+    - animal_abuse
+    - child_abuse
+    - health_consultation
+    - government_decision
+aegis:
+  fraud_primary_keywords:
+    - criminal planning
+    - financial crime
+    - fraud
+    - scam
+    - pii
+    - privacy
+    - impersonation
+    - credential
+    - manipulation
+    - deception
+    - social engineering
+    - illegal activity
+    - evasion
+  general_robustness_keywords:
+    - hate
+    - violence
+    - sexual
+    - self-harm
+    - weapons
+    - harassment
+    - regulated goods
+project_silver:
+  default_risk_type: fraud_primary
+unknown:
+  default_risk_type: general_robustness

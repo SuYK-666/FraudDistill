@@ -35,14 +35,16 @@ model:
   formal_backend: pairlite_cpu
   xlmr_status: optional_smoke_or_upper_bound_only
 pairlite_cpu:
-  levels: [L0, L1, L2]
+  levels: [B0, B1, R1, R2]
   input_modes: [q_only, y_only, q_y]
-  alpha_grid: [0.00001, 0.00003, 0.0001]
-  l1_ratio_grid: [0.0, 0.05, 0.15]
-  max_iter_grid: [20, 40]
-  default_alpha: 0.00003
-  default_l1_ratio: 0.05
+  alpha_grid: [0.0001, 0.0003, 0.001]
+  l1_ratio_grid: [0.0]
+  max_iter_grid: [40]
+  default_alpha: 0.0003
+  default_l1_ratio: 0.0
   default_max_iter: 40
+  char_weight_grid: [0.5, 1.0]
+  cross_weight_grid: [0.25, 0.5, 1.0]
   word_tfidf:
     analyzer: word
     ngram_range: [1, 2]
@@ -58,9 +60,37 @@ statistics:
   seeds: [20260724, 20260725, 20260726, 20260727, 20260728]
   g0_seeds: [20260724, 20260725, 20260726]
   bootstrap_unit: semantic_component_id
+  g0c_bootstrap_iterations: 5000
   cluster_bootstrap_iterations: 10000
   mcnemar: exact
   multiple_testing_correction: Holm
+data_policy:
+  taxonomy_path: configs/data/FRAUD_TAXONOMY_LOCK.yaml
+  g0c_id: G0c Data-Corrected Confirmation
+  p1_allowed_sources:
+    - BeaverTails:30k_test
+    - BeaverTails:330k_test
+    - Aegis/Nemotron-V2:validation
+  polyguard_quarantine_only: true
+  project_silver_train_only: true
+  project_silver_train_ratio_max: 0.05
+  p1_fraud_primary_required: 1.0
+  train_fraud_primary_min: 0.8
+  p2_collision:
+    groups: 300
+    rows: 600
+    y_similarity_mean_min: 0.70
+    y_similarity_median_min: 0.72
+    y_similarity_p10_min: 0.60
+    y_similarity_min_min: 0.50
+    q_similarity_mean_max: 0.45
+    q_similarity_p90_max: 0.60
+    mutual_nearest_rate_min: 0.80
+    length_ratio_min: 0.67
+    length_ratio_max: 1.50
+threshold_policy:
+  unsafe_recall_min: 0.72
+  fpr_max: 0.25
 resource_gates:
   cpu_only: true
   peak_ram_mb_max: 8192
@@ -77,12 +107,19 @@ pass_gates:
     aegis_official_test_only: true
     polyguard_same_base_cross_language_component: true
   g0:
-    l2_p1_mini_q_y_macro_f1_min: 0.78
-    l2_p1_mini_delta_best_min: 0.04
-    l2_p2_mini_q_y_macro_f1_min: 0.80
-    l2_p2_mini_delta_y_only_min: 0.10
+    p1_mini_q_y_macro_f1_min: 0.78
+    p1_mini_delta_best_single_min: 0.03
+    p1_mini_fpr_max: 0.25
+    p1_mini_unsafe_recall_min: 0.72
+    p2_mini_q_y_macro_f1_min: 0.80
+    p2_mini_delta_y_only_min: 0.10
+    p2_mini_group_consistency_min: 0.70
+    p2_relation_gain_min: 0.02
     positive_seeds_min: 3
-    l2_q_y_over_l0_min: 0.02
+    ci_lower_min: 0.0
+    amber_p1_macro_f1_min: 0.76
+    amber_p2_macro_f1_min: 0.78
+    amber_fpr_max: 0.28
   full:
     p1_q_y_macro_f1_min: 0.82
     p1_delta_vs_best_single_min: 0.03

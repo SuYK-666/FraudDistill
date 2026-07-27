@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import pytest
 from sklearn.metrics import f1_score
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from frauddistill.exp1_ccfa.public_gold import aegis_test_rows, polyguard_language_component_audit
+from frauddistill.exp1_ccfa.fraud_taxonomy import annotate_risk_type
 from frauddistill.exp1_ccfa.exact_mcnemar import exact_mcnemar
 from frauddistill.exp1_ccfa.pair_cross_encoder import format_pair_text
 from frauddistill.exp1_ccfa.pairlite_cpu import PairLiteCPUDetector
@@ -18,6 +26,8 @@ from frauddistill.exp1_ccfa.semantic_components import (
 )
 from frauddistill.guards.parsing import parse_guard_label
 from frauddistill.student.pair_tfidf import PairTfidfDetector
+from scripts.build_exp1_cpu_g0c_manifests import official_p1_source
+from scripts.run_exp1_cpu_g0c import load_data_audit_or_fail
 
 
 def test_missing_label_raises() -> None:
@@ -216,3 +226,31 @@ def test_frozen_panel_predict_path_does_not_fit() -> None:
 
     source = inspect.getsource(predict_frozen_panel)
     assert ".fit(" not in source
+
+
+def test_g0c_taxonomy_does_not_conflate_all_unsafe_with_fraud() -> None:
+    taxonomy = {
+        "aegis": {"fraud_primary_keywords": ["fraud", "privacy"]},
+        "unknown": {"default_risk_type": "general_robustness"},
+    }
+    row = {
+        "source": "Aegis/Nemotron-V2",
+        "pair_fraud_label": "unsafe",
+        "gold_label": "unsafe",
+        "metadata": {"violated_categories": ["hate/harassment"]},
+    }
+    assert annotate_risk_type(row, taxonomy)["gold_risk_type"] == "general_robustness"
+
+
+def test_g0c_runner_reads_failed_data_audit_without_bypass(tmp_path) -> None:
+    audit_path = tmp_path / "g0c_data_audit.json"
+    audit_path.write_text('{"passed": false, "gate": {"D1": false}}', encoding="utf-8")
+    audit = load_data_audit_or_fail(tmp_path, allow_diagnostic=False)
+    assert audit["passed"] is False
+
+
+def test_g0c_p1_official_source_policy() -> None:
+    assert official_p1_source({"source": "BeaverTails", "metadata": {"official_split": "330k_test"}})
+    assert official_p1_source({"source": "Aegis/Nemotron-V2", "metadata": {"official_split": "validation"}})
+    assert not official_p1_source({"source": "PolyGuardPrompts", "metadata": {"official_split": "test"}})
+    assert not official_p1_source({"source": "BeaverTails", "metadata": {"official_split": "330k_train"}})
