@@ -7,7 +7,13 @@ from bisect import bisect_left
 from collections import Counter, defaultdict
 from pathlib import Path
 
+import numpy as np
+
+from frauddistill.exp1_ccfa.duplicate_audit import duplicate_audit
 from frauddistill.exp1_ccfa.fraud_taxonomy import annotate_risk_type, load_taxonomy
+from frauddistill.exp1_ccfa.nuisance_single_view import SingleViewNuisanceSelectors
+from frauddistill.exp1_ccfa.p2_dual_view_match import balance_audit as p2_balance_audit
+from frauddistill.exp1_ccfa.p2_dual_view_match import smd
 from frauddistill.exp1_ccfa.public_gold import aegis_test_rows
 from frauddistill.exp1_ccfa.saferlhf_public import saferlhf_rows
 from frauddistill.exp1_ccfa.semantic_components import attach_semantic_components, leakage_audit
@@ -39,6 +45,40 @@ def write_relation_manifests(output_dir: Path, config: dict, taxonomy_path: Path
     write_relation_funnel(output_dir / "E1_G0_RELATION_CANDIDATE_FUNNEL.csv", pools)
     (output_dir / "E1_G0_LICENSE_AND_REVISION_LOCK.json").write_text(json.dumps(license_lock(config), ensure_ascii=False, indent=2), encoding="utf-8")
     write_jsonl(output_dir / "E1_SPLIT_COMPONENT_MANIFEST.tsv", component_manifest_rows(splits))
+    return census
+
+
+def write_relation_manifests_v6r1(output_dir: Path, config: dict, taxonomy_path: Path, seed: int) -> dict:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    taxonomy = load_taxonomy(taxonomy_path)
+    sources = load_public_sources(config, taxonomy)
+    all_rows = dedupe_row_uid([row for rows in sources.values() for row in rows])
+    r1 = build_r1_pairs(sources.get("PKU-SafeRLHF", []), seed)
+    train_only = [row for row in all_rows if str(row.get("metadata", {}).get("official_split") or row.get("metadata", {}).get("g0b_use")) in {"train", "330k_train"}]
+    natural_pool = [
+        row
+        for row in all_rows
+        if row.get("prompt_risk_domain") == "fraud_core"
+        and row.get("exp1_label") in {"safe", "unsafe"}
+        and "project" not in str(row.get("label_provenance", "")).lower()
+    ]
+    r2, r2_audit = build_r2_v6r1(natural_pool, train_only or natural_pool, seed, target_groups=4600)
+    r3 = select_balanced(natural_pool, seed + 31, "R3", per_label=4500)
+    splits = build_v6r1_splits(r1, r2, r3, config, seed)
+    for name, rows in splits.items():
+        write_jsonl(output_dir / f"{name}.jsonl", rows)
+    census = v6r1_census(sources, r1, r2, r3, splits, r2_audit, config)
+    prefix = "E1_V6R1"
+    (output_dir / f"{prefix}_DATA_CENSUS.json").write_text(json.dumps(census, ensure_ascii=False, indent=2, default=json_default), encoding="utf-8")
+    write_label_provenance(output_dir / f"{prefix}_LABEL_PROVENANCE.csv", sources)
+    (output_dir / f"{prefix}_DATASET_REVISION_LOCK.json").write_text(json.dumps(dataset_revision_lock(config), ensure_ascii=False, indent=2, default=json_default), encoding="utf-8")
+    write_component_tsv(output_dir / f"{prefix}_SPLIT_COMPONENTS.tsv", splits)
+    duplicate = duplicate_audit(splits)
+    (output_dir / f"{prefix}_DUPLICATE_AUDIT.json").write_text(json.dumps(duplicate, ensure_ascii=False, indent=2, default=json_default), encoding="utf-8")
+    (output_dir / f"{prefix}_R2_BALANCE_AUDIT.json").write_text(json.dumps(r2_audit, ensure_ascii=False, indent=2, default=json_default), encoding="utf-8")
+    fingerprint = {f"{name}.jsonl": file_sha256(output_dir / f"{name}.jsonl") for name in splits}
+    (output_dir / f"{prefix}_MANIFEST_FINGERPRINT.json").write_text(json.dumps({"manifest_sha256": fingerprint}, ensure_ascii=False, indent=2, default=json_default), encoding="utf-8")
+    (output_dir / f"{prefix}_PROTOCOL_LOCK.json").write_text(json.dumps({"protocol": config["experiment"]["protocol"], "seed": seed, "manifest_sha256": fingerprint}, ensure_ascii=False, indent=2, default=json_default), encoding="utf-8")
     return census
 
 
@@ -76,11 +116,358 @@ def normalize_rows(rows: list[dict], taxonomy: dict) -> list[dict]:
         row["exp1_label"] = label
         row["gold_label"] = label
         row["pair_fraud_label"] = label
-        row["fraud_family"] = fraud_family(query, answer)
+        row["row_uid"] = row_uid(row, query, answer)
+        row["fraud_family"] = fraud_family_q_only(query, row.get("metadata", {}))
+        row["fraud_family_q_only"] = row["fraud_family"]
         row = annotate_risk_type(row, taxonomy)
         row["semantic_component_id"] = row.get("semantic_component_id") or f"component_{stable_hash(str(row.get('source_prompt_id')) or query)[:24]}"
         out.append(row)
     return attach_semantic_components(out)
+
+
+def row_uid(row: dict, query: str | None = None, answer: str | None = None) -> str:
+    q = str(query if query is not None else row.get("user_query", "")).strip()
+    y = str(answer if answer is not None else row.get("target_model_answer", "")).strip()
+    source = str(row.get("source") or row.get("metadata", {}).get("source_dataset") or "source")
+    rid = str(row.get("id") or row.get("source_prompt_id") or "")
+    return stable_hash(f"{source}\n{rid}\n{q}\n{y}")[:32]
+
+
+def dedupe_row_uid(rows: list[dict]) -> list[dict]:
+    seen = set()
+    out = []
+    for row in rows:
+        uid = str(row.get("row_uid") or row_uid(row))
+        if uid in seen:
+            continue
+        item = dict(row)
+        item["row_uid"] = uid
+        seen.add(uid)
+        out.append(item)
+    return out
+
+
+def build_r1_pairs(rows: list[dict], seed: int) -> list[dict]:
+    safer = [row for row in rows if row.get("prompt_risk_domain") == "fraud_core"]
+    by_prompt: dict[str, dict[str, list[dict]]] = defaultdict(lambda: {"safe": [], "unsafe": []})
+    for row in safer:
+        by_prompt[str(row.get("source_prompt_id") or row.get("semantic_component_id"))][row["exp1_label"]].append(row)
+    out = []
+    for prompt_id, labels in sorted(by_prompt.items(), key=lambda item: stable_hash(f"{seed}:r1:{item[0]}")):
+        if not labels["safe"] or not labels["unsafe"]:
+            continue
+        group_id = f"r1_{stable_hash(prompt_id)[:20]}"
+        safe = sorted(labels["safe"], key=lambda row: stable_hash(f"{seed}:r1:s:{row['row_uid']}"))[0]
+        unsafe = sorted(labels["unsafe"], key=lambda row: stable_hash(f"{seed}:r1:u:{row['row_uid']}"))[0]
+        out.extend([as_subset_row(safe, "R1", group_id), as_subset_row(unsafe, "R1", group_id)])
+    return out
+
+
+def build_r2_v6r1(candidates: list[dict], train_rows: list[dict], seed: int, target_groups: int) -> tuple[list[dict], dict]:
+    train_rows = sample_for_nuisance(train_rows, seed, max_rows=20000)
+    candidates = sample_r2_candidates(candidates, seed, max_per_label=70000)
+    selectors = SingleViewNuisanceSelectors(c=0.3, seed=seed).fit(train_rows)
+    scored = []
+    scores = selectors.score(candidates)
+    for idx, row in enumerate(candidates):
+        item = dict(row)
+        metadata = dict(item.get("metadata") or {})
+        metadata["p2_dvm_q_score"] = float(scores.q_prob[idx])
+        metadata["p2_dvm_y_score"] = float(scores.y_prob[idx])
+        metadata["p2_dvm_q_logit"] = float(scores.q_logit[idx])
+        metadata["p2_dvm_y_logit"] = float(scores.y_logit[idx])
+        item["metadata"] = metadata
+        scored.append(item)
+    safe = [row for row in scored if row["exp1_label"] == "safe"]
+    unsafe = [row for row in scored if row["exp1_label"] == "unsafe"]
+    safe_bins: dict[tuple[str, str, bool], list[tuple[float, dict]]] = defaultdict(list)
+    for row in safe:
+        safe_bins[(str(row.get("fraud_family_q_only")), str(row.get("language", "English")), refusal_marker(row["target_model_answer"]))].append((float(row["metadata"]["p2_dvm_y_logit"]), row))
+        safe_bins[(str(row.get("fraud_family_q_only")), "__any__", refusal_marker(row["target_model_answer"]))].append((float(row["metadata"]["p2_dvm_y_logit"]), row))
+        safe_bins[("__any__", "__any__", refusal_marker(row["target_model_answer"]))].append((float(row["metadata"]["p2_dvm_y_logit"]), row))
+    for values in safe_bins.values():
+        values.sort(key=lambda item: (item[0], str(item[1].get("row_uid"))))
+    selected = []
+    used_components: set[str] = set()
+    used_rows: set[str] = set()
+    for unsafe_row in tqdm(sorted(unsafe, key=lambda row: stable_hash(f"{seed}:r2:{row['row_uid']}")), desc="v6r1 R2 nuisance matching", leave=False):
+        if unsafe_row["semantic_component_id"] in used_components or unsafe_row["row_uid"] in used_rows:
+            continue
+        safe_row = find_r2_v6r1_safe(unsafe_row, safe_bins, used_components, used_rows)
+        if safe_row is None:
+            continue
+        group_id = f"r2_{len(selected)//2:05d}"
+        for source_row in (unsafe_row, safe_row):
+            item = as_subset_row(source_row, "R2", group_id)
+            item["context_collision_group_id"] = group_id
+            item["matched_relation_group_id"] = group_id
+            selected.append(item)
+            used_components.add(str(source_row["semantic_component_id"]))
+            used_rows.add(str(source_row["row_uid"]))
+        if len(selected) // 2 >= target_groups:
+            break
+    audit = r2_v6r1_audit(selected, target_groups)
+    audit["independent_q_probe_auc"] = selectors.auc(selected, "q") if selected else 1.0
+    audit["independent_y_probe_auc"] = selectors.auc(selected, "y") if selected else 1.0
+    audit["used_p2_dual_view_match_balance_audit"] = True
+    return selected, audit
+
+
+def sample_for_nuisance(rows: list[dict], seed: int, max_rows: int) -> list[dict]:
+    if len(rows) <= max_rows:
+        return rows
+    per_label = max_rows // 2
+    selected = []
+    for label in ("safe", "unsafe"):
+        candidates = [row for row in rows if row.get("exp1_label") == label]
+        selected.extend(sorted(candidates, key=lambda row: stable_hash(f"{seed}:nuisance:{label}:{row.get('row_uid', row.get('id'))}"))[:per_label])
+    return selected
+
+
+def sample_r2_candidates(rows: list[dict], seed: int, max_per_label: int) -> list[dict]:
+    selected = []
+    for label in ("safe", "unsafe"):
+        candidates = [row for row in rows if row.get("exp1_label") == label]
+        by_key: dict[tuple[str, str], list[dict]] = defaultdict(list)
+        for row in candidates:
+            by_key[(str(row.get("source")), str(row.get("fraud_family_q_only") or row.get("fraud_family")))].append(row)
+        quota = max(1, max_per_label // max(len(by_key), 1))
+        label_rows = []
+        for key, values in sorted(by_key.items()):
+            label_rows.extend(sorted(values, key=lambda row: stable_hash(f"{seed}:r2cand:{label}:{row.get('row_uid', row.get('id'))}"))[:quota])
+        selected.extend(label_rows[:max_per_label])
+    return selected
+
+
+def find_r2_v6r1_safe(unsafe_row: dict, safe_bins: dict[tuple[str, str, bool], list[tuple[float, dict]]], used_components: set[str], used_rows: set[str]) -> dict | None:
+    y_logit = float(unsafe_row["metadata"]["p2_dvm_y_logit"])
+    q_logit = float(unsafe_row["metadata"]["p2_dvm_q_logit"])
+    refusal = refusal_marker(unsafe_row["target_model_answer"])
+    keys = [
+        (str(unsafe_row.get("fraud_family_q_only")), str(unsafe_row.get("language", "English")), refusal),
+        (str(unsafe_row.get("fraud_family_q_only")), "__any__", refusal),
+        ("__any__", "__any__", refusal),
+    ]
+    best = None
+    best_cost = None
+    for key in keys:
+        values = safe_bins.get(key, [])
+        if not values:
+            continue
+        y_values = [value for value, _ in values]
+        pos = bisect_left(y_values, y_logit)
+        for start, stop in ((max(0, pos - 120), min(len(values), pos + 120)), (0, min(len(values), 300))):
+            for _, row in values[start:stop]:
+                if row["semantic_component_id"] in used_components or row["row_uid"] in used_rows:
+                    continue
+                if row["semantic_component_id"] == unsafe_row["semantic_component_id"]:
+                    continue
+                q_gap = abs(q_logit - float(row["metadata"]["p2_dvm_q_logit"]))
+                y_gap = abs(y_logit - float(row["metadata"]["p2_dvm_y_logit"]))
+                ratio = len(str(unsafe_row.get("target_model_answer", ""))) / max(len(str(row.get("target_model_answer", ""))), 1)
+                if q_gap > 0.15 or y_gap > 0.15 or not (0.75 <= ratio <= 1.33):
+                    continue
+                cost = q_gap + y_gap + abs(np.log(max(ratio, 1e-9))) + 0.1 * (str(unsafe_row.get("source")) != str(row.get("source")))
+                if best is None or cost < best_cost:
+                    best = row
+                    best_cost = cost
+        if best is not None:
+            return best
+    return None
+
+
+def r2_v6r1_audit(rows: list[dict], target_groups: int) -> dict:
+    policy = {
+        "target_groups": target_groups,
+        "formal_sources_min": 3,
+        "largest_source_max": 0.40,
+        "calipers": [{"level": "v6r1", "max_abs_logit_q": 0.15, "max_abs_logit_y": 0.15, "min_length_ratio": 0.75, "max_length_ratio": 1.33}],
+        "balance_gate": {"q_selector_smd_max": 0.10, "y_selector_smd_max": 0.10, "log_answer_length_smd_max": 0.10, "refusal_gap_max": 0.05},
+    }
+    base = p2_balance_audit(rows, policy["calipers"][0], [{"level": "v6r1", "edge_count": None, "max_matching": len(rows) // 2}], policy)
+    source_pairs = Counter()
+    by_group: dict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        by_group[str(row.get("relation_group_id") or row.get("context_collision_group_id"))].append(row)
+    for group_rows in by_group.values():
+        if len(group_rows) == 2:
+            source_pairs[tuple(sorted(str(row.get("source")) for row in group_rows))] += 1
+    base["source_pair_types"] = len(source_pairs)
+    base["source_pair_counts"] = {"|".join(key): value for key, value in source_pairs.items()}
+    base["checks"]["R2-v6r1-source-pair-types"] = len(source_pairs) >= 3
+    base["passed"] = all(base["checks"].values())
+    return base
+
+
+def build_v6r1_splits(r1: list[dict], r2: list[dict], r3: list[dict], config: dict, seed: int) -> dict[str, list[dict]]:
+    blocked_components: set[str] = set()
+    blocked_rows: set[str] = set()
+
+    def take(rows: list[dict], n: int, split: str, grouped: bool) -> list[dict]:
+        if grouped:
+            selected = take_relation_groups(rows, n, blocked_components, blocked_rows, seed, split)
+        else:
+            selected = take_independent_rows(rows, n, blocked_components, blocked_rows, seed, split)
+        return [dict(row, e1_split=split) for row in selected]
+
+    smoke_cfg = config["data"]["smoke"]
+    pilot_cfg = config["data"]["pilot"]
+    formal_cfg = config["data"]["formal"]
+    splits = {
+        "smoke_train": [
+            *take(r1, 400, "smoke_train", True),
+            *take(r2, 600, "smoke_train", True),
+            *take(r3, int(smoke_cfg["train_rows"]) - 1000, "smoke_train", False),
+        ],
+        "smoke_model_dev": take_mixed(r1, r2, r3, int(smoke_cfg["model_dev_rows"]), "smoke_model_dev", blocked_components, blocked_rows, seed),
+        "smoke_calibration_dev": take_mixed(r1, r2, r3, int(smoke_cfg["calibration_rows"]), "smoke_calibration_dev", blocked_components, blocked_rows, seed + 1),
+        "smoke_test": take_mixed(r1, r2, r3, int(smoke_cfg["test_rows"]), "smoke_test", blocked_components, blocked_rows, seed + 2),
+        "pilot_train": [
+            *take(r1, 1200, "pilot_train", True),
+            *take(r2, 1600, "pilot_train", True),
+            *take(r3, int(pilot_cfg["train_rows"]) - 2800, "pilot_train", False),
+        ],
+        "pilot_model_dev": take_mixed(r1, r2, r3, int(pilot_cfg["model_dev_rows"]), "pilot_model_dev", blocked_components, blocked_rows, seed + 3),
+        "pilot_calibration_dev": take_mixed(r1, r2, r3, int(pilot_cfg["calibration_rows"]), "pilot_calibration_dev", blocked_components, blocked_rows, seed + 4),
+        "pilot_test": [
+            *take(r1, int(pilot_cfg["test_rows_per_subset"]), "pilot_test", True),
+            *take(r2, int(pilot_cfg["test_rows_per_subset"]), "pilot_test", True),
+            *take(r3, int(pilot_cfg["test_rows_per_subset"]), "pilot_test", False),
+        ],
+        "formal_train": [],
+        "formal_model_dev": [],
+        "formal_calibration_dev": [],
+        "formal_test": [],
+    }
+    splits["formal_train"] = [*take(r1, 3000, "formal_train", True), *take(r2, 4000, "formal_train", True), *take(r3, max(0, int(formal_cfg["train_rows"]) - 7000), "formal_train", False)]
+    splits["formal_model_dev"] = take_mixed(r1, r2, r3, int(formal_cfg["model_dev_rows"]), "formal_model_dev", blocked_components, blocked_rows, seed + 5)
+    splits["formal_calibration_dev"] = take_mixed(r1, r2, r3, int(formal_cfg["calibration_rows"]), "formal_calibration_dev", blocked_components, blocked_rows, seed + 6)
+    splits["formal_test"] = [*take(r1, int(formal_cfg["r1_rows"]), "formal_test", True), *take(r2, int(formal_cfg["r2_rows"]), "formal_test", True), *take(r3, int(formal_cfg["r3_rows"]), "formal_test", False)]
+    return splits
+
+
+def take_relation_groups(rows: list[dict], n_rows: int, blocked_components: set[str], blocked_rows: set[str], seed: int, split: str) -> list[dict]:
+    by_group: dict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        by_group[str(row.get("relation_group_id") or row.get("context_collision_group_id"))].append(row)
+    out = []
+    for gid, group_rows in sorted(by_group.items(), key=lambda item: stable_hash(f"{seed}:{split}:{item[0]}")):
+        components = {str(row.get("semantic_component_id")) for row in group_rows}
+        uids = {str(row.get("row_uid")) for row in group_rows}
+        if components & blocked_components or uids & blocked_rows:
+            continue
+        out.extend(group_rows)
+        blocked_components.update(components)
+        blocked_rows.update(uids)
+        if len(out) >= n_rows:
+            break
+    return out[:n_rows]
+
+
+def take_independent_rows(rows: list[dict], n_rows: int, blocked_components: set[str], blocked_rows: set[str], seed: int, split: str) -> list[dict]:
+    out = []
+    for row in sorted(rows, key=lambda item: stable_hash(f"{seed}:{split}:{item.get('row_uid', item.get('id'))}")):
+        component = str(row.get("semantic_component_id"))
+        uid = str(row.get("row_uid"))
+        if component in blocked_components or uid in blocked_rows:
+            continue
+        out.append(row)
+        blocked_components.add(component)
+        blocked_rows.add(uid)
+        if len(out) >= n_rows:
+            break
+    return out
+
+
+def take_mixed(r1: list[dict], r2: list[dict], r3: list[dict], n_rows: int, split: str, blocked_components: set[str], blocked_rows: set[str], seed: int) -> list[dict]:
+    r_each = (n_rows // 3) // 2 * 2
+    selected = [
+        *take_relation_groups(r1, r_each, blocked_components, blocked_rows, seed, split),
+        *take_relation_groups(r2, r_each, blocked_components, blocked_rows, seed + 1, split),
+    ]
+    selected.extend(take_independent_rows(r3, n_rows - len(selected), blocked_components, blocked_rows, seed + 2, split))
+    return [dict(row, e1_split=split) for row in selected]
+
+
+def v6r1_census(sources: dict[str, list[dict]], r1: list[dict], r2: list[dict], r3: list[dict], splits: dict[str, list[dict]], r2_audit: dict, config: dict) -> dict:
+    leakage = leakage_audit(splits)
+    duplicate = duplicate_audit({name: rows for name, rows in splits.items() if name.endswith(("test", "dev")) or name in {"pilot_test", "formal_test"}})
+    row_dups = same_row_uid_duplicates(splits)
+    response_family_leak = 0
+    checks = {
+        "r1_groups": len({row["relation_group_id"] for row in r1}) >= int(config["gates"]["g0r"]["r1_groups_min"]),
+        "r2_groups_min": len({row["relation_group_id"] for row in r2}) >= int(config["gates"]["g0r"]["r2_groups_stop_min"]),
+        "r3_formal_rows": len(r3) >= int(config["gates"]["g0r"]["r3_formal_rows_min"]),
+        "prompt_label_fallback": all(row.get("metadata", {}).get("p3_label_source") != "prompt_label_fallback" for rows in sources.values() for row in rows),
+        "empty_q_y": all(str(row.get("user_query", "")).strip() and str(row.get("target_model_answer", "")).strip() for rows in splits.values() for row in rows),
+        "component_overlap": leakage["passed"],
+        "duplicate_audit": duplicate["passed"],
+        "same_row_uid_duplicate": row_dups == 0,
+        "response_derived_fraud_family": response_family_leak == 0,
+        "r2_balance": bool(r2_audit.get("passed")),
+    }
+    return {
+        "protocol": config["experiment"]["protocol"],
+        "source_counts": {name: label_counts(rows) for name, rows in sources.items()},
+        "r1_groups": len({row["relation_group_id"] for row in r1}),
+        "r2_groups": len({row["relation_group_id"] for row in r2}),
+        "r3_rows": len(r3),
+        "split_counts": {name: label_counts(rows) for name, rows in splits.items()},
+        "r2_balance": r2_audit,
+        "leakage": leakage,
+        "duplicate_audit": duplicate,
+        "same_row_uid_duplicates": row_dups,
+        "checks": checks,
+        "passed": all(checks.values()),
+    }
+
+
+def same_row_uid_duplicates(splits: dict[str, list[dict]]) -> int:
+    seen: dict[str, str] = {}
+    hits = 0
+    for split, rows in splits.items():
+        for row in rows:
+            uid = str(row.get("row_uid") or row_uid(row))
+            prior = seen.get(uid)
+            if prior and prior != split:
+                hits += 1
+            else:
+                seen[uid] = split
+    return hits
+
+
+def write_component_tsv(path: Path, splits: dict[str, list[dict]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write("split\tid\trow_uid\tsemantic_component_id\trelation_group_id\tsubset\tsource\n")
+        for split, rows in splits.items():
+            for row in rows:
+                handle.write(f"{split}\t{row.get('id')}\t{row.get('row_uid')}\t{row.get('semantic_component_id')}\t{row.get('relation_group_id','')}\t{row.get('e1_subset','')}\t{row.get('source','')}\n")
+
+
+def dataset_revision_lock(config: dict) -> dict:
+    return {
+        "PKU-SafeRLHF": "9421ffafec3fa40a1f1a7d567b4d525079477ecb",
+        "BeaverTails": "8401fe609d288129cc684a9b3be6a93e41cfe678",
+        "Aegis-AI-Content-Safety-Dataset-2.0": "d86bb8bedff51d25ac834ab7838f1cc61acb7a2c",
+        "protocol": config["experiment"]["protocol"],
+    }
+
+
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def json_default(value):
+    if isinstance(value, (np.bool_,)):
+        return bool(value)
+    if isinstance(value, (np.integer,)):
+        return int(value)
+    if isinstance(value, (np.floating,)):
+        return float(value)
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    raise TypeError(f"{value.__class__.__name__} is not JSON serializable")
 
 
 def build_relation_pools(sources: dict[str, list[dict]], seed: int) -> dict[str, list[dict]]:
@@ -348,6 +735,35 @@ def license_lock(config: dict) -> dict:
 
 def fraud_family(query: str, answer: str) -> str:
     text = f"{query} {answer}".lower()
+    if any(term in text for term in ("phishing", "钓鱼")):
+        return "phishing"
+    if any(term in text for term in ("impersonat", "pretend", "冒充", "伪装")):
+        return "impersonation"
+    if any(term in text for term in ("password", "credential", "otp", "验证码", "密码", "凭证")):
+        return "credential_theft"
+    if any(term in text for term in ("job", "recruit", "招聘", "兼职")):
+        return "fake_job"
+    if any(term in text for term in ("romance", "dating", "relationship", "网恋", "交友")):
+        return "romance"
+    return "financial_scam"
+
+
+def fraud_family_q_only(query: str, metadata: dict | None = None) -> str:
+    metadata = dict(metadata or {})
+    for key in ("fraud_family", "subcategory", "category_name"):
+        value = str(metadata.get(key) or "").lower()
+        if value:
+            if "phish" in value:
+                return "phishing"
+            if "imperson" in value:
+                return "impersonation"
+            if "credential" in value or "privacy" in value:
+                return "credential_theft"
+            if "job" in value or "recruit" in value:
+                return "fake_job"
+            if "romance" in value or "relationship" in value:
+                return "romance"
+    text = str(query or "").lower()
     if any(term in text for term in ("phishing", "钓鱼")):
         return "phishing"
     if any(term in text for term in ("impersonat", "pretend", "冒充", "伪装")):
