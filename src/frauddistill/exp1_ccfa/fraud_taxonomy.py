@@ -25,15 +25,18 @@ def risk_type_for_row(row: dict, taxonomy: dict[str, Any]) -> str:
 def prompt_risk_domain_for_row(row: dict, taxonomy: dict[str, Any]) -> str:
     source = str(row.get("source") or "")
     metadata = dict(row.get("metadata") or {})
-    text_domain = _prompt_text_domain(row)
-    if text_domain:
-        return text_domain
+    metadata_domain = metadata.get("prompt_risk_domain") or metadata.get("domain") or metadata.get("fraud_family")
+    if str(metadata_domain) in {"fraud_core", "fraud_adjacent", "general_safety"}:
+        return str(metadata_domain)
     if "BeaverTails" in source:
         category = metadata.get("category") or {}
         if any(bool(category.get(key)) for key in taxonomy.get("beavertails", {}).get("fraud_core_categories", [])):
             return "fraud_core"
         if any(bool(category.get(key)) for key in taxonomy.get("beavertails", {}).get("fraud_adjacent_categories", [])):
             return "fraud_adjacent"
+        text_domain = _prompt_text_domain(row)
+        if text_domain == "fraud_core":
+            return "fraud_core"
         return "general_safety"
     if "Aegis" in source:
         haystack = " ".join(str(value) for value in _flatten(metadata.get("violated_categories"))).lower()
@@ -41,6 +44,9 @@ def prompt_risk_domain_for_row(row: dict, taxonomy: dict[str, Any]) -> str:
             return "fraud_core"
         if any(keyword.lower() in haystack for keyword in taxonomy.get("aegis", {}).get("fraud_adjacent_keywords", [])):
             return "fraud_adjacent"
+        text_domain = _prompt_text_domain(row)
+        if text_domain == "fraud_core":
+            return "fraud_core"
         return "general_safety"
     if "Fraud-R1" in source:
         return "fraud_core"
@@ -50,9 +56,15 @@ def prompt_risk_domain_for_row(row: dict, taxonomy: dict[str, Any]) -> str:
             return "fraud_core"
         if any(bool(category.get(key)) for key in taxonomy.get("saferlhf", {}).get("fraud_adjacent_categories", [])):
             return "fraud_adjacent"
+        text_domain = _prompt_text_domain(row)
+        if text_domain == "fraud_core":
+            return "fraud_core"
         return "general_safety"
     if "silver" in str(row.get("label_provenance") or "").lower() or "project" in source.lower():
         return str(taxonomy.get("project_silver", {}).get("default_prompt_risk_domain", "fraud_core"))
+    text_domain = _prompt_text_domain(row)
+    if text_domain:
+        return "fraud_adjacent"
     return str(taxonomy.get("unknown", {}).get("default_prompt_risk_domain", "general_safety"))
 
 
@@ -68,16 +80,14 @@ def _prompt_text_domain(row: dict) -> str | None:
         "credit card",
         "bank account",
         "wire transfer",
-        "social security",
         "ssn",
         "impersonat",
         "identity theft",
         "steal money",
         "financial institution",
         "market manipulation",
-        "privacy",
-        "personal data",
-        "pii",
+        "fake job",
+        "romance scam",
     )
     adjacent_terms = ("deceive", "deception", "manipulat", "bypass", "evade", "illegal")
     if any(term in text for term in core_terms):
@@ -92,12 +102,32 @@ def annotate_risk_type(row: dict, taxonomy: dict[str, Any]) -> dict:
     result["response_safety_label"] = result.get("exp1_label") or result.get("pair_fraud_label") or result.get("gold_label")
     result["prompt_risk_domain"] = prompt_risk_domain_for_row(result, taxonomy)
     result["gold_risk_type"] = risk_type_for_row(result, taxonomy)
+    result["domain_mapping_reason"] = domain_mapping_reason(result, taxonomy)
     metadata = dict(result.get("metadata") or {})
     metadata["prompt_risk_domain"] = result["prompt_risk_domain"]
     metadata["response_safety_label"] = result["response_safety_label"]
     metadata["gold_risk_type"] = result["gold_risk_type"]
+    metadata["domain_mapping_reason"] = result["domain_mapping_reason"]
     result["metadata"] = metadata
     return result
+
+
+def domain_mapping_reason(row: dict, taxonomy: dict[str, Any]) -> str:
+    source = str(row.get("source") or "")
+    metadata = dict(row.get("metadata") or {})
+    if metadata.get("prompt_risk_domain") or metadata.get("domain") or metadata.get("fraud_family"):
+        return "metadata_domain"
+    if "BeaverTails" in source:
+        return "beavertails_official_category"
+    if "Aegis" in source:
+        return "aegis_violated_categories"
+    if "PKU-SafeRLHF" in source:
+        return "saferlhf_official_harm_category"
+    if "Fraud-R1" in source:
+        return "fraudr1_taxonomy_only"
+    if _prompt_text_domain(row):
+        return "text_keyword_audit_only_adjacent"
+    return "default_unknown"
 
 
 def fraud_primary_rate(rows: list[dict]) -> float:

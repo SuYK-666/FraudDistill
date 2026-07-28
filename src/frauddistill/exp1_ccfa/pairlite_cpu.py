@@ -85,6 +85,7 @@ class PairLiteCPUDetector:
             dtype=np.float32,
         )
         self.hasher = FeatureHasher(n_features=hash_features, input_type="string", alternate_sign=False, dtype=np.float32)
+        self._idf_by_token: dict[str, float] = {}
         self.classifier = SGDClassifier(
             loss="log_loss",
             penalty="elasticnet",
@@ -103,6 +104,11 @@ class PairLiteCPUDetector:
         corpus = [str(row.get("user_query", "")) for row in rows] + [str(row.get("target_model_answer", "")) for row in rows]
         vectorizer_started = time.perf_counter()
         self.word_vectorizer.fit(corpus)
+        self._idf_by_token = {
+            token: float(self.word_vectorizer.idf_[idx])
+            for token, idx in self.word_vectorizer.vocabulary_.items()
+            if " " not in token
+        }
         if self.level in {"B1", "R1", "R2"}:
             self.char_vectorizer.fit(corpus)
         vectorizer_seconds = time.perf_counter() - vectorizer_started
@@ -175,8 +181,8 @@ class PairLiteCPUDetector:
     def _hashed_cross_tokens(self, query: str, answer: str) -> list[str]:
         if not query.strip() or not answer.strip():
             return []
-        q_tokens = _top_tokens(query, self.top_k_cross)
-        y_tokens = _top_tokens(answer, self.top_k_cross)
+        q_tokens = _top_tokens(query, self.top_k_cross, self._idf_by_token)
+        y_tokens = _top_tokens(answer, self.top_k_cross, self._idf_by_token)
         return [f"q={q}|y={y}" for q in q_tokens for y in y_tokens]
 
     def _cross_dim(self) -> int:
@@ -185,11 +191,18 @@ class PairLiteCPUDetector:
         )
 
 
-def _top_tokens(text: str, limit: int) -> list[str]:
+def _top_tokens(text: str, limit: int, idf_by_token: dict[str, float] | None = None) -> list[str]:
     counts: dict[str, int] = {}
     for token in _TOKEN_RE.findall(text.lower()):
         counts[token] = counts.get(token, 0) + 1
-    return [token for token, _ in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:limit]]
+    idf_by_token = idf_by_token or {}
+    return [
+        token
+        for token, _ in sorted(
+            counts.items(),
+            key=lambda item: (-(item[1] * float(idf_by_token.get(item[0], 1.0))), item[0]),
+        )[:limit]
+    ]
 
 
 def _canonical_level(level: str) -> str:

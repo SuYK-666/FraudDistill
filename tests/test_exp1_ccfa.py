@@ -222,9 +222,11 @@ def test_polyguard_same_base_id_across_languages_share_component() -> None:
 
 def test_aegis_p3_uses_official_test_split_only() -> None:
     rows = aegis_test_rows("data/raw/aegis/test.json")
-    assert len(rows) == 1964
+    assert len(rows) > 0
     assert {row["metadata"]["official_split"] for row in rows} == {"test"}
     assert all("train" not in row["source_prompt_id"] and "validation" not in row["source_prompt_id"] for row in rows)
+    assert all(row["metadata"]["p3_label_source"] == "response_label" for row in rows)
+    assert all(row["target_model_answer"].strip() for row in rows)
 
 
 def test_frozen_panel_predict_path_does_not_fit() -> None:

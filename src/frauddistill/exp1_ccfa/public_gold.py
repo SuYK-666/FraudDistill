@@ -101,17 +101,12 @@ def aegis_test_rows(path: str | Path = "data/raw/aegis/test.json") -> list[dict]
     raw_rows = data if isinstance(data, list) else data.get("data", [])
     rows: list[dict] = []
     for item in raw_rows:
-        label_source = "response_label"
         label = _safe_unsafe_label(item.get("response_label"))
-        if label not in {"safe", "unsafe"}:
-            label_source = "prompt_label_fallback"
-            label = _safe_unsafe_label(item.get("prompt_label"))
         if label not in {"safe", "unsafe"}:
             continue
         query = str(item.get("prompt") or "").strip()
-        response_missing = item.get("response") is None or not str(item.get("response") or "").strip()
-        answer = str(item.get("response") or "").strip() or "No response is provided in the source record."
-        if not query:
+        answer = str(item.get("response") or "").strip()
+        if not query or not answer:
             continue
         row_id = str(item.get("id") or _sha1(query + answer)[:24])
         source_id = f"aegis_test_{row_id}"
@@ -134,8 +129,8 @@ def aegis_test_rows(path: str | Path = "data/raw/aegis/test.json") -> list[dict]
                     "source_row_id": row_id,
                     "prompt_label": item.get("prompt_label"),
                     "response_label": item.get("response_label"),
-                    "response_missing_in_source": response_missing,
-                    "p3_label_source": label_source,
+                    "response_missing_in_source": False,
+                    "p3_label_source": "response_label",
                     "prompt_label_source": item.get("prompt_label_source"),
                     "response_label_source": item.get("response_label_source"),
                     "violated_categories": item.get("violated_categories"),

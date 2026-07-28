@@ -1,0 +1,77 @@
+experiment:
+  id: e1_relation_gate_v6
+  protocol: E1_CPU_CCF-A_FROZEN_v6
+  task: response_level_fraud_assistance_relation_gate
+data:
+  seed: 20260728
+  required_sources:
+    - PKU-Alignment/PKU-SafeRLHF
+    - PKU-Alignment/BeaverTails
+    - nvidia/Aegis-AI-Content-Safety-Dataset-2.0
+  optional_sources:
+    - ToxicityPrompts/PolyGuardPrompts
+  r1_target_pairs: 1500
+  r1_min_pairs: 1000
+  r2_target_groups: 1500
+  r2_min_groups: 1000
+  r3_target_rows: 3000
+  r3_min_rows: 2000
+  pilot:
+    train_rows: 8000
+    model_dev_rows: 1000
+    calibration_dev_rows: 1000
+    pilot_rows_per_subset: 800
+    seeds: [20260724, 20260725, 20260726]
+  formal_seeds: [20260724, 20260725, 20260726, 20260727, 20260728]
+model:
+  pairlite:
+    word_features: 100000
+    char_features: 100000
+    hash_features: 262144
+    top_k_cross: 12
+    alpha: 0.0003
+    l1_ratio: 0.0
+    max_iter: 40
+statistics:
+  pilot_bootstrap_iterations: 1000
+  formal_bootstrap_iterations: 10000
+gates:
+  g0:
+    r1_min_pairs: 1000
+    r2_min_groups: 1000
+    r3_min_rows: 2000
+    prompt_label_fallback: 0
+    empty_response: 0
+    cross_split_component_overlap: 0
+  pilot:
+    q_only_lt_y_only: true
+    r1_q_only_auroc_min: 0.47
+    r1_q_only_auroc_max: 0.53
+    overall_q_only_auroc_max: 0.58
+    y_only_score_min: 0.70
+    y_only_score_max: 0.85
+    relation_score_min: 0.84
+    relation_delta_y_min: 0.05
+    q_shuffle_drop_min: 0.04
+    q_shuffle_y_gap_max: 0.03
+    peak_ram_mb_max: 4096
+    wall_minutes_max: 30
+  full:
+    e1_score_mean_min: 0.90
+    e1_score_median_min: 0.90
+    e1_score_worst_seed_min: 0.88
+    pooled_macro_f1_min: 0.89
+    subset_macro_f1_min: 0.85
+    y_only_min: 0.72
+    y_only_max: 0.85
+    relation_delta_mean_min: 0.07
+    relation_delta_seed_min: 0.04
+    ci_lower_min: 0.04
+    unsafe_recall_min: 0.88
+    fpr_max: 0.12
+    auprc_min: 0.90
+    ece_max: 0.05
+    brier_max: 0.12
+    q_shuffle_drop_min: 0.05
+    peak_ram_mb_max: 4096
+    wall_minutes_max: 90

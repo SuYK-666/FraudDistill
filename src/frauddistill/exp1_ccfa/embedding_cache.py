@@ -41,10 +41,34 @@ class FrozenEmbeddingCache:
         meta_path = self.cache_dir / f"{fingerprint}.json"
         if path.exists():
             return np.load(path)
-        vectors = self._encode_uncached(texts, config)
-        np.save(path, vectors)
+        vectors = self._encode_with_text_cache(texts, config)
+        np.save(path, vectors.astype(np.float16 if str(config.get("cache_dtype", config.get("dtype", "float32"))) == "float16" else np.float32))
         meta_path.write_text(json.dumps({"fingerprint": fingerprint, "config": config, "rows": len(texts)}, ensure_ascii=False, indent=2), encoding="utf-8")
-        return vectors
+        return vectors.astype(np.float32, copy=False)
+
+    def _encode_with_text_cache(self, texts: list[str], config: dict) -> np.ndarray:
+        if not texts:
+            return np.zeros((0, 0), dtype=np.float32)
+        text_dir = self.cache_dir / "texts"
+        text_dir.mkdir(parents=True, exist_ok=True)
+        keys = [text_cache_key(text, config) for text in texts]
+        cached: dict[str, np.ndarray] = {}
+        missing_texts: list[str] = []
+        missing_keys: list[str] = []
+        for text, key in zip(texts, keys):
+            item_path = text_dir / f"{key}.npy"
+            if item_path.exists():
+                cached[key] = np.load(item_path).astype(np.float32, copy=False)
+            elif key not in missing_keys:
+                missing_texts.append(text)
+                missing_keys.append(key)
+        if missing_texts:
+            vectors = self._encode_uncached(missing_texts, config)
+            for key, vector in zip(missing_keys, vectors):
+                stored = vector.astype(np.float16 if str(config.get("cache_dtype", "float16")) == "float16" else np.float32)
+                np.save(text_dir / f"{key}.npy", stored)
+                cached[key] = stored.astype(np.float32, copy=False)
+        return np.vstack([cached[key] for key in keys]).astype(np.float32, copy=False)
 
     def _encode_uncached(self, texts: list[str], config: dict) -> np.ndarray:
         import torch
@@ -83,3 +107,18 @@ class FrozenEmbeddingCache:
 
 def _sha256(text: str) -> str:
     return hashlib.sha256(str(text).encode("utf-8")).hexdigest()
+
+
+def text_cache_key(text: str, config: dict) -> str:
+    payload = {
+        "model_id": config["model_id"],
+        "revision": config.get("revision", "main"),
+        "tokenizer_revision": config.get("tokenizer_revision", config.get("revision", "main")),
+        "prefix": config.get("prefix", ""),
+        "max_length": int(config.get("max_length", 256)),
+        "pooling": config.get("pooling", "mean"),
+        "normalize": bool(config.get("normalize", True)),
+        "backend": config.get("backend", "transformers"),
+        "text_sha256": _sha256(text),
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()

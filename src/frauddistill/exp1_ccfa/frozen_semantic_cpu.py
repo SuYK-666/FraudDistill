@@ -5,11 +5,12 @@ from dataclasses import dataclass
 import joblib
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 
 from frauddistill.exp1_ccfa.embedding_cache import FrozenEmbeddingCache
 
 
-SEMANTIC_LEVELS = ("S0", "S1", "S2")
+SEMANTIC_LEVELS = ("S0", "S1", "S2", "M4")
 SEMANTIC_INPUT_MODES = ("q_only", "y_only", "q_y")
 
 
@@ -29,6 +30,7 @@ class FrozenSemanticCPUDetector:
         relation_weight: float = 1.0,
         max_iter: int = 200,
         seed: int = 20260724,
+        head: str = "logistic",
     ):
         if level not in SEMANTIC_LEVELS:
             raise ValueError(f"unknown semantic level: {level}")
@@ -38,7 +40,11 @@ class FrozenSemanticCPUDetector:
         self.relation_weight = relation_weight
         self.max_iter = max_iter
         self.seed = seed
-        self.classifier = LogisticRegression(C=c, max_iter=max_iter, class_weight="balanced", random_state=seed, solver="liblinear")
+        self.head = head
+        if head == "mlp":
+            self.classifier = MLPClassifier(hidden_layer_sizes=(128, 64), alpha=1.0 / max(c, 1e-6), max_iter=max_iter, random_state=seed, early_stopping=True)
+        else:
+            self.classifier = LogisticRegression(C=c, max_iter=max_iter, class_weight="balanced", random_state=seed, solver="liblinear")
         self.feature_rms_: np.ndarray | None = None
         self.profile: SemanticCPUProfile | None = None
 
@@ -57,15 +63,18 @@ class FrozenSemanticCPUDetector:
             raise ValueError(f"unknown input mode: {mode}")
         query_prefix = str(self.cache.config.get("query_prefix", self.cache.config.get("prefix", "")))
         passage_prefix = str(self.cache.config.get("passage_prefix", self.cache.config.get("prefix", "")))
-        q = self.cache.encode([str(row.get("user_query", "")) for row in rows], prefix=query_prefix)
-        y = self.cache.encode([str(row.get("target_model_answer", "")) for row in rows], prefix=passage_prefix)
-        zeros = np.zeros_like(q)
         if mode == "q_only":
+            q = self.cache.encode([str(row.get("user_query", "")) for row in rows], prefix=query_prefix)
+            zeros = np.zeros_like(q)
             features = np.hstack([q, zeros, self._zero_relation(q)])
             return self._scale_features(features, fit_scaler)
         if mode == "y_only":
-            features = np.hstack([zeros, y, self._zero_relation(q)])
+            y = self.cache.encode([str(row.get("target_model_answer", "")) for row in rows], prefix=passage_prefix)
+            zeros = np.zeros_like(y)
+            features = np.hstack([zeros, y, self._zero_relation(y)])
             return self._scale_features(features, fit_scaler)
+        q = self.cache.encode([str(row.get("user_query", "")) for row in rows], prefix=query_prefix)
+        y = self.cache.encode([str(row.get("target_model_answer", "")) for row in rows], prefix=passage_prefix)
         features = np.hstack([q, y, self.relation_features(q, y, rows)])
         return self._scale_features(features, fit_scaler)
 
