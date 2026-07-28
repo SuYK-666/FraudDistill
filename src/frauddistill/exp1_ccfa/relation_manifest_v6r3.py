@@ -444,7 +444,8 @@ def build_r3_balanced_v6r3(rows: list[dict], selected_rows: int, seed: int) -> t
     unsafe_only = [sid for sid, labels in by_super.items() if labels["unsafe"] and not labels["safe"]]
     dual = [sid for sid, labels in by_super.items() if labels["safe"] and labels["unsafe"]]
     k_max = min(len(safe_only) + len(dual), len(unsafe_only) + len(dual), (len(safe_only) + len(unsafe_only) + len(dual)) // 2)
-    per_label = selected_rows // 2
+    requested_per_label = selected_rows // 2
+    per_label = min(requested_per_label, k_max)
     selected = []
     used = set()
 
@@ -471,6 +472,9 @@ def build_r3_balanced_v6r3(rows: list[dict], selected_rows: int, seed: int) -> t
         "unsafe_only_supercomponents": len(unsafe_only),
         "dual_label_supercomponents": len(dual),
         "max_balanced_r3_rows": 2 * k_max,
+        "requested_rows": selected_rows,
+        "requested_per_label": requested_per_label,
+        "selected_per_label": per_label,
         "selected_rows": len(selected),
         "selected_counts": counts,
         "source_counts": dict(source_counts),
