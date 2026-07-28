@@ -25,13 +25,17 @@ def main() -> None:
     parser.add_argument("--output_dir", default="data/prepared/e1_relation_gate_v6")
     parser.add_argument("--seed", type=int, default=20260728)
     parser.add_argument("--config", default=str(CONFIG_PATH))
-    parser.add_argument("--protocol", choices=["v6", "v6r1"], default="v6")
+    parser.add_argument("--protocol", choices=["v6", "v6r1", "v6r2"], default="v6")
     args = parser.parse_args()
     config_path = Path(args.config)
     if not config_path.is_absolute():
         config_path = ROOT / config_path
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-    if args.protocol == "v6r1":
+    if args.protocol == "v6r2":
+        from frauddistill.exp1_ccfa.relation_manifest import write_relation_manifests_v6r2
+
+        census = write_relation_manifests_v6r2(ROOT / args.output_dir, config, TAXONOMY_PATH, args.seed)
+    elif args.protocol == "v6r1":
         census = write_relation_manifests_v6r1(ROOT / args.output_dir, config, TAXONOMY_PATH, args.seed)
     else:
         census = write_relation_manifests(ROOT / args.output_dir, config, TAXONOMY_PATH, args.seed)

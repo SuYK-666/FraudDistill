@@ -1,0 +1,86 @@
+experiment:
+  id: e1_relation_gate_v6r2
+  protocol: E1_CPU_CCF-A_v6r2
+  task: residual_relation_master_split_with_r2_capacity
+data:
+  seed: 20260728
+  master:
+    train_rows: 20000
+    model_dev_rows: 3000
+    calibration_rows: 3000
+    pilot_test_rows: 1800
+    formal_test_rows: 9000
+  r2:
+    selected_groups: 2250
+    formal_groups: 1200
+    pilot_groups: 300
+    q_logit_gap_max: 0.20
+    y_logit_gap_max: 0.20
+    length_ratio_min: 0.75
+    length_ratio_max: 1.33
+    candidate_max_per_label: 90000
+    nuisance_train_rows: 20000
+  smoke:
+    train_rows: 2000
+    model_dev_rows: 300
+    calibration_rows: 300
+    eval_rows: 600
+    seeds: [20260724]
+    bootstrap_iterations: 200
+  pilot:
+    train_rows: 8000
+    model_dev_rows: 1000
+    calibration_rows: 1000
+    test_rows: 1800
+    seeds: [20260724, 20260725, 20260726]
+    bootstrap_iterations: 5000
+  formal:
+    train_rows: 20000
+    model_dev_rows: 3000
+    probability_cal_rows: 1500
+    threshold_cal_rows: 1500
+    test_rows: 9000
+    seeds: [20260724, 20260725, 20260726, 20260727, 20260728]
+    bootstrap_iterations: 10000
+model:
+  pairlite:
+    word_features: 80000
+    char_features: 80000
+    hash_features: 262144
+    top_k_cross: 12
+    alpha: 0.0003
+    l1_ratio: 0.0
+    max_iter: 45
+  residual:
+    lambda_grid: [0.0, 0.25, 0.5, 0.75, 1.0]
+    correction_clip: 1.5
+    svd_components: 64
+    mlp_hidden: 64
+    mlp_alpha: 0.01
+    mlp_max_iter: 200
+gates:
+  g0r2:
+    r1_groups_min: 3800
+    r2_max_matching_min: 2250
+    r3_rows_min: 24900
+    r2_smd_max: 0.10
+    r2_refusal_gap_max: 0.05
+    r2_auroc_min: 0.47
+    r2_auroc_max: 0.55
+    largest_row_source_max: 0.70
+    largest_source_pair_max: 0.50
+    cross_source_group_min: 0.40
+    source_pair_types_min: 5
+    third_source_share_min: 0.05
+  pilot:
+    m5_mean_min: 0.87
+    m5_worst_min: 0.85
+    delta_mean_min: 0.04
+    ci_lower_min: 0.015
+    recall_min: 0.85
+    fpr_max: 0.15
+    auprc_min: 0.88
+    ece_max: 0.06
+    brier_max: 0.14
+    peak_ram_mb_max: 4096
+    wall_minutes_max: 60
