@@ -1,0 +1,77 @@
+experiment:
+  id: e1_relation_gate_v6r3
+  protocol: E1_CPU_CCF-A_v6r3
+  task: component_level_relation_gate_with_wildguard_admission
+data:
+  seed: 20260728
+  required_sources:
+    - PKU-SafeRLHF
+    - BeaverTails
+    - Aegis/Nemotron-V2
+    - WildGuardTrain
+  master:
+    train_rows: 9000
+    model_dev_rows: 1500
+    calibration_rows: 1500
+    pilot_test_rows: 1800
+    formal_test_rows: 9000
+  quotas:
+    master_train: {R1: 2400, R2: 800, R3: 5800}
+    master_model_dev: {R1: 400, R2: 200, R3: 900}
+    master_calibration: {R1: 400, R2: 200, R3: 900}
+    pilot_test: {R1: 600, R2: 600, R3: 600}
+    formal_test: {R1: 3000, R2: 2400, R3: 3600}
+    smoke_train: {R1: 600, R2: 200, R3: 1200}
+    smoke_model_dev: {R1: 100, R2: 40, R3: 160}
+    smoke_probability_cal: {R1: 50, R2: 20, R3: 80}
+    smoke_threshold_cal: {R1: 50, R2: 20, R3: 80}
+    smoke_eval: {R1: 200, R2: 200, R3: 200}
+    pilot_train: {R1: 2000, R2: 700, R3: 5300}
+    pilot_model_dev: {R1: 300, R2: 100, R3: 600}
+    pilot_probability_cal: {R1: 150, R2: 50, R3: 300}
+    pilot_threshold_cal: {R1: 150, R2: 50, R3: 300}
+    formal_probability_cal: {R1: 200, R2: 100, R3: 450}
+    formal_threshold_cal: {R1: 200, R2: 100, R3: 450}
+  r2:
+    selected_groups: 2250
+    q_logit_gap_max: 0.20
+    y_logit_gap_max: 0.20
+    length_ratio_min: 0.75
+    length_ratio_max: 1.33
+    candidate_max_per_label: 90000
+    nuisance_train_rows: 20000
+  r3:
+    selected_rows: 11800
+model:
+  smoke:
+    seeds: [20260724]
+    bootstrap_iterations: 200
+  pilot:
+    seeds: [20260724, 20260725, 20260726]
+    bootstrap_iterations: 5000
+  formal:
+    seeds: [20260724, 20260725, 20260726, 20260727, 20260728]
+    bootstrap_iterations: 10000
+gates:
+  g0r3:
+    require_clean_git: true
+    required_source_failures_max: 0
+    prompt_label_fallback_max: 0
+    project_manual_test_labels_max: 0
+    r1_groups_min: 3800
+    r2_true_max_matching_min: 2250
+    r2_selected_groups: 2250
+    r3_balanced_capacity_min: 12000
+    r3_selected_rows: 11800
+    r2_smd_max: 0.10
+    r2_refusal_gap_max: 0.05
+    r2_auroc_min: 0.47
+    r2_auroc_max: 0.55
+    largest_row_source_max: 0.70
+    largest_source_pair_max: 0.50
+    cross_source_group_min: 0.40
+    source_pair_types_min: 5
+    third_source_share_min: 0.05
+    r3_largest_source_max: 0.70
+    r3_source_count_min: 3
+    r3_fraud_families_min: 4
