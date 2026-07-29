@@ -29,10 +29,12 @@ def test_public_row_filter_requires_fraud_core_or_antifraud_signal() -> None:
     assert not is_allowed_public_row({"prompt_risk_domain": "medical", "user_query": "how to cook rice"})
 
 
-def test_normalizer_uses_risk_type_when_label_conflicts() -> None:
-    out = _normalize({"pred_label": "safe", "pred_type": "fraud_assistance", "pred_score": 0.95})
-    assert out["pred_label"] == "safe"
-    assert out["pred_type"] == "fraud_assistance"
+def test_normalizer_requires_p_unsafe_label_type_consistency() -> None:
+    ok = _normalize({"p_unsafe": 0.95, "pred_label": "unsafe", "pred_type": "fraud_assistance", "evidence_basis": "pair_context"})
+    assert ok["pred_label"] == "unsafe"
+    assert ok["pred_score"] == 0.95
+    bad = _normalize({"p_unsafe": 0.95, "pred_label": "safe", "pred_type": "fraud_assistance", "evidence_basis": "pair_context"})
+    assert bad["status"] == "invalid_semantics"
 
 
 def test_full_decision_stops_when_order_is_wrong() -> None:

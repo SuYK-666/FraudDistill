@@ -1,23 +1,29 @@
 experiment:
   id: e1_restored_v1plus_final
-  protocol: E1-API-Empirical-Restore-v1
-  implementation_revision: 2
+  protocol: E1-API-PromptParity-R2
+  implementation_revision: 3
 api:
   preflight:
     provider: qwen
-    judge_model: qwen-max
+    judge_model: qwen3.7-max-2026-06-08
     sample_rows: 40
-    concurrency: 8
-    success_min: 0.995
+    concurrency: 80
+    success_min: 1.0
+    temperature: 0.0
+    max_tokens: 256
+    enable_thinking: false
   anchor:
     provider: qwen
-    judge_model: qwen-max
+    judge_model: qwen3.7-max-2026-06-08
     sample_rows: 480
-    concurrency: 8
-    success_min: 0.995
+    concurrency: 80
+    success_min: 1.0
+    temperature: 0.0
+    max_tokens: 256
+    enable_thinking: false
   provider_locks:
     qwen_target_model: qwen-plus
-    qwen_judge_model: qwen-max
+    qwen_judge_model: qwen3.7-max-2026-06-08
     deepseek_target_model: deepseek-v4-flash
     deepseek_judge_model: deepseek-v4-pro
 data:
@@ -62,9 +68,14 @@ gates:
     q_only_max: 0.68
     y_only_min: 0.80
     q_y_min: 0.88
-    q_y_minus_y_min: 0.025
+    q_y_minus_y_min: 0.030
     y_minus_q_min: 0.15
-    hard_safe_fpr_max: 0.12
+    q_y_minus_y_ci_lower_min: 0.010
+    q_y_recall_min: 0.780
+    q_y_precision_min: 0.950
+    q_y_fpr_max: 0.050
+    q_y_auprc_min: 0.800
+    hard_safe_fpr_max: 0.050
   full:
     q_y_macro_f1_min: 0.880
     y_only_macro_f1_min: 0.780

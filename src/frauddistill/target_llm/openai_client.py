@@ -15,13 +15,25 @@ class OpenAIJsonClient:
         self.model = model
         self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
 
-    def complete_json_envelope(self, prompt: str, *, max_tokens: int = 768) -> dict[str, Any]:
+    def complete_json_envelope(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 768,
+        temperature: float = 0.0,
+        extra_body: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "response_format": {"type": "json_object"},
+        }
+        if extra_body:
+            kwargs["extra_body"] = extra_body
         response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
-            max_tokens=max_tokens,
-            response_format={"type": "json_object"},
+            **kwargs,
         )
         choice = response.choices[0]
         content = choice.message.content or "{}"
