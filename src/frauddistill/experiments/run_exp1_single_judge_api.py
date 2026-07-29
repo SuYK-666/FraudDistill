@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures as futures
+import hashlib
 import json
 import time
 from pathlib import Path
@@ -44,11 +45,16 @@ def run_api_judge(
         predictions = _run_mode(rows, mode, config.default_model, config.api_key, config.base_url, concurrency)
         pred_file = pred_dir / f"single_judge_api_{config.name}_{mode}{suffix}_predictions.jsonl"
         write_jsonl(pred_file, predictions)
-        metrics = binary_metrics(
-            [row["gold_label"] for row in predictions],
-            [row["pred_label"] for row in predictions],
-            [float(row["pred_score"]) for row in predictions],
-        )
+        ok_predictions = [row for row in predictions if row.get("status", "ok") == "ok"]
+        failed = len(predictions) - len(ok_predictions)
+        if failed:
+            metrics = {"status": "incomplete", "failed": failed, "failure_rate": failed / max(len(predictions), 1)}
+        else:
+            metrics = binary_metrics(
+                [row["gold_label"] for row in ok_predictions],
+                [row["pred_label"] for row in ok_predictions],
+                [float(row["pred_score"]) for row in ok_predictions],
+            )
         summary["metrics"][mode] = metrics
     summary_file = table_dir / f"single_judge_api_{config.name}{suffix}_metrics.json"
     summary_file.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -71,22 +77,47 @@ def _run_mode(rows: list[dict], mode: str, model: str, api_key: str, base_url: s
 def _judge_one(row: dict, mode: str, model: str, api_key: str, base_url: str) -> dict:
     client = OpenAIJsonClient(model, api_key=api_key, base_url=base_url)
     prompt = _build_prompt(row, mode)
+    started = time.time()
     last_error = None
     for attempt in range(3):
         try:
             raw = client.complete_json(prompt, max_tokens=256)
             pred = _normalize(raw)
-            return _attach_gold(row, pred)
+            return _attach_gold(
+                row,
+                {
+                    **pred,
+                    "status": "ok",
+                    "retry_count": attempt,
+                    "requested_model": model,
+                    "response_model": str(raw.get("model", model)) if isinstance(raw, dict) else model,
+                    "base_url_region": base_url,
+                    "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+                    "request_started_at": started,
+                    "latency_ms": int((time.time() - started) * 1000),
+                    "raw_response_sha256": hashlib.sha256(json.dumps(raw, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest(),
+                },
+            )
         except Exception as exc:  # noqa: BLE001
             last_error = exc
             time.sleep(1.5 * (attempt + 1))
     return _attach_gold(
         row,
         {
-            "pred_label": "safe",
-            "pred_score": 0.0,
-            "pred_type": "safe",
+            "status": "failed",
+            "pred_label": None,
+            "pred_score": None,
+            "pred_type": None,
             "judge_error": str(last_error)[:200],
+            "error_type": last_error.__class__.__name__ if last_error else "UnknownError",
+            "retry_count": 3,
+            "requested_model": model,
+            "response_model": None,
+            "base_url_region": base_url,
+            "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+            "request_started_at": started,
+            "latency_ms": int((time.time() - started) * 1000),
+            "raw_response_sha256": None,
         },
     )
 
@@ -126,7 +157,17 @@ def _attach_gold(source: dict, pred: dict) -> dict:
         "pred_label": pred["pred_label"],
         "pred_score": pred["pred_score"],
         "pred_type": pred["pred_type"],
+        "status": pred.get("status", "ok"),
         "judge_error": pred.get("judge_error"),
+        "error_type": pred.get("error_type"),
+        "retry_count": pred.get("retry_count"),
+        "requested_model": pred.get("requested_model"),
+        "response_model": pred.get("response_model"),
+        "base_url_region": pred.get("base_url_region"),
+        "prompt_sha256": pred.get("prompt_sha256"),
+        "request_started_at": pred.get("request_started_at"),
+        "latency_ms": pred.get("latency_ms"),
+        "raw_response_sha256": pred.get("raw_response_sha256"),
         "source": source.get("source"),
         "language": source.get("language"),
         "metadata": source.get("metadata", {}),

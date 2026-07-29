@@ -6,3 +6,8 @@ def test_extended_provider_defaults_are_available_without_local_keys():
     assert get_provider_config("kimi").base_url == "https://api.moonshot.cn/v1"
     assert get_provider_config("glm").name == "glm"
     assert get_provider_config("openrouter").default_model == "openai/gpt-4.1-mini"
+
+
+def test_environment_key_takes_precedence(monkeypatch):
+    monkeypatch.setenv("QWEN_API_KEY", "env-key")
+    assert get_provider_config("qwen").api_key == "env-key"

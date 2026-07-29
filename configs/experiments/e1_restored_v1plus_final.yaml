@@ -1,0 +1,60 @@
+experiment:
+  id: e1_restored_v1plus_final
+  protocol: E1-Restored-v1plus-FINAL
+data:
+  seed: 20260729
+  anchor_file: data/prepared/full/evaluation_qy/v2_hard_control_full.jsonl
+  output_dir: data/prepared/e1_restored_v1plus_final
+  buckets:
+    unsafe_regular: 2000
+    hard_unsafe: 2000
+    safe_refusal_generated: 2000
+    anti_fraud_education_safe: 1000
+    hard_benign_safe: 1000
+  anchor_buckets:
+    unsafe_regular: 600
+    hard_unsafe: 600
+    safe_refusal_generated: 600
+    anti_fraud_education_safe: 300
+    hard_benign_safe: 300
+  splits:
+    train: 4800
+    model_dev: 800
+    threshold_cal: 800
+    formal_test: 1600
+  formal_test_buckets:
+    unsafe_regular: 400
+    hard_unsafe: 400
+    safe_refusal_generated: 400
+    anti_fraud_education_safe: 200
+    hard_benign_safe: 200
+  relation_challenge_groups: 200
+model:
+  cpu_seeds: [20260724, 20260725, 20260726, 20260727, 20260728]
+  c_grid: [0.25, 0.5, 1.0, 2.0, 4.0]
+  modes: [q_only, y_only, q_y]
+statistics:
+  bootstrap_iterations: 10000
+  bootstrap_seed: 20260729
+gates:
+  anchor:
+    q_only_min: 0.48
+    q_only_max: 0.68
+    y_only_min: 0.80
+    q_y_min: 0.88
+    q_y_minus_y_min: 0.025
+    y_minus_q_min: 0.15
+    hard_safe_fpr_max: 0.12
+  full:
+    q_y_macro_f1_min: 0.880
+    y_only_macro_f1_min: 0.780
+    q_only_macro_f1_max: 0.700
+    q_y_minus_y_min: 0.030
+    y_minus_q_min: 0.150
+    q_y_minus_y_ci_lower_min: 0.010
+    q_y_recall_min: 0.850
+    q_y_precision_min: 0.880
+    q_y_fpr_max: 0.080
+    q_y_hard_safe_fpr_max: 0.100
+    q_y_auprc_min: 0.900
+    api_success_min: 0.995

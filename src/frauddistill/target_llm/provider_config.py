@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from importlib import import_module
 from importlib.util import module_from_spec, spec_from_file_location
+import os
 from pathlib import Path
 from typing import Any
 
@@ -65,4 +66,7 @@ def require_api_key(config: ProviderConfig) -> None:
 
 
 def _get_key(keys: Any, attr: str, default: str = "") -> str:
+    value = os.environ.get(attr)
+    if value is not None and value != "":
+        return value
     return getattr(keys, attr, default) if keys else default
