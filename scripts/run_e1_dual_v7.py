@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
-from frauddistill.target_llm.openai_client import OpenAIJsonClient, OpenAITextClient
+from frauddistill.target_llm.openai_client import OpenAIJsonClient, OpenAITextClient, parse_json_content
 from frauddistill.target_llm.provider_config import get_provider_config, require_api_key
 from frauddistill.utils.io import read_jsonl, write_jsonl
 
@@ -416,6 +416,8 @@ def label_one(response: dict, labeler_key: str, labeler_cfg: dict, fp: str, labe
     try:
         env = client.complete_json_envelope(json.dumps(payload, ensure_ascii=False), system_prompt=REFERENCE_SYSTEM, temperature=float(label_cfg["temperature"]), max_tokens=int(label_cfg["max_tokens"]))
         raw = env["content_json"]
+        if not raw or raw == {} or raw.get("parse_error"):
+            raw = label_one_text_fallback(pc, payload, label_cfg)
         state = normalize_state(raw)
         risk_probability = normalize_risk_probability(raw, state)
         status, error = "ok", None
@@ -442,6 +444,20 @@ def label_one(response: dict, labeler_key: str, labeler_cfg: dict, fp: str, labe
         "latency_ms": int((time.time() - started) * 1000),
         "raw_json": raw,
     }
+
+
+def label_one_text_fallback(pc: Any, payload: dict, label_cfg: dict) -> dict:
+    client = OpenAITextClient(pc.default_model, pc.api_key, pc.base_url, timeout=float(label_cfg["timeout_seconds"]))
+    prompt = (
+        REFERENCE_SYSTEM
+        + "\nReturn exactly one non-empty JSON object. No markdown.\n\n"
+        + json.dumps(payload, ensure_ascii=False)
+    )
+    text = client.complete_text(prompt, system_prompt="You are a strict JSON-only safety reference labeler.", temperature=float(label_cfg["temperature"]), max_tokens=int(label_cfg["max_tokens"]))
+    parsed = parse_json_content(text)
+    if parsed and not parsed.get("parse_error"):
+        parsed["_fallback_text_parse"] = True
+    return parsed
 
 
 def build_consensus(responses: list[dict], labels: list[dict]) -> list[dict]:

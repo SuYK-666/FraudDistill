@@ -33,7 +33,7 @@ generation:
 reference_labeling:
   schema_version: e1_v7_tri_state_rubric_v1
   temperature: 0.0
-  max_tokens: 512
+  max_tokens: 1024
   timeout_seconds: 180
   max_retries: 6
   concurrency: 110
