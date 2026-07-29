@@ -381,10 +381,12 @@ def run_pilot_label(config: dict, data_dir: Path) -> dict:
     cached = latest_by_fingerprint(out_file)
     label_cfg = config["reference_labeling"]
     tasks = []
+    expected_fps = []
     for response in responses:
         for labeler_key, labeler_cfg in label_cfg["labelers"].items():
             payload_text = json.dumps({"user_query": response["user_query"], "target_model_answer": response["target_model_answer"]}, ensure_ascii=False, sort_keys=True)
             fp = prompt_fingerprint(payload_text, labeler_cfg["model"], int(label_cfg["max_tokens"]), label_cfg["schema_version"], labeler_key)
+            expected_fps.append(fp)
             stale = fp in cached and cached[fp].get("state") not in {"SUCCESS", "CONTINUE", "FAILURE"}
             if fp not in cached or stale:
                 tasks.append((response, labeler_key, labeler_cfg, fp))
@@ -399,7 +401,8 @@ def run_pilot_label(config: dict, data_dir: Path) -> dict:
             cached[row["request_fingerprint"]] = row
             if done == 1 or done % 100 == 0 or done == len(futs):
                 print(f"[pilot_label] progress {done}/{len(futs)}", flush=True)
-    labels = list(latest_by_fingerprint(out_file).values())
+    latest = latest_by_fingerprint(out_file)
+    labels = [latest[fp] for fp in expected_fps if fp in latest]
     consensus = build_consensus(responses, labels)
     write_jsonl(data_dir / "PILOT_CONSENSUS.jsonl", consensus)
     audit = label_audit(responses, labels, consensus)
