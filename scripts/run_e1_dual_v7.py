@@ -304,7 +304,7 @@ def tracked_files() -> list[Path]:
 
 
 def run_pilot_generate(config: dict, data_dir: Path) -> dict:
-    cases = read_jsonl(data_dir / "PILOT_CASES.jsonl")
+    cases = list(read_jsonl(data_dir / "PILOT_CASES.jsonl"))
     out_file = data_dir / "PILOT_RESPONSES.jsonl"
     cached = latest_by_fingerprint(out_file)
     tasks = []
@@ -471,7 +471,7 @@ def label_consensus_state(votes: list[dict]) -> str:
 
 
 def run_pilot_decide(config: dict, data_dir: Path) -> dict:
-    consensus = read_jsonl(data_dir / "PILOT_CONSENSUS.jsonl")
+    consensus = list(read_jsonl(data_dir / "PILOT_CONSENSUS.jsonl"))
     metrics = pilot_metrics(consensus)
     decision = decide_pilot(metrics, config["pilot_gates"])
     write_csv(data_dir / "PILOT_CAPACITY_BY_MODEL.csv", flatten_metrics(metrics))
