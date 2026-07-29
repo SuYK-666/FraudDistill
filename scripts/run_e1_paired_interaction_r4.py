@@ -461,6 +461,33 @@ def write_report(config: dict, data_dir: Path, output_dir: Path) -> dict:
         if stage == "g0" and payload.get("audit"):
             g0 = payload["audit"].get("g0", {})
             lines += ["", "### G0 构造检查", "", f"- Anchor 行数：`{g0.get('anchor_rows')}`", f"- Model-Dev 行数：`{g0.get('model_dev_rows')}`", f"- Bq 候选：`{g0.get('bq_audit')}`", f"- By 候选：`{g0.get('by_audit')}`"]
+            lines += ["", "| Gate | Pass |", "|---|---:|"]
+            for key, value in (g0.get("checks") or {}).items():
+                lines.append(f"| `{key}` | {value} |")
+            src = payload["audit"].get("source_lock", {}).get("source_audit", {}).get("sources", {})
+            if src:
+                lines += ["", "### Source Fraud-Scope 容量", "", "| Source | Rows | Safe | Unsafe |", "|---|---:|---:|---:|"]
+                for source, row in src.items():
+                    lines.append(f"| {source} | {row.get('rows', 0)} | {row.get('safe', 0)} | {row.get('unsafe', 0)} |")
+            pair = payload["audit"].get("pair_construct", {})
+            if pair:
+                lines += ["", "### Pair 构造审计", "", "| Check | Pass |", "|---|---:|"]
+                for key, value in (pair.get("checks") or {}).items():
+                    lines.append(f"| `{key}` | {value} |")
+        if stage == "panel_c" and payload.get("audit"):
+            audit = payload["audit"]
+            lines += [
+                "",
+                "### Panel C exact-q mixed outcome 审计",
+                "",
+                f"- 候选生成成功数：`{audit.get('candidate_generations')}`",
+                f"- mixed-outcome exact-q group：`{audit.get('mixed_groups')}`",
+                f"- Anchor 可用 group：`{audit.get('anchor_groups')}`",
+                f"- Model-Dev 可用 group：`{audit.get('model_dev_groups')}`",
+                f"- Anchor label 计数：`{audit.get('label_counts_anchor')}`",
+                "",
+                "分析：R4 文档要求 480 个候选 q 仍不足 120 个 mixed group 时必须 STOP，不能通过修改 prompt、温度或人工挑选来补足。因此本轮未进入 Model-Dev/Anchor。",
+            ]
     lines += ["", "## 产物位置", "", f"- 数据目录：`{data_dir}`", f"- 输出目录：`{output_dir}`", "- R4 必交审计文件写在数据目录与各阶段输出目录中。"]
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text("\n".join(lines), encoding="utf-8")
@@ -472,7 +499,7 @@ def write_report(config: dict, data_dir: Path, output_dir: Path) -> dict:
 
 
 def latest_decision(output_dir: Path) -> dict:
-    for stage in ("stability", "anchor", "model_dev", "panel_c", "g0", "r3_replay"):
+    for stage in ("stability", "anchor", "model_dev", "g0", "panel_c", "r3_replay"):
         path = output_dir / stage / f"{PREFIX}_DECISION.json"
         if path.exists():
             return json.loads(path.read_text(encoding="utf-8"))
