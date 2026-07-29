@@ -37,7 +37,7 @@ api:
         model: deepseek-v4-flash
     concurrency: 110
     temperature: 0.0
-    max_tokens: 256
+    max_tokens: 512
   panel_c_generation:
     provider: qwen
     model: qwen3.7-plus-2026-05-26
