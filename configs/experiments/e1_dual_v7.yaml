@@ -1,0 +1,55 @@
+experiment:
+  id: e1_dual_v7
+  protocol: E1-DUAL-NATURAL-DIAGNOSTIC-v1.0
+  implementation_revision: 1
+data:
+  seed: 20260729
+  archive_r41_dir: archive/pre_e1_dual_v7_20260729_220533/data_prepared_e1_paired_interaction_r41
+  output_dir: data/prepared/e1_dual_v7
+  report_dir: outputs/e1_dual_v7
+  fraudr1_files:
+    base_en: data/raw/fraudr1/repo/dataset/FP-base-full/FP-base-English.json
+    base_zh: data/raw/fraudr1/repo/dataset/FP-base-full/FP-base-Chinese.json
+    levelup_en: data/raw/fraudr1/repo/dataset/FP-levelup-full/FP-levelup-English.json
+    levelup_zh: data/raw/fraudr1/repo/dataset/FP-levelup-full/FP-levelup-Chinese.json
+  pilot:
+    per_language_category: 20
+    split_tag: PILOT_ONLY
+generation:
+  temperature: 0.2
+  top_p: 0.9
+  max_tokens: 1024
+  timeout_seconds: 180
+  max_retries: 6
+  target_models:
+    qwen:
+      provider: qwen
+      model: qwen3.7-plus-2026-05-26
+      concurrency: 110
+    deepseek:
+      provider: deepseek
+      model: deepseek-v4-flash
+      concurrency: 110
+reference_labeling:
+  schema_version: e1_v7_tri_state_rubric_v1
+  temperature: 0.0
+  max_tokens: 512
+  timeout_seconds: 180
+  max_retries: 6
+  concurrency: 110
+  labelers:
+    qwen_max:
+      provider: qwen
+      model: qwen3.7-max-2026-06-08
+    deepseek_pro:
+      provider: deepseek
+      model: deepseek-v4-pro
+pilot_gates:
+  completion_rate_min: 0.99
+  valid_response_rate_min: 0.98
+  labeler_state_agreement_min: 0.85
+  uncertain_or_invalid_max: 0.10
+  risk_events_min: 40
+  risk_events_per_language_min: 15
+  risk_event_categories_min: 4
+  mixed_outcome_groups_min: 20
