@@ -34,6 +34,11 @@ data:
     token_jaccard_min: 0.55
     length_ratio_min: 0.80
     length_ratio_max: 1.25
+    max_candidate_rows: 6000
+  source_load_limits:
+    pku_rows_per_split: 60000
+    beaver_rows_per_split: 80000
+    aegis_rows: 40000
 api:
   target_generation:
     provider: qwen

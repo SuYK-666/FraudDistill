@@ -12,7 +12,7 @@ from typing import Any, Iterable
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.neighbors import NearestNeighbors
 
 from frauddistill.utils.io import read_jsonl, write_jsonl
 
@@ -118,6 +118,7 @@ def load_public_sources(config: dict) -> tuple[dict[str, list[dict]], dict]:
     }
     normalized = {}
     for source, rows in sources.items():
+        print(f"[g0:source] normalizing {source}, raw_rows={len(rows)}", flush=True)
         out = []
         seen = set()
         for row in rows:
@@ -129,9 +130,11 @@ def load_public_sources(config: dict) -> tuple[dict[str, list[dict]], dict]:
                 continue
             seen.add(key)
             out.append(item)
+        out = sorted(out, key=lambda r: stable_hash(int(config["data"]["seed"]), "source_limit", source, r["id"]))
         normalized[source] = out
         labels = Counter(row["gold_label"] for row in out)
         audit["sources"][source] = {"rows": len(out), "safe": labels.get("safe", 0), "unsafe": labels.get("unsafe", 0)}
+        print(f"[g0:source] {source} admitted={len(out)} safe={labels.get('safe',0)} unsafe={labels.get('unsafe',0)}", flush=True)
     return normalized, audit
 
 
@@ -141,10 +144,13 @@ def load_pku_rows(config: dict, audit: dict) -> list[dict]:
         from datasets import load_dataset
 
         os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "0")
+        limit = int(config["data"].get("source_load_limits", {}).get("pku_rows_per_split", 60000))
         for split in ("train", "test"):
             ds = load_dataset("PKU-Alignment/PKU-SafeRLHF", split=split, revision=config["data"]["public_revisions"].get("pku_saferlhf", "main"))
             audit["source_files"][f"PKU-SafeRLHF:{split}"] = {"dataset": "PKU-Alignment/PKU-SafeRLHF", "revision": config["data"]["public_revisions"].get("pku_saferlhf", "main"), "rows_raw": len(ds)}
             for idx, item in enumerate(ds):
+                if idx >= limit:
+                    break
                 prompt = normalize_ws(item.get("prompt"))
                 if not prompt:
                     continue
@@ -182,10 +188,13 @@ def load_beaver_rows(config: dict, audit: dict) -> list[dict]:
     try:
         from datasets import load_dataset
 
+        limit = int(config["data"].get("source_load_limits", {}).get("beaver_rows_per_split", 80000))
         for split in ("330k_train", "30k_test"):
             ds = load_dataset("PKU-Alignment/BeaverTails", split=split, revision=config["data"]["public_revisions"].get("beavertails", "main"))
             audit["source_files"][f"BeaverTails:{split}"] = {"dataset": "PKU-Alignment/BeaverTails", "revision": config["data"]["public_revisions"].get("beavertails", "main"), "rows_raw": len(ds)}
             for idx, item in enumerate(ds):
+                if idx >= limit:
+                    break
                 q = normalize_ws(item.get("prompt"))
                 y = normalize_ws(item.get("response"))
                 if not q or not y:
@@ -212,7 +221,10 @@ def load_aegis_rows(audit: dict) -> list[dict]:
     path = ROOT / "data/prepared/full/evaluation_qy/aegis_qy.jsonl"
     if path.exists():
         audit["source_files"]["Aegis:prepared_qy"] = {"path": str(path), "sha256": sha_file(path)}
+        limit = 40000
         for raw in read_jsonl(path):
+            if len(rows) >= limit:
+                break
             meta = raw.get("metadata") or {}
             response_label = str(meta.get("response_label") or "").lower()
             if response_label not in {"safe", "unsafe"}:
@@ -230,10 +242,22 @@ def build_r4_manifests(config: dict, output_dir: Path) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     seed = int(config["data"]["seed"])
     sources, source_audit = load_public_sources(config)
+    print("[g0] selecting Panel A", flush=True)
     panel_a_anchor = select_panel_a(sources, config, seed, "anchor")
-    panel_a_dev = select_panel_a(sources, config, seed, "model_dev", exclude={r["id"] for r in panel_a_anchor})
+    panel_a_dev = select_panel_a(
+        sources,
+        config,
+        seed,
+        "model_dev",
+        exclude={r["id"] for r in panel_a_anchor},
+        exclude_groups={r["canonical_group_id"] for r in panel_a_anchor},
+    )
+    print("[g0] selecting Bq exact-q pairs", flush=True)
     bq_anchor, bq_dev, bq_audit = select_exact_q_pairs(sources, config, seed)
+    print(f"[g0] Bq audit {bq_audit}", flush=True)
+    print("[g0] selecting By near-y pairs", flush=True)
     by_anchor, by_dev, by_audit = select_near_y_pairs([r for rows in sources.values() for r in rows], config, seed)
+    print(f"[g0] By audit {by_audit}", flush=True)
     c_anchor = load_panel_c(output_dir, "anchor")
     c_dev = load_panel_c(output_dir, "model_dev")
     anchor = assign_panel(panel_a_anchor, "A") + assign_panel(bq_anchor, "Bq") + assign_panel(by_anchor, "By") + assign_panel(c_anchor, "C")
@@ -245,16 +269,21 @@ def build_r4_manifests(config: dict, output_dir: Path) -> dict:
     return {"passed": passed, **audits}
 
 
-def select_panel_a(sources: dict[str, list[dict]], config: dict, seed: int, split: str, exclude: set[str] | None = None) -> list[dict]:
+def select_panel_a(sources: dict[str, list[dict]], config: dict, seed: int, split: str, exclude: set[str] | None = None, exclude_groups: set[str] | None = None) -> list[dict]:
     per_source = 120 if split == "anchor" else 40
     per_label = per_source // 2
     out = []
     exclude = exclude or set()
     for source, rows in sources.items():
         for label in ("safe", "unsafe"):
-            choices = [r for r in rows if r["gold_label"] == label and r["id"] not in exclude]
+            choices = [
+                dict(r, canonical_group_id=f"A_{r['source']}_{sha_text(r['source_prompt_id'])[:16]}")
+                for r in rows
+                if r["gold_label"] == label and r["id"] not in exclude
+            ]
+            choices = [r for r in choices if r["canonical_group_id"] not in (exclude_groups or set())]
             out.extend(sorted(choices, key=lambda r: stable_hash(seed, split, "A", source, label, r["id"]))[:per_label])
-    return [dict(r, canonical_group_id=f"A_{r['source']}_{sha_text(r['source_prompt_id'])[:16]}") for r in out]
+    return out
 
 
 def select_exact_q_pairs(sources: dict[str, list[dict]], config: dict, seed: int) -> tuple[list[dict], list[dict], dict]:
@@ -281,20 +310,25 @@ def select_exact_q_pairs(sources: dict[str, list[dict]], config: dict, seed: int
 
 def select_near_y_pairs(rows: list[dict], config: dict, seed: int) -> tuple[list[dict], list[dict], dict]:
     clean = [r for r in rows if 40 <= len(r["target_model_answer"]) <= 1200]
+    max_rows = int(config["data"]["near_y"].get("max_candidate_rows", 6000))
+    clean = sorted(clean, key=lambda r: stable_hash(seed, "by_candidate", r["id"]))[:max_rows]
     if len(clean) < 2:
         return [], [], {"candidate_rows": len(clean), "candidate_groups": 0}
     texts = [answer_norm(r["target_model_answer"]) for r in clean]
     vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), min_df=1, max_features=50000)
     mat = vectorizer.fit_transform(texts)
+    nn = NearestNeighbors(n_neighbors=min(50, len(clean)), metric="cosine", algorithm="brute", n_jobs=-1)
+    nn.fit(mat)
+    distances, indices = nn.kneighbors(mat, return_distance=True)
     groups = []
     used = set()
     threshold = float(config["data"]["near_y"]["char_tfidf_min"])
     for i, row in enumerate(clean):
+        if i == 0 or i % 500 == 0:
+            print(f"[g0:By] nearest scan {i}/{len(clean)} groups={len(groups)}", flush=True)
         if row["id"] in used:
             continue
-        sims = cosine_similarity(mat[i], mat).ravel()
-        order = np.argsort(-sims)[:80]
-        for j in order:
+        for pos, j in enumerate(indices[i]):
             if i == j:
                 continue
             other = clean[int(j)]
@@ -302,7 +336,7 @@ def select_near_y_pairs(rows: list[dict], config: dict, seed: int) -> tuple[list
                 continue
             if sha_text(other["user_query"]) == sha_text(row["user_query"]):
                 continue
-            sim = float(sims[int(j)])
+            sim = float(1.0 - distances[i][pos])
             jac = token_jaccard(row["target_model_answer"], other["target_model_answer"])
             ratio = length_ratio(row["target_model_answer"], other["target_model_answer"])
             if sim >= threshold and jac >= float(config["data"]["near_y"]["token_jaccard_min"]) and float(config["data"]["near_y"]["length_ratio_min"]) <= ratio <= float(config["data"]["near_y"]["length_ratio_max"]):
