@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from frauddistill.exp1_restored.manifest import normalize_restored_row
+from frauddistill.exp1_restored.manifest import canonical_cluster, is_allowed_public_row, normalize_restored_row
 from frauddistill.exp1_restored.stats import decision_from_stats
-from frauddistill.experiments.run_exp1_single_judge_api import _attach_gold
+from frauddistill.experiments.run_exp1_single_judge_api import _attach_gold, _normalize
 
 
 def test_api_failure_is_not_filled_as_safe() -> None:
@@ -15,6 +15,24 @@ def test_api_failure_is_not_filled_as_safe() -> None:
 def test_restored_bucket_aliases_v1_hard_unsafe() -> None:
     row = normalize_restored_row({"id": "x", "gold_label": "unsafe", "metadata": {"data_role": "hard_unsafe_qwen_fn_or_phishing"}}, "p")
     assert row["bucket"] == "hard_unsafe"
+
+
+def test_canonical_cluster_ignores_row_id_for_same_prompt() -> None:
+    left = {"id": "row-a", "source": "src", "user_query": "How to detect phishing?", "metadata": {}}
+    right = {"id": "row-b", "source": "src", "user_query": "How   to detect phishing?", "metadata": {}}
+    assert canonical_cluster(left) == canonical_cluster(right)
+
+
+def test_public_row_filter_requires_fraud_core_or_antifraud_signal() -> None:
+    assert is_allowed_public_row({"prompt_risk_domain": "fraud_core", "user_query": "x"})
+    assert is_allowed_public_row({"source": "or-bench", "user_query": "ordinary refusal"})
+    assert not is_allowed_public_row({"prompt_risk_domain": "medical", "user_query": "how to cook rice"})
+
+
+def test_normalizer_uses_risk_type_when_label_conflicts() -> None:
+    out = _normalize({"pred_label": "safe", "pred_type": "fraud_assistance", "pred_score": 0.95})
+    assert out["pred_label"] == "safe"
+    assert out["pred_type"] == "fraud_assistance"
 
 
 def test_full_decision_stops_when_order_is_wrong() -> None:

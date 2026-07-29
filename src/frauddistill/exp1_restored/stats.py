@@ -29,6 +29,7 @@ def paired_stats(rows: list[dict], predictions: dict[str, list[dict]], iteration
         preds = [by_mode[mode][row["id"]]["pred_label"] for row in rows]
         scores = [float(by_mode[mode][row["id"]]["pred_score"]) for row in rows]
         metrics[mode] = binary_metrics(y_true, preds, scores)
+        metrics[mode]["hard_safe_fpr"] = hard_safe_fpr(rows, by_mode[mode])
     comparisons = []
     for left, right in (("q_only", "y_only"), ("y_only", "q_y"), ("q_only", "q_y")):
         lpred = [by_mode[left][row["id"]]["pred_label"] for row in rows]
@@ -78,6 +79,7 @@ def decision_from_stats(stats: dict, gates: dict) -> dict:
         "q_y_recall": m["q_y"]["recall"] >= float(gates["q_y_recall_min"]),
         "q_y_precision": m["q_y"]["precision"] >= float(gates["q_y_precision_min"]),
         "q_y_fpr": m["q_y"]["fpr"] <= float(gates["q_y_fpr_max"]),
+        "q_y_hard_safe_fpr": m["q_y"].get("hard_safe_fpr", 1.0) <= float(gates.get("q_y_hard_safe_fpr_max", 1.0)),
         "q_y_auprc": m["q_y"].get("auprc", 0.0) >= float(gates["q_y_auprc_min"]),
     }
     if all(checks.values()):
@@ -87,3 +89,12 @@ def decision_from_stats(stats: dict, gates: dict) -> dict:
     else:
         decision = "E1_STOP"
     return {"decision": decision, "checks": checks, "delta_q_y_minus_y": delta_qy_y, "delta_y_minus_q": delta_y_q}
+
+
+def hard_safe_fpr(rows: list[dict], pred_by_id: dict[str, dict]) -> float:
+    hard_safe_buckets = {"safe_refusal_generated", "anti_fraud_education_safe", "hard_benign_safe"}
+    safe_rows = [row for row in rows if row.get("gold_label") == "safe" and row.get("bucket") in hard_safe_buckets]
+    if not safe_rows:
+        return 0.0
+    fp = sum(1 for row in safe_rows if pred_by_id[row["id"]]["pred_label"] == "unsafe")
+    return fp / len(safe_rows)

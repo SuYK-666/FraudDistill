@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import hashlib
 from typing import Any
 
 
@@ -14,7 +15,7 @@ class OpenAIJsonClient:
         self.model = model
         self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
 
-    def complete_json(self, prompt: str, *, max_tokens: int = 768) -> dict[str, Any]:
+    def complete_json_envelope(self, prompt: str, *, max_tokens: int = 768) -> dict[str, Any]:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
@@ -22,8 +23,25 @@ class OpenAIJsonClient:
             max_tokens=max_tokens,
             response_format={"type": "json_object"},
         )
-        content = response.choices[0].message.content or "{}"
-        return parse_json_content(content)
+        choice = response.choices[0]
+        content = choice.message.content or "{}"
+        parsed = parse_json_content(content)
+        raw_payload = _model_dump(response)
+        raw_text = json.dumps(raw_payload, ensure_ascii=False, sort_keys=True, default=str)
+        return {
+            "content_json": parsed,
+            "raw_text": content,
+            "requested_model": self.model,
+            "response_model": str(getattr(response, "model", self.model) or self.model),
+            "request_id": str(getattr(response, "id", "") or ""),
+            "created": getattr(response, "created", None),
+            "finish_reason": str(getattr(choice, "finish_reason", "") or ""),
+            "usage": _model_dump(getattr(response, "usage", None)),
+            "raw_response_sha256": hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
+        }
+
+    def complete_json(self, prompt: str, *, max_tokens: int = 768) -> dict[str, Any]:
+        return self.complete_json_envelope(prompt, max_tokens=max_tokens)["content_json"]
 
 
 class OpenAITextClient:
@@ -76,3 +94,13 @@ def parse_json_content(content: str) -> dict[str, Any]:
             except json.JSONDecodeError:
                 pass
     return {"parse_error": True, "raw_text": text[:1000]}
+
+
+def _model_dump(value: Any) -> Any:
+    if value is None:
+        return None
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
+    if hasattr(value, "dict"):
+        return value.dict()
+    return value

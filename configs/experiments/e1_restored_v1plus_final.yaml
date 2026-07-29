@@ -1,6 +1,25 @@
 experiment:
   id: e1_restored_v1plus_final
-  protocol: E1-Restored-v1plus-FINAL
+  protocol: E1-API-Empirical-Restore-v1
+  implementation_revision: 2
+api:
+  preflight:
+    provider: qwen
+    judge_model: qwen-max
+    sample_rows: 40
+    concurrency: 8
+    success_min: 0.995
+  anchor:
+    provider: qwen
+    judge_model: qwen-max
+    sample_rows: 480
+    concurrency: 8
+    success_min: 0.995
+  provider_locks:
+    qwen_target_model: qwen-plus
+    qwen_judge_model: qwen-max
+    deepseek_target_model: deepseek-v4-flash
+    deepseek_judge_model: deepseek-v4-pro
 data:
   seed: 20260729
   anchor_file: data/prepared/full/evaluation_qy/v2_hard_control_full.jsonl
@@ -35,6 +54,7 @@ model:
   modes: [q_only, y_only, q_y]
 statistics:
   bootstrap_iterations: 10000
+  anchor_bootstrap_iterations: 2000
   bootstrap_seed: 20260729
 gates:
   anchor:

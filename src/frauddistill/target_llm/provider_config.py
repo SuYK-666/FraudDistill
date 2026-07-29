@@ -40,7 +40,7 @@ def get_provider_config(provider: str, model: str | None = None) -> ProviderConf
         "openai": ("OPENAI_API_KEY", "OPENAI_BASE_URL", "https://api.openai.com/v1", "gpt-4.1-mini"),
         "qwen": ("QWEN_API_KEY", "QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
         "dashscope": ("QWEN_API_KEY", "QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
-        "deepseek": ("DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL", "https://api.deepseek.com", "deepseek-chat"),
+        "deepseek": ("DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL", "https://api.deepseek.com", "deepseek-v4-flash"),
         "gemini": ("GEMINI_API_KEY", "GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-2.5-flash"),
         "kimi": ("KIMI_API_KEY", "KIMI_BASE_URL", "https://api.moonshot.cn/v1", "moonshot-v1-8k"),
         "moonshot": ("KIMI_API_KEY", "KIMI_BASE_URL", "https://api.moonshot.cn/v1", "moonshot-v1-8k"),

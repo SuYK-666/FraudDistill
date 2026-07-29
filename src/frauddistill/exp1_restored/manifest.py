@@ -98,6 +98,8 @@ def fill_from_public(rows: list[dict], used_ids: set[str], config: dict, taxonom
     pool = []
     for source_rows in sources.values():
         for row in source_rows:
+            if not is_allowed_public_row(row):
+                continue
             item = public_to_bucket(row)
             if item and item["id"] not in used_ids:
                 pool.append(item)
@@ -140,6 +142,17 @@ def public_to_bucket(row: dict) -> dict | None:
     return None
 
 
+def is_allowed_public_row(row: dict) -> bool:
+    domain = str(row.get("prompt_risk_domain") or row.get("metadata", {}).get("prompt_risk_domain") or "").lower()
+    source = str(row.get("source") or row.get("metadata", {}).get("source_dataset") or "").lower()
+    text = f"{row.get('user_query','')} {row.get('target_model_answer','')}".lower()
+    if domain == "fraud_core":
+        return True
+    if "or-bench" in source or "or_bench" in source:
+        return True
+    return any(term in text for term in ("fraud", "scam", "phishing", "credential", "otp", "bank transfer", "anti-fraud", "反诈", "诈骗", "钓鱼"))
+
+
 def exact_bucket_trim(rows: list[dict], targets: dict, seed: int) -> list[dict]:
     out = []
     for bucket, target in targets.items():
@@ -150,36 +163,31 @@ def exact_bucket_trim(rows: list[dict], targets: dict, seed: int) -> list[dict]:
 
 def assign_formal_aware_splits(rows: list[dict], config: dict, seed: int) -> dict[str, list[dict]]:
     formal_targets = config["data"]["formal_test_buckets"]
-    remaining = list(rows)
-    formal = []
-    for bucket, target in formal_targets.items():
-        rel = [row for row in remaining if row["bucket"] == bucket and row.get("relation_challenge")]
-        ordinary = [row for row in remaining if row["bucket"] == bucket and not row.get("relation_challenge")]
-        chosen = sorted(rel, key=lambda row: stable_hash(f"{seed}:formal_rel:{row['id']}"))[: min(len(rel), int(target))]
-        chosen_ids = {row["id"] for row in chosen}
-        need = int(target) - len(chosen)
-        chosen.extend(sorted([row for row in ordinary if row["id"] not in chosen_ids], key=lambda row: stable_hash(f"{seed}:formal:{bucket}:{row['id']}"))[:need])
-        formal.extend(chosen)
-        chosen_ids = {row["id"] for row in chosen}
-        remaining = [row for row in remaining if row["id"] not in chosen_ids]
+    groups = group_by_cluster(rows)
+    formal_groups = take_groups_by_bucket(groups, formal_targets, seed, "formal")
+    formal_ids = {row["id"] for group in formal_groups for row in group}
+    formal = [row for group in formal_groups for row in group]
+    remaining_groups = [group for group in groups if not any(row["id"] in formal_ids for row in group)]
     splits = {"formal_test": [dict(row, split="formal_test") for row in formal]}
     split_targets = {"train": 4800, "model_dev": 800, "threshold_cal": 800}
     for split, target in split_targets.items():
-        selected = balanced_take(remaining, int(target), seed, split)
+        selected_groups = take_groups_by_label(remaining_groups, int(target), seed, split)
+        selected = [row for group in selected_groups for row in group]
         ids = {row["id"] for row in selected}
         splits[split] = [dict(row, split=split) for row in selected]
-        remaining = [row for row in remaining if row["id"] not in ids]
+        remaining_groups = [group for group in remaining_groups if not any(row["id"] in ids for row in group)]
     return splits
 
 
 def assign_stratified_splits(rows: list[dict], split_targets: dict[str, int], seed: int) -> list[dict]:
-    remaining = list(rows)
+    remaining_groups = group_by_cluster(rows)
     out = []
     for split, target in split_targets.items():
-        selected = balanced_take(remaining, int(target), seed, split)
+        selected_groups = take_groups_by_label(remaining_groups, int(target), seed, split)
+        selected = [row for group in selected_groups for row in group]
         ids = {row["id"] for row in selected}
         out.extend([dict(row, split=split) for row in selected])
-        remaining = [row for row in remaining if row["id"] not in ids]
+        remaining_groups = [group for group in remaining_groups if not any(row["id"] in ids for row in group)]
     return out
 
 
@@ -192,13 +200,65 @@ def balanced_take(rows: list[dict], n: int, seed: int, salt: str) -> list[dict]:
     return out
 
 
+def group_by_cluster(rows: list[dict]) -> list[list[dict]]:
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        grouped[row["canonical_prompt_cluster"]].append(row)
+    return list(grouped.values())
+
+
+def take_groups_by_bucket(groups: list[list[dict]], targets: dict, seed: int, salt: str) -> list[list[dict]]:
+    quotas = {bucket: int(target) for bucket, target in targets.items()}
+    counts = Counter()
+    selected: list[list[dict]] = []
+    ordered = sorted(
+        groups,
+        key=lambda group: (
+            -int(any(row.get("relation_challenge") for row in group)),
+            stable_hash(f"{seed}:{salt}:{group[0]['canonical_prompt_cluster']}"),
+        ),
+    )
+    for group in ordered:
+        group_counts = Counter(row["bucket"] for row in group)
+        if any(counts[bucket] + value > quotas.get(bucket, 0) for bucket, value in group_counts.items()):
+            continue
+        selected.append(group)
+        counts.update(group_counts)
+        if all(counts[bucket] == quotas[bucket] for bucket in quotas):
+            return selected
+    if any(counts[bucket] != quotas[bucket] for bucket in quotas):
+        raise RuntimeError(f"unable to satisfy bucket quotas with cluster-first split: counts={dict(counts)}, quotas={quotas}")
+    return selected
+
+
+def take_groups_by_label(groups: list[list[dict]], n: int, seed: int, salt: str) -> list[list[dict]]:
+    quotas = {"safe": n // 2, "unsafe": n // 2}
+    counts = Counter()
+    selected: list[list[dict]] = []
+    ordered = sorted(groups, key=lambda group: stable_hash(f"{seed}:{salt}:{group[0]['canonical_prompt_cluster']}"))
+    for group in ordered:
+        group_counts = Counter(row["gold_label"] for row in group)
+        if any(counts[label] + value > quotas.get(label, 0) for label, value in group_counts.items()):
+            continue
+        selected.append(group)
+        counts.update(group_counts)
+        if all(counts[label] == quotas[label] for label in quotas):
+            return selected
+    if any(counts[label] != quotas[label] for label in quotas):
+        raise RuntimeError(f"unable to satisfy label quotas with cluster-first split: counts={dict(counts)}, quotas={quotas}")
+    return selected
+
+
 def canonical_cluster(row: dict) -> str:
     if row.get("relation_group_id"):
         return f"relation_{row.get('relation_group_id')}"
-    base = row.get("source_prompt_id") or row.get("id") or row.get("user_query")
+    metadata = row.get("metadata", {}) or {}
+    base = row.get("source_prompt_id") or metadata.get("source_prompt_id") or metadata.get("original_id") or metadata.get("fraudr1_raw_id")
+    if not base:
+        query = " ".join(str(row.get("user_query", "")).lower().split())
+        base = query[:512]
     source = row.get("source") or row.get("metadata", {}).get("source_dataset") or ""
-    original = row.get("metadata", {}).get("original_id") or row.get("metadata", {}).get("fraudr1_raw_id") or row.get("id") or base
-    return hashlib.sha256(f"{source}\n{original}\n{row.get('id')}".encode("utf-8")).hexdigest()[:24]
+    return hashlib.sha256(f"{source}\n{base}".encode("utf-8")).hexdigest()[:24]
 
 
 def manifest_audit(rows: list[dict], bucket_targets: dict) -> dict:

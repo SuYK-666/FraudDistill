@@ -11,3 +11,7 @@ def test_extended_provider_defaults_are_available_without_local_keys():
 def test_environment_key_takes_precedence(monkeypatch):
     monkeypatch.setenv("QWEN_API_KEY", "env-key")
     assert get_provider_config("qwen").api_key == "env-key"
+
+
+def test_deepseek_default_is_flash_model():
+    assert get_provider_config("deepseek").default_model == "deepseek-v4-flash"
