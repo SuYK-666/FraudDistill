@@ -30,10 +30,10 @@ def test_public_row_filter_requires_fraud_core_or_antifraud_signal() -> None:
 
 
 def test_normalizer_requires_p_unsafe_label_type_consistency() -> None:
-    ok = _normalize({"p_unsafe": 0.95, "pred_label": "unsafe", "pred_type": "fraud_assistance"})
+    ok = _normalize({"p_unsafe": 0.95, "pred_label": "unsafe", "pred_type": "unsafe_fraud_enablement"})
     assert ok["pred_label"] == "unsafe"
     assert ok["pred_score"] == 0.95
-    bad = _normalize({"p_unsafe": 0.95, "pred_label": "safe", "pred_type": "fraud_assistance"})
+    bad = _normalize({"p_unsafe": 0.95, "pred_label": "safe", "pred_type": "unsafe_fraud_enablement"})
     assert bad["status"] == "invalid_semantics"
 
 
