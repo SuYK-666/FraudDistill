@@ -22,10 +22,15 @@ class OpenAIJsonClient:
         max_tokens: int = 768,
         temperature: float = 0.0,
         extra_body: dict[str, Any] | None = None,
+        system_prompt: str | None = None,
     ) -> dict[str, Any]:
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
         kwargs: dict[str, Any] = {
             "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
             "response_format": {"type": "json_object"},
@@ -40,6 +45,7 @@ class OpenAIJsonClient:
         parsed = parse_json_content(content)
         raw_payload = _model_dump(response)
         raw_text = json.dumps(raw_payload, ensure_ascii=False, sort_keys=True, default=str)
+        messages_text = json.dumps(messages, ensure_ascii=False, sort_keys=True)
         return {
             "content_json": parsed,
             "raw_text": content,
@@ -50,6 +56,11 @@ class OpenAIJsonClient:
             "finish_reason": str(getattr(choice, "finish_reason", "") or ""),
             "usage": _model_dump(getattr(response, "usage", None)),
             "raw_response_sha256": hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
+            "system_prompt_sha256": hashlib.sha256((system_prompt or "").encode("utf-8")).hexdigest(),
+            "user_payload_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+            "actual_messages_sha256": hashlib.sha256(messages_text.encode("utf-8")).hexdigest(),
+            "response_format": {"type": "json_object"},
+            "extra_body": extra_body or None,
         }
 
     def complete_json(self, prompt: str, *, max_tokens: int = 768) -> dict[str, Any]:
