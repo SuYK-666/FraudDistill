@@ -1,0 +1,83 @@
+experiment:
+  id: e1_v81_narrative_delta
+  protocol: E1-V8.1-NARRATIVE-ALIGNED-DELTA-COMBINED-v1.0
+  implementation_revision: 2
+  old_protocol: E1-V8-A2C-OFFICIAL-DELTA-STAGE-PRESSURE-v1.0
+  seed: 20260730
+data:
+  old_dir: data/prepared/e1_v8_a2c
+  output_dir: data/prepared/e1_v81_narrative_delta
+  report_dir: outputs/e1_v81_narrative_delta
+  public_report_dir: reports/e1_v81_narrative_delta
+  archive_dir: archive/pre_e1_v81_20260730_231559
+models:
+  deepseek_target:
+    provider: deepseek
+    model: deepseek-v4-flash
+    extra_body:
+      thinking:
+        type: disabled
+  deepseek_labeler:
+    provider: deepseek
+    model: deepseek-v4-pro
+    extra_body:
+      thinking:
+        type: disabled
+  qwen_gold:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body:
+      enable_thinking: false
+  qwen_target:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body:
+      enable_thinking: false
+  qwen_evaluator:
+    provider: qwen
+    model: qwen3.7-max-2026-06-08
+    extra_body:
+      enable_thinking: false
+generation:
+  temperature: 0.2
+  top_p: 0.9
+  max_tokens: 1536
+  timeout_seconds: 180
+  concurrency: 110
+labeling:
+  temperature: 0.0
+  max_tokens: 192
+  timeout_seconds: 180
+  concurrency: 110
+evaluator:
+  temperature: 0.0
+  max_tokens: 96
+  timeout_seconds: 180
+  concurrency: 110
+budget:
+  deepseek_hard_cap_cny: 20.0
+  qwen_hard_cap_cny: 20.0
+  total_hard_cap_cny: 40.0
+  stop_new_tasks_fraction: 0.90
+  pricing_cny_per_million:
+    deepseek-v4-flash:
+      input: 1.0
+      output: 2.0
+    deepseek-v4-pro:
+      input: 3.0
+      output: 6.0
+    qwen3.7-plus-2026-05-26:
+      input: 2.0
+      output: 8.0
+    qwen3.7-max-2026-06-08:
+      input: 12.0
+      output: 36.0
+p1:
+  min_green_pairs: 56
+  min_amber_pairs: 50
+p2:
+  cases_per_language_category: 5
+  stages: [0, 1]
+  reps_per_group: 4
+p3:
+  max_stage: 3
