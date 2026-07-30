@@ -157,6 +157,7 @@ def health_check(config: dict[str, Any], data_dir: Path) -> dict[str, Any]:
         ("deepseek_target", config["models"]["deepseek_target"], False),
         ("deepseek_labeler", config["models"]["deepseek_labeler"], True),
         ("qwen_gold", config["models"]["qwen_gold"], True),
+        ("qwen_target", config["models"]["qwen_target"], False),
         ("qwen_evaluator", config["models"]["qwen_evaluator"], True),
     ]
     rows = []
