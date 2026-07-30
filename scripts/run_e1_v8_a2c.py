@@ -257,6 +257,7 @@ def run_c_analyze(config: dict[str, Any], data_dir: Path) -> dict[str, Any]:
 
 def run_probe_build(config: dict[str, Any], data_dir: Path) -> dict[str, Any]:
     rows = list(read_jsonl(data_dir / "C_ISO_CONSENSUS.jsonl"))
+    rows = enrich_consensus_prompts(rows, data_dir)
     panel, audit = build_probe_panel(rows, config["probe"]["target_n"], config["probe"]["min_balanced_n"], config["probe"]["min_failure_to_run"])
     write_jsonl(data_dir / "PROBE_PANEL.jsonl", panel)
     write_json(data_dir / "PROBE_PANEL_AUDIT.json", audit)
@@ -265,6 +266,28 @@ def run_probe_build(config: dict[str, Any], data_dir: Path) -> dict[str, Any]:
         decision = "PROBE_STRUCTURE_STOP"
         audit["decision"] = decision
     return {"decision": decision, "audit": audit}
+
+
+def enrich_consensus_prompts(rows: list[dict[str, Any]], data_dir: Path) -> list[dict[str, Any]]:
+    cases = {row["canonical_id"]: row for row in read_jsonl(data_dir / "CANONICAL_STAGE_CASES.jsonl")}
+    out = []
+    for row in rows:
+        if row.get("prompt"):
+            out.append(row)
+            continue
+        case = cases.get(row["canonical_id"])
+        if not case:
+            out.append(row)
+            continue
+        stage_id = int(row.get("stage_id", 0))
+        if row.get("track") == "A_DELTA" and row.get("arm") == "A0_PARITY_CONTROL":
+            prompt = v7_parity_prompt(case)
+        elif row.get("track") == "A_DELTA":
+            prompt = official_roleplay_prompt(case, stage_id)
+        else:
+            prompt = isolated_stage_prompt(case, stage_id)
+        out.append({**row, "prompt": prompt, "q_sha256": sha_text(prompt)})
+    return out
 
 
 def run_probe(config: dict[str, Any], data_dir: Path) -> dict[str, Any]:
