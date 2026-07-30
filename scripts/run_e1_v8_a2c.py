@@ -861,8 +861,14 @@ def latest_by_fingerprint(path: Path) -> dict[str, dict[str, Any]]:
 
 
 def latest_ok_by_fingerprint(path: Path) -> dict[str, dict[str, Any]]:
-    latest = latest_by_fingerprint(path)
-    return {key: row for key, row in latest.items() if row.get("status") == "ok"}
+    if not path.exists():
+        return {}
+    out = {}
+    for row in read_jsonl(path):
+        fp = row.get("fingerprint")
+        if fp and row.get("status") == "ok":
+            out[str(fp)] = row
+    return out
 
 
 def latest_by_response_id(path: Path) -> list[dict[str, Any]]:
