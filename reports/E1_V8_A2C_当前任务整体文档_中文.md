@@ -2,7 +2,7 @@
 
 生成时间：2026-07-30  
 协议：`E1-V8-A2C-OFFICIAL-DELTA-STAGE-PRESSURE-v1.0`  
-当前代码提交：`6ac60ffcad1ffb3af0ee1de6b3815dce522332b1`
+当前代码提交：`61b91abcf44d457cca9e518251eb26b23a279726`
 
 ## 1. 本轮已完成的整理与归档
 
@@ -157,17 +157,34 @@ C-ISO stage 1–3 目标回答：`C_ISO_GENERATE_PASS`
 | C-ISO stage 1–3 | 2,400 | 完成 |
 | 合计 | 4,000 | 完成 |
 
-C-ISO 标签阶段因 Qwen 失效中止：
+C-ISO 标签阶段在充值后继续断点续跑。本次没有重跑已完成的 4,000 条目标回答，也没有重跑已成功的标签记录；代码改为只复用 `status=ok` 的标签缓存，并修复了“后到 error 覆盖早到 ok”的读取问题。
+
+当前 C-ISO strict consensus 已重新生成 3,200 行，但质量 Gate 仍为 `C_ISO_LABEL_STOP`，原因是 Qwen 账户在补跑过程中再次返回 `Arrearage`，导致仍有 437 个 Qwen label fingerprint 没有任何成功记录。
 
 | 标签统计 | 数量 |
 |---|---:|
-| raw label rows | 7,752 |
-| ok labels | 7,589 |
-| error labels | 163 |
-| labeler_d ok | 3,874 |
-| labeler_q ok | 3,715 |
-| labeler_q error | 163 |
-| error type | `BadRequestError / Arrearage` |
+| raw label rows | 16,830 |
+| unique label fingerprint | 16,000 |
+| ok label fingerprint | 15,563 |
+| error-only fingerprint | 437 |
+| error provider | Qwen labeler |
+| error type | `BadRequestError / Arrearage` 为主，少量 `RateLimitError` |
+
+C-ISO 当前质量审计：
+
+| 视图 | state agreement | binary agreement | kappa | uncertain | Gate |
+|---|---:|---:|---:|---:|---|
+| O official-y | 89.875% | 91.594% | 0.782 | 10.125% | STOP：uncertain 略高于 10% |
+| X contextual-qy | 91.406% | 91.719% | 0.803 | 8.594% | PASS |
+
+C-ISO 当前 strict 标签分布：
+
+| 视图 | SUCCESS | CONTINUE | FAILURE | UNCERTAIN |
+|---|---:|---:|---:|---:|
+| O official-y | 2,665 | 152 | 59 | 324 |
+| X contextual-qy | 2,794 | 6 | 125 | 275 |
+
+当前不能继续 C-ADAPT、C-ANALYZE、Probe 和最终 Full Decision，因为 V8 明确要求 C 质量失败时停止。即使 X 视图已经可用，O 视图的 strict 双标签器缺票与 uncertain 超限仍会影响官方多轮 DSR 和联合质量 Gate。
 
 当前已落盘数据全部保留在：
 
@@ -177,7 +194,7 @@ C-ISO 标签阶段因 Qwen 失效中止：
 
 当前状态应判为：`ENGINEERING_PROVIDER_STOP`
 
-原因不是实验设计失败，也不是代码执行链失败，而是 Qwen provider 在 C-ISO 标注阶段中途返回欠费/账户不可用错误。V8 要求 O/X 双视图、Qwen/DeepSeek 双标签器 strict consensus；在 Qwen labeler 不可用时继续分析 C 容量、Probe 和最终 Full GO 都不合规。
+原因不是实验设计失败，也不是代码执行链失败，而是 Qwen provider 在 C-ISO 标注阶段中途再次返回欠费/账户不可用错误。V8 要求 O/X 双视图、Qwen/DeepSeek 双标签器 strict consensus；在 Qwen labeler 不可用时继续分析 C 容量、Probe 和最终 Full GO 都不合规。
 
 不能做的替代操作：
 
@@ -188,7 +205,7 @@ C-ISO 标签阶段因 Qwen 失效中止：
 
 可恢复方式：
 
-1. 恢复 `QWEN_API_KEY` 对 `qwen3.7-plus-2026-05-26` 和 `qwen3.7-max-2026-06-08` 的可用额度。
+1. 恢复 `QWEN_API_KEY` 对 `qwen3.7-plus-2026-05-26` 和 `qwen3.7-max-2026-06-08` 的可用额度，并确认余额足以完成至少 437 个 label fingerprint 的补跑。
 2. 重新运行：
    `python scripts/run_e1_v8_a2c.py --phase model-param-probe`
 3. 若探测 PASS，继续运行：
@@ -209,8 +226,27 @@ C-ISO 目标回答层面已经完整可用，说明四阶段自然压力的目�
 
 | commit | 说明 |
 |---|---|
+| `61b91ab` | Prefer successful E1 V8 cache records |
+| `a83d62d` | Retry failed E1 V8 label cache entries |
 | `ee3dd07` | Implement E1 V8 A2C pilot protocol |
 | `991d1f9` | Fix E1 V8 fingerprint shadowing |
 | `6ac60ff` | Fix E1 V8 cache response mapping |
 
 本报告提交后将作为当前任务收尾文档同步到 GitHub。数据、outputs、archive 不提交，但本地完整保留。
+
+## 10. 本次断点续跑记录
+
+用户说明 Qwen 和 DeepSeek 均已充值后，本次从上次未完成的 `c-iso-label` 接续执行：
+
+| 步骤 | 结果 |
+|---|---|
+| 复测模型参数 | 起初 PASS，Qwen/DeepSeek 均可用 |
+| `c-iso-label` 断点续跑 | 先补跑 8,248 个剩余标签任务 |
+| 发现问题 | O uncertain 10.125%，且仍有 Qwen error-only fingerprint |
+| 代码修复 1 | 标签/Probe 阶段只复用 `status=ok` 缓存，失败缓存可重试 |
+| 补跑失败项 | 415 个标签任务 |
+| 代码修复 2 | 保留“最后一个成功记录”，避免后到 error 覆盖早到 ok |
+| 再次补跑失败项 | 415 个标签任务 |
+| 当前最终状态 | Qwen 再次 `Arrearage`，仍有 437 个 error-only fingerprint，C 质量 Gate STOP |
+
+本次已把能合规推进的部分全部推进完毕，并保留所有原始响应、标签尝试、错误记录和 consensus 文件。后续只需恢复 Qwen 额度后从 `c-iso-label` 再次接续，不需要重跑 A-Delta、C-ISO 目标回答或已成功标签。
