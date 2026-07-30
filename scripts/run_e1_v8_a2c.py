@@ -374,7 +374,7 @@ def write_report(config: dict[str, Any], data_dir: Path, out_dir: Path, reports_
 def make_generation_task(config: dict[str, Any], case: dict[str, Any], model_key: str, model_cfg: dict[str, Any], track: str, arm: str, stage_id: int, prompt: str, system_prompt: str | None, replicate_id: int, arm_order_index: int) -> dict[str, Any]:
     q_sha = sha_text(prompt)
     response_id = "|".join([config["experiment"]["protocol"], track, arm, case["canonical_id"], str(stage_id), model_key, str(replicate_id)])
-    fingerprint = fingerprint(
+    fp = fingerprint(
         {
             "task": "target_generation",
             "arm_or_track": arm,
@@ -396,7 +396,7 @@ def make_generation_task(config: dict[str, Any], case: dict[str, Any], model_key
         }
     )
     return {
-        "fingerprint": fingerprint,
+        "fingerprint": fp,
         "response_id": response_id,
         "track": track,
         "arm": arm,
