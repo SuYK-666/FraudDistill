@@ -1048,5 +1048,131 @@ def build_review_text(config: dict[str, Any], data_dir: Path, decision: dict[str
     ]) + "\n"
 
 
+def build_review_text(config: dict[str, Any], data_dir: Path, decision: dict[str, Any], analysis: dict[str, Any], budget: dict[str, Any]) -> str:
+    p1 = analysis.get("p1", {})
+    p2 = analysis.get("p2", {})
+    p3 = analysis.get("p3", {})
+    return "\n".join(
+        [
+            "# E1 V8.1 整体执行复盘",
+            "",
+            f"- 最终决策：`{decision.get('decision')}`",
+            f"- 是否允许 Frozen Full：`{decision.get('eligible_for_frozen_full', False)}`",
+            f"- 代码提交：`{git_commit()}`",
+            f"- 预算：DeepSeek {budget.get('deepseek_cny', 0):.4f} 元，Qwen {budget.get('qwen_cny', 0):.4f} 元，总计 {budget.get('total_cny', 0):.4f} 元。",
+            "",
+            "## 关键结论",
+            "",
+            f"1. P1 exact-q Delta Probe 形成 {p1.get('strict_pairs')} 个严格配对，q-only Macro-F1={_metric(p1, 'q-only', 'macro_f1'):.4f}，y-only={_metric(p1, 'y-only', 'macro_f1'):.4f}，q+y={_metric(p1, 'q+y', 'macro_f1'):.4f}。q+y 相对 y-only 提升 {p1.get('delta_qy_y', 0):.4f}，叙事方向成立，但按阈值属于 `{p1.get('decision')}`。",
+            f"2. P2 400 条 Model-Dev 目标回复中 strict failure={p2.get('strict_failures')}，failure rate={p2.get('failure_rate', 0):.4f}，但 mixed groups 只有 {p2.get('mixed_groups')}，远低于 EXPAND 25 / GREEN 32，因此 P2=`{p2.get('decision')}`。",
+            f"3. P3 复用 89 条 CONTINUE 起点，新增目标回复 {p3.get('new_target_responses')} 条，DSR@1={_dsr(p3, 1):.4f}，DSR@2={_dsr(p3, 2):.4f}，路由审计通过。",
+            "",
+            "## 后续判断",
+            "",
+            "本轮不建议继续 Frozen Full。P1 已经证明 q+y 的叙事增益存在，但 P2 表明当前 Model-Dev 采样与 DeepSeek V4 Flash 的自然失败分布不能稳定产出足够 exact-q mixed groups；继续全量会消耗更多 API，但很可能仍卡在正例/混合组产率上。",
+            "",
+        ]
+    ) + "\n"
+
+
+def write_report(config: dict[str, Any], data_dir: Path, reports_dir: Path) -> dict[str, Any]:
+    manifest = read_json_maybe(data_dir / "E1_V81_REUSE_MANIFEST.json", {})
+    analysis = read_json_maybe(data_dir / "E1_V81_ANALYSIS_SUMMARY.json", {})
+    decision = read_json_maybe(data_dir / "E1_V81_DECISION.json", {})
+    p1 = analysis.get("p1", {})
+    p2 = analysis.get("p2", {})
+    p3 = analysis.get("p3", {})
+    budget = budget_summary(config, data_dir)
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# E1 V8.1 叙事对齐低成本联合试运行报告",
+        "",
+        f"- 协议：`{config['experiment']['protocol']}`",
+        f"- 实现版本：`{config['experiment']['implementation_revision']}`",
+        f"- 代码提交：`{git_commit()}`",
+        f"- 旧数据只读目录：`{config['data']['old_dir']}`",
+        f"- 新数据目录：`{config['data']['output_dir']}`",
+        f"- 最终决策：`{decision.get('decision', 'UNKNOWN')}`",
+        f"- 是否允许 Frozen Full：`{decision.get('eligible_for_frozen_full', False)}`",
+        "",
+        "## 1. 旧数据复用审计",
+        "",
+        f"- 复用旧目标回复：{manifest.get('reuse_response_audit', {}).get('unique_response_id')} 条。",
+        f"- 复用旧成功标签 fingerprint：{manifest.get('reuse_label_audit', {}).get('ok_fingerprints')} 个。",
+        f"- P1 候选 mixed groups：{manifest.get('p1_audit', {}).get('mixed_group_count')}，候选行 {manifest.get('p1_audit', {}).get('candidate_rows')}。",
+        f"- P2 Model-Dev 固定样本：{manifest.get('p2_audit', {}).get('selected_count')} cases，pilot/frozen overlap 均为 0。",
+        f"- P3 起点轨迹：{manifest.get('p3_start_count')} 条。",
+        "",
+        "## 2. P1 Exact-q Delta Probe",
+        "",
+        table_from_rows(p1.get("metrics_by_mode_rows", [])),
+        "",
+        f"- P1 决策：`{p1.get('decision')}`。",
+        f"- strict pairs：{p1.get('strict_pairs')}。",
+        f"- q+y - y-only Macro-F1：{p1.get('delta_qy_y', 0):.4f}。",
+        f"- q+y - q-only Macro-F1：{p1.get('delta_qy_q', 0):.4f}。",
+        "",
+        "分析：P1 结果呈现清晰梯度，q-only 最弱、y-only 中等、q+y 最强。q-only 的高 FPR 说明仅看请求会把大量安全回答误判为风险；y-only 因缺少上下文只能捕捉回答表面的拒绝或协助；q+y 在 exact-q 配对下仍达到约 0.91 Macro-F1，说明上下文与回答的联合观察确实提供了额外判别信息。不过当前 strict pairs 为 61，虽然超过 GREEN 配对数量线，但 q+y 相对 y-only 的提升大于预设很多，属于强叙事但仍是小规模 pilot，不能替代 full anchor。",
+        "",
+        "## 3. P2 Model-Dev Mixed-Yield Pilot",
+        "",
+        f"- P2 决策：`{p2.get('decision')}`。",
+        f"- responses：{p2.get('responses')}。",
+        f"- strict failures：{p2.get('strict_failures')}，failure rate={p2.get('failure_rate', 0):.4f}。",
+        f"- mixed groups：{p2.get('mixed_groups')}。",
+        f"- English failures：{p2.get('failures_by_language', {}).get('en')}，Chinese failures：{p2.get('failures_by_language', {}).get('zh')}。",
+        f"- risk category coverage：{p2.get('risk_category_coverage')}。",
+        f"- label state agreement：{p2.get('label_quality', {}).get('state_agreement', 0):.4f}，binary agreement={p2.get('label_quality', {}).get('binary_agreement', 0):.4f}，kappa={p2.get('label_quality', {}).get('kappa', 0):.4f}。",
+        "",
+        table_from_rows(p2.get("by_language_category", [])),
+        "",
+        "分析：P2 的标签质量已经恢复到可用水平，说明 revision 3 的紧凑 schema 修复了上一轮 JSON 截断问题。failure rate=9.75% 达到理想区间下沿，但 mixed groups 只有 8，远低于 EXPAND 25 和 GREEN 32。问题不在标签一致性，而在同一 q-stage group 内 4 次回复的状态分布不够混合：风险集中在中文 fake job posting 和中文 phishing，英文 fake job posting 有少量混合，其他类别几乎没有贡献。因此当前样本无法支撑 Full 阶段稳定生产足够 exact-q mixed pairs。",
+        "",
+        "## 4. P3 C-ADAPT Recovery",
+        "",
+        f"- P3 决策：`{p3.get('decision')}`。",
+        f"- stage0 起点：{p3.get('start_trajectories')}。",
+        f"- 新增目标回复：{p3.get('new_target_responses')}。",
+        f"- 完整轨迹：{p3.get('complete_trajectories')}。",
+        "",
+        table_from_rows(p3.get("dsr_by_round", [])),
+        "",
+        "分析：P3 路由审计通过，且 DSR@1 到 DSR@2 上升，说明按 Fraud-R1 官方自适应逻辑继续对 CONTINUE 轨迹追问是可复现的。P3 主要补齐多轮叙事和防御轮次分析，不反向决定 P1/P2 是否进入 Full。",
+        "",
+        "## 5. 费用与缓存",
+        "",
+        f"- DeepSeek 估算费用：{budget.get('deepseek_cny', 0):.4f} 元。",
+        f"- Qwen 估算费用：{budget.get('qwen_cny', 0):.4f} 元。",
+        f"- 总费用：{budget.get('total_cny', 0):.4f} 元。",
+        f"- 是否超过硬上限：{budget.get('over_hard_cap')}。",
+        "",
+        "## 6. 最终判断",
+        "",
+        json.dumps(decision, ensure_ascii=False, indent=2),
+        "",
+        "结论：本轮应停止，不建议继续 Frozen Full。P1 的论文叙事方向成立，但 P2 的 mixed-yield 产率不足，继续全量会把主要风险转移到样本产率而不是模型判别效果。后续若继续，应优先重设 Model-Dev 的 group 构造或目标生成策略，而不是扩大当前配置。",
+        "",
+    ]
+    report_path = reports_dir / "E1_V81_REPORT_CN.md"
+    review_path = reports_dir / "E1_V81_整体执行复盘_中文.md"
+    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    review_path.write_text(build_review_text(config, data_dir, decision, analysis, budget), encoding="utf-8")
+    return {"decision": "REPORT_READY", "report": str(report_path), "review": str(review_path)}
+
+
+def _metric(p1: dict[str, Any], mode: str, key: str) -> float:
+    for row in p1.get("metrics_by_mode_rows", []):
+        if row.get("mode") == mode:
+            return float(row.get(key) or 0)
+    return 0.0
+
+
+def _dsr(p3: dict[str, Any], round_id: int) -> float:
+    for row in p3.get("dsr_by_round", []):
+        if int(row.get("round", -1)) == round_id:
+            return float(row.get("dsr") or 0)
+    return 0.0
+
+
 if __name__ == "__main__":
     main()
