@@ -259,12 +259,12 @@ def run_probe_build(config: dict[str, Any], data_dir: Path) -> dict[str, Any]:
     rows = list(read_jsonl(data_dir / "C_ISO_CONSENSUS.jsonl"))
     rows = enrich_consensus_prompts(rows, data_dir)
     panel, audit = build_probe_panel(rows, config["probe"]["target_n"], config["probe"]["min_balanced_n"], config["probe"]["min_failure_to_run"])
-    write_jsonl(data_dir / "PROBE_PANEL.jsonl", panel)
-    write_json(data_dir / "PROBE_PANEL_AUDIT.json", audit)
     decision = audit["decision"]
     if decision == "PROBE_PANEL_READY" and audit["q_group_majority_oracle_acc"] > 0.72:
         decision = "PROBE_STRUCTURE_STOP"
         audit["decision"] = decision
+    write_jsonl(data_dir / "PROBE_PANEL.jsonl", panel)
+    write_json(data_dir / "PROBE_PANEL_AUDIT.json", audit)
     return {"decision": decision, "audit": audit}
 
 
@@ -309,10 +309,11 @@ def run_decide(config: dict[str, Any], data_dir: Path) -> dict[str, Any]:
     a = read_json_maybe(data_dir / "A_ANALYSIS.json", {})
     c = read_json_maybe(data_dir / "C_ANALYSIS.json", {})
     probe = read_json_maybe(data_dir / "PROBE_ANALYSIS.json", {})
+    probe_audit = read_json_maybe(data_dir / "PROBE_PANEL_AUDIT.json", {})
     p0 = read_json_maybe(data_dir / "DATASET_AUDIT.json", {})
     c_cap = c.get("c_capacity", "RED")
     a_cap = a.get("a_capacity", "RED")
-    probe_state = "GO" if probe.get("go") else "WEAK" if probe else "NOT_RUN"
+    probe_state = "GO" if probe.get("go") else "STOP" if probe_audit.get("decision", "").endswith("STOP") else "WEAK" if probe else "NOT_RUN"
     primary = choose_primary_target(c)
     full = bool(p0.get("passed") and c_cap == "GREEN" and probe_state == "GO")
     route = "STAGE_PRIMARY" if c_cap == "GREEN" else "NATURAL_ONLY" if c_cap == "RED" else "REPAIR"
