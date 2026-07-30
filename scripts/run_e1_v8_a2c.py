@@ -204,7 +204,7 @@ def run_c_iso_generate(config: dict[str, Any], data_dir: Path) -> dict[str, Any]
 
 
 def run_label_phase(config: dict[str, Any], data_dir: Path, scope: str, response_path: Path) -> dict[str, Any]:
-    responses = list(read_jsonl(response_path)) if response_path.exists() else []
+    responses = latest_by_response_id(response_path)
     if scope == "A":
         todo = [r for r in responses if r.get("track") == "A_DELTA" and r.get("status") == "ok"]
         expected = 1600
@@ -390,6 +390,9 @@ def make_generation_task(config: dict[str, Any], case: dict[str, Any], model_key
             "provider_extra_body_sha256": sha_text(json.dumps(model_cfg.get("extra_body") or {}, sort_keys=True)),
             "max_tokens": config["generation"]["max_tokens"],
             "response_format": "text",
+            "response_id": response_id,
+            "canonical_id": case["canonical_id"],
+            "stage_id": stage_id,
             "replicate_id": replicate_id,
             "code_commit": git_commit(),
             "cache_schema": "e1_v8_cache_v1",
@@ -426,7 +429,8 @@ def run_generation_tasks(config: dict[str, Any], path: Path, tasks: list[dict[st
     if missing:
         workers = min(config["generation"]["requested_concurrency"], config["generation"]["max_concurrency_per_provider"], max(1, len(missing)))
         append_rows_concurrently(path, missing, lambda task: target_call(config, task), workers, label)
-    return list(latest_by_fingerprint(path).values())
+    latest = latest_by_fingerprint(path)
+    return [latest[t["fingerprint"]] for t in tasks if t["fingerprint"] in latest]
 
 
 def target_call(config: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:
@@ -480,7 +484,8 @@ def run_label_tasks(config: dict[str, Any], path: Path, tasks: list[dict[str, An
     if missing:
         workers = min(config["reference_labeling"]["requested_concurrency"], config["reference_labeling"]["max_concurrency_per_provider"], max(1, len(missing)))
         append_rows_concurrently(path, missing, lambda task: label_call(config, task), workers, label)
-    return list(latest_by_fingerprint(path).values())
+    latest = latest_by_fingerprint(path)
+    return [latest[t["fingerprint"]] for t in tasks if t["fingerprint"] in latest]
 
 
 def label_call(config: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:
@@ -693,7 +698,8 @@ def run_probe_tasks(config: dict[str, Any], path: Path, tasks: list[dict[str, An
     if missing:
         workers = min(config["reference_labeling"]["requested_concurrency"], config["reference_labeling"]["max_concurrency_per_provider"], max(1, len(missing)))
         append_rows_concurrently(path, missing, lambda task: probe_call(config, task), workers, label)
-    return list(latest_by_fingerprint(path).values())
+    latest = latest_by_fingerprint(path)
+    return [latest[t["fingerprint"]] for t in tasks if t["fingerprint"] in latest]
 
 
 def probe_call(config: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:
@@ -852,6 +858,17 @@ def latest_by_fingerprint(path: Path) -> dict[str, dict[str, Any]]:
         if fp:
             out[str(fp)] = row
     return out
+
+
+def latest_by_response_id(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    out: dict[str, dict[str, Any]] = {}
+    for row in read_jsonl(path):
+        rid = row.get("response_id")
+        if rid:
+            out[str(rid)] = row
+    return list(out.values())
 
 
 def groupby(rows: Iterable[dict[str, Any]], *keys: str) -> dict[tuple[Any, ...], list[dict[str, Any]]]:
