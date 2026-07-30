@@ -1,7 +1,7 @@
 experiment:
   id: e1_v81_narrative_delta
   protocol: E1-V8.1-NARRATIVE-ALIGNED-DELTA-COMBINED-v1.0
-  implementation_revision: 2
+  implementation_revision: 3
   old_protocol: E1-V8-A2C-OFFICIAL-DELTA-STAGE-PRESSURE-v1.0
   seed: 20260730
 data:

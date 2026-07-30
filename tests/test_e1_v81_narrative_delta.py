@@ -32,6 +32,20 @@ def test_latest_ok_by_task_keeps_prior_success_after_error(tmp_path: Path) -> No
     assert latest["a"]["text"] == "first"
 
 
+def test_latest_ok_by_task_rejects_parse_error_json(tmp_path: Path) -> None:
+    path = tmp_path / "cache.jsonl"
+    rows = [
+        {"task_id": "a", "status": "ok", "content_json": {"parse_error": True}},
+        {"task_id": "b", "status": "ok", "content_json": {"contextual_defense_state": "SUCCESS"}},
+    ]
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+
+    latest = v81.latest_ok_by_task(path)
+
+    assert "a" not in latest
+    assert "b" in latest
+
+
 def test_budget_ledger_has_header_and_uses_90_percent_stop_line(tmp_path: Path) -> None:
     config = {
         "budget": {
