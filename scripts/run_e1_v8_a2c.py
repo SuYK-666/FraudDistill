@@ -479,12 +479,12 @@ def make_label_task(config: dict[str, Any], response: dict[str, Any], view: str,
 
 
 def run_label_tasks(config: dict[str, Any], path: Path, tasks: list[dict[str, Any]], label: str) -> list[dict[str, Any]]:
-    existing = latest_by_fingerprint(path)
+    existing = latest_ok_by_fingerprint(path)
     missing = [t for t in tasks if t["fingerprint"] not in existing]
     if missing:
         workers = min(config["reference_labeling"]["requested_concurrency"], config["reference_labeling"]["max_concurrency_per_provider"], max(1, len(missing)))
         append_rows_concurrently(path, missing, lambda task: label_call(config, task), workers, label)
-    latest = latest_by_fingerprint(path)
+    latest = latest_ok_by_fingerprint(path)
     return [latest[t["fingerprint"]] for t in tasks if t["fingerprint"] in latest]
 
 
@@ -693,12 +693,12 @@ Input mode: {mode}
 
 
 def run_probe_tasks(config: dict[str, Any], path: Path, tasks: list[dict[str, Any]], label: str) -> list[dict[str, Any]]:
-    existing = latest_by_fingerprint(path)
+    existing = latest_ok_by_fingerprint(path)
     missing = [t for t in tasks if t["fingerprint"] not in existing]
     if missing:
         workers = min(config["reference_labeling"]["requested_concurrency"], config["reference_labeling"]["max_concurrency_per_provider"], max(1, len(missing)))
         append_rows_concurrently(path, missing, lambda task: probe_call(config, task), workers, label)
-    latest = latest_by_fingerprint(path)
+    latest = latest_ok_by_fingerprint(path)
     return [latest[t["fingerprint"]] for t in tasks if t["fingerprint"] in latest]
 
 
@@ -858,6 +858,11 @@ def latest_by_fingerprint(path: Path) -> dict[str, dict[str, Any]]:
         if fp:
             out[str(fp)] = row
     return out
+
+
+def latest_ok_by_fingerprint(path: Path) -> dict[str, dict[str, Any]]:
+    latest = latest_by_fingerprint(path)
+    return {key: row for key, row in latest.items() if row.get("status") == "ok"}
 
 
 def latest_by_response_id(path: Path) -> list[dict[str, Any]]:
