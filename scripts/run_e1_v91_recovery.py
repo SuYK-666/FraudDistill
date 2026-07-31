@@ -1436,7 +1436,7 @@ def build_main_report(config: dict[str, Any], decision: dict[str, Any], g1: dict
         "",
         "## 四、E1-B 输入边界机制分析",
         "",
-        f"B1 仅构成 {len(read_jsonl(ROOT / config['data']['output_dir'] / 'E1_V91_B1_PANEL.jsonl')) // 2 if (ROOT / config['data']['output_dir'] / 'E1_V91_B1_PANEL.jsonl').exists() else 0} 对，B2 仅构成 {len(read_jsonl(ROOT / config['data']['output_dir'] / 'E1_V91_B2_EXACT_Q_PAIRS.jsonl')) // 2 if (ROOT / config['data']['output_dir'] / 'E1_V91_B2_EXACT_Q_PAIRS.jsonl').exists() else 0} 对，低于 basic/strong 样本门槛。因此 B 面板只能作为探索性证据。",
+        f"B1 仅构成 {jsonl_count(ROOT / config['data']['output_dir'] / 'E1_V91_B1_PANEL.jsonl') // 2} 对，B2 仅构成 {jsonl_count(ROOT / config['data']['output_dir'] / 'E1_V91_B2_EXACT_Q_PAIRS.jsonl') // 2} 对，低于 basic/strong 样本门槛。因此 B 面板只能作为探索性证据。",
         f"B1 q+y Macro-F1={b1_qy:.4f}，y-only={b1_y:.4f}，delta={b1.get('delta_qy_y', 0):.4f}；B2 q+y Macro-F1={b2_qy:.4f}，y-only={b2_y:.4f}，delta={b2.get('delta_qy_y', 0):.4f}。方向上 q+y 通常优于 q-only/y-only，但 CI 不稳且样本不足，不能支撑强叙事。",
         "",
         "## 五、数据与审计口径",
@@ -1500,6 +1500,12 @@ def audit_jsonl_lines(path: Path) -> dict[str, Any]:
             if len(examples) < 5:
                 examples.append({"line": line_no, "error": str(exc)[:160]})
     return {"exists": True, "lines": total, "valid_json": valid, "invalid_json": invalid, "invalid_examples": examples}
+
+
+def jsonl_count(path: Path) -> int:
+    if not path.exists():
+        return 0
+    return sum(1 for _ in read_jsonl(path))
 
 
 def build_closeout(config: dict[str, Any], decision: dict[str, Any], budget: dict[str, Any]) -> str:
