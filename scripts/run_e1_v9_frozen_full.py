@@ -879,10 +879,30 @@ def budget_summary(data_dir: Path) -> dict[str, Any]:
         with path.open("r", encoding="utf-8", newline="") as h:
             for row in csv.DictReader(h):
                 try:
-                    totals[row.get("provider", "")] += float(row.get("estimated_cost_cny") or 0)
+                    provider = row.get("provider", "")
+                    if provider in {"qwen", "deepseek"}:
+                        totals[provider] += float(row.get("estimated_cost_cny") or 0)
                 except ValueError:
                     continue
+    if totals["qwen"] == 0 and totals["deepseek"] == 0:
+        totals.update(budget_from_caches(data_dir))
     return {"qwen_cny": totals["qwen"], "deepseek_cny": totals["deepseek"], "total_cny": totals["qwen"] + totals["deepseek"], "over_hard_cap": totals["qwen"] > 49 or totals["deepseek"] > 49}
+
+
+def budget_from_caches(data_dir: Path) -> Counter:
+    config = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8"))
+    totals = Counter()
+    seen = set()
+    for path in data_dir.glob("E1_V9_*.jsonl"):
+        for row in read_jsonl(path):
+            request_id = row.get("request_id")
+            if not request_id or request_id in seen or row.get("status") != "ok":
+                continue
+            seen.add(request_id)
+            usage = row.get("usage") or {}
+            price = config["budget"]["pricing_cny_per_million"].get(row.get("requested_model"), {"input": 0, "output": 0})
+            totals[row.get("provider", "")] += (int(usage.get("prompt_tokens") or 0) / 1_000_000 * price["input"]) + (int(usage.get("completion_tokens") or 0) / 1_000_000 * price["output"])
+    return totals
 
 
 def latest_ok_by_task(path: Path) -> dict[str, dict[str, Any]]:
