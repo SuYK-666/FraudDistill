@@ -59,12 +59,12 @@ evaluator:
   max_tokens: 160
   timeout_seconds: 180
 concurrency:
-  deepseek_target: 32
-  deepseek_label: 32
-  qwen_target: 24
-  qwen_label: 24
-  qwen_evaluator: 16
-  deepseek_evaluator: 32
+  deepseek_target: 100
+  deepseek_label: 100
+  qwen_target: 100
+  qwen_label: 100
+  qwen_evaluator: 100
+  deepseek_evaluator: 100
 budget:
   qwen_soft_stop_cny: 44.0
   qwen_hard_stop_cny: 49.0
