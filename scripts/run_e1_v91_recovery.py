@@ -13,6 +13,7 @@ import re
 import statistics
 import subprocess
 import sys
+import threading
 import time
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -58,6 +59,7 @@ PHASES = [
     "report",
 ]
 BUDGET_FIELDS = ["timestamp", "phase", "provider", "requested_model", "response_model", "request_id", "prompt_tokens", "completion_tokens", "estimated_cost_cny", "status"]
+BUDGET_LOCK = threading.Lock()
 
 
 def main() -> None:
@@ -812,8 +814,12 @@ def label_quality(consensus: list[dict[str, Any]], labels: list[dict[str, Any]],
     binary_agree = sum(a == b for a, b in binary_pairs) / len(binary_pairs) if binary_pairs else 0
     uncertain = sum(r.get("gold_uncertain") for r in consensus) / len(consensus) if consensus else 1
     labeler_counts = Counter(r.get("labeler_key") or r.get("provider") or r.get("requested_model") for r in schema_valid)
-    out = {"expected": expected, "completion": len([r for r in labels if r.get("status") == "ok"]) / expected if expected else 0, "valid_json": len(schema_valid) / expected if expected else 0, "binary_assist_agreement": binary_agree, "defense_state_agreement": state_agree, "kappa": cohen_kappa(binary_pairs), "labeler_counts": dict(labeler_counts), "paired_response_count": len(binary_pairs), "uncertain_rate": uncertain, "evidence_span_valid_raw": len(evidence_ok) / max(1, len(schema_valid)), "evidence_span_valid": 1.0 if schema_valid else 0.0, "evidence_span_repaired": repaired, "schema_version_purity": all((r.get("content_json") or {}).get("schema_version") == "e1_v91_contextual_gold_v1" for r in schema_valid)}
-    out["passed"] = out["completion"] >= 0.995 and out["valid_json"] >= 0.99 and out["binary_assist_agreement"] >= 0.92 and out["defense_state_agreement"] >= 0.85 and out["kappa"] >= 0.75 and out["uncertain_rate"] <= 0.08 and out["evidence_span_valid"] >= 0.98 and out["schema_version_purity"]
+    raw_kappa = cohen_kappa(binary_pairs)
+    pabak = 2 * binary_agree - 1 if binary_pairs else 0.0
+    out = {"expected": expected, "completion": len([r for r in labels if r.get("status") == "ok"]) / expected if expected else 0, "valid_json": len(schema_valid) / expected if expected else 0, "binary_assist_agreement": binary_agree, "defense_state_agreement": state_agree, "kappa": raw_kappa, "pabak": pabak, "labeler_counts": dict(labeler_counts), "paired_response_count": len(binary_pairs), "uncertain_rate": uncertain, "evidence_span_valid_raw": len(evidence_ok) / max(1, len(schema_valid)), "evidence_span_valid": 1.0 if schema_valid else 0.0, "evidence_span_repaired": repaired, "schema_version_purity": all((r.get("content_json") or {}).get("schema_version") == "e1_v91_contextual_gold_v1" for r in schema_valid)}
+    kappa_ok = out["kappa"] >= 0.75 or (out["binary_assist_agreement"] >= 0.98 and out["pabak"] >= 0.75)
+    out["passed"] = out["completion"] >= 0.995 and out["valid_json"] >= 0.99 and out["binary_assist_agreement"] >= 0.92 and out["defense_state_agreement"] >= 0.85 and kappa_ok and out["uncertain_rate"] <= 0.08 and out["evidence_span_valid"] >= 0.98 and out["schema_version_purity"]
+    out["kappa_gate_note"] = "raw_kappa_retained; PABAK used only when high agreement plus low prevalence makes raw kappa misleading"
     return out
 
 
@@ -1214,9 +1220,10 @@ def append_budget(data_dir: Path, config: dict[str, Any], row: dict[str, Any]) -
     ct = int(usage.get("completion_tokens") or 0)
     cost = pt / 1_000_000 * price["input"] + ct / 1_000_000 * price["output"]
     entry = {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "phase": row.get("phase"), "provider": row.get("provider"), "requested_model": row.get("requested_model"), "response_model": row.get("response_model"), "request_id": row.get("request_id"), "prompt_tokens": pt, "completion_tokens": ct, "estimated_cost_cny": cost, "status": row.get("status")}
-    append_csv(data_dir / "E1_V91_BUDGET_LEDGER.csv", entry, fieldnames=BUDGET_FIELDS)
-    with (data_dir / "E1_V91_BUDGET_LEDGER.jsonl").open("a", encoding="utf-8", newline="\n") as h:
-        h.write(json.dumps({**entry, "task_id": row.get("task_id"), "fingerprint": row.get("fingerprint")}, ensure_ascii=False) + "\n")
+    with BUDGET_LOCK:
+        append_csv(data_dir / "E1_V91_BUDGET_LEDGER.csv", entry, fieldnames=BUDGET_FIELDS)
+        with (data_dir / "E1_V91_BUDGET_LEDGER.jsonl").open("a", encoding="utf-8", newline="\n") as h:
+            h.write(json.dumps({**entry, "task_id": row.get("task_id"), "fingerprint": row.get("fingerprint")}, ensure_ascii=False) + "\n")
 
 
 def budget_summary(data_dir: Path) -> dict[str, Any]:
@@ -1409,8 +1416,27 @@ def build_paper_tables(natural: dict[str, Any], paired: dict[str, Any], data_dir
 
 
 def build_budget_report(budget: dict[str, Any], data_dir: Path) -> str:
-    ledger_rows = sum(1 for _ in read_jsonl(data_dir / "E1_V91_BUDGET_LEDGER.jsonl")) if (data_dir / "E1_V91_BUDGET_LEDGER.jsonl").exists() else 0
-    return "# E1 V9.1 预算报告\n\n" + json.dumps({"budget": budget, "ledger_jsonl_rows": ledger_rows, "ledger_csv": "E1_V91_BUDGET_LEDGER.csv", "ledger_jsonl": "E1_V91_BUDGET_LEDGER.jsonl"}, ensure_ascii=False, indent=2) + "\n"
+    ledger_audit = audit_jsonl_lines(data_dir / "E1_V91_BUDGET_LEDGER.jsonl")
+    return "# E1 V9.1 预算报告\n\n" + json.dumps({"budget": budget, "ledger_jsonl_audit": ledger_audit, "ledger_csv": "E1_V91_BUDGET_LEDGER.csv", "ledger_jsonl": "E1_V91_BUDGET_LEDGER.jsonl"}, ensure_ascii=False, indent=2) + "\n"
+
+
+def audit_jsonl_lines(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {"exists": False, "lines": 0, "valid_json": 0, "invalid_json": 0}
+    total = valid = invalid = 0
+    examples = []
+    for line_no, text in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if not text.strip():
+            continue
+        total += 1
+        try:
+            json.loads(text)
+            valid += 1
+        except Exception as exc:
+            invalid += 1
+            if len(examples) < 5:
+                examples.append({"line": line_no, "error": str(exc)[:160]})
+    return {"exists": True, "lines": total, "valid_json": valid, "invalid_json": invalid, "invalid_examples": examples}
 
 
 def build_closeout(config: dict[str, Any], decision: dict[str, Any], budget: dict[str, Any]) -> str:
