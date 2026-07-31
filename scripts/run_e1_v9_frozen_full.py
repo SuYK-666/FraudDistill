@@ -35,6 +35,7 @@ from frauddistill.utils.io import read_jsonl, write_jsonl
 CONFIG_PATH = ROOT / "configs/experiments/e1_v9_frozen_full.yaml"
 PREFIX = "E1_V9"
 PHASES = ["g0", "g1", "full-targets", "full-labels", "analyze-full", "b-panels", "b-eval", "e1c", "decide", "report"]
+BUDGET_FIELDS = ["timestamp", "phase", "provider", "requested_model", "response_model", "request_id", "prompt_tokens", "completion_tokens", "estimated_cost_cny", "status"]
 
 
 def main() -> None:
@@ -857,8 +858,9 @@ def budget_stop(config: dict[str, Any], data_dir: Path, provider: str, core: boo
 def init_budget(data_dir: Path) -> None:
     path = data_dir / "E1_V9_BUDGET_LEDGER.csv"
     if not path.exists():
-        write_csv(path, [{"timestamp": "", "phase": "", "provider": "", "requested_model": "", "response_model": "", "request_id": "", "prompt_tokens": "", "completion_tokens": "", "estimated_cost_cny": "", "status": ""}])
-        path.write_text(path.read_text(encoding="utf-8").splitlines()[0] + "\n", encoding="utf-8")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8", newline="") as h:
+            csv.DictWriter(h, fieldnames=BUDGET_FIELDS).writeheader()
 
 
 def append_budget(data_dir: Path, config: dict[str, Any], row: dict[str, Any]) -> None:
@@ -867,7 +869,7 @@ def append_budget(data_dir: Path, config: dict[str, Any], row: dict[str, Any]) -
     pt = int(usage.get("prompt_tokens") or 0)
     ct = int(usage.get("completion_tokens") or 0)
     cost = pt / 1_000_000 * price["input"] + ct / 1_000_000 * price["output"]
-    append_csv(data_dir / "E1_V9_BUDGET_LEDGER.csv", {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "phase": row.get("phase"), "provider": row.get("provider"), "requested_model": row.get("requested_model"), "response_model": row.get("response_model"), "request_id": row.get("request_id"), "prompt_tokens": pt, "completion_tokens": ct, "estimated_cost_cny": cost, "status": row.get("status")})
+    append_csv(data_dir / "E1_V9_BUDGET_LEDGER.csv", {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "phase": row.get("phase"), "provider": row.get("provider"), "requested_model": row.get("requested_model"), "response_model": row.get("response_model"), "request_id": row.get("request_id"), "prompt_tokens": pt, "completion_tokens": ct, "estimated_cost_cny": cost, "status": row.get("status")}, fieldnames=BUDGET_FIELDS)
 
 
 def budget_summary(data_dir: Path) -> dict[str, Any]:
@@ -876,7 +878,10 @@ def budget_summary(data_dir: Path) -> dict[str, Any]:
     if path.exists():
         with path.open("r", encoding="utf-8", newline="") as h:
             for row in csv.DictReader(h):
-                totals[row.get("provider", "")] += float(row.get("estimated_cost_cny") or 0)
+                try:
+                    totals[row.get("provider", "")] += float(row.get("estimated_cost_cny") or 0)
+                except ValueError:
+                    continue
     return {"qwen_cny": totals["qwen"], "deepseek_cny": totals["deepseek"], "total_cny": totals["qwen"] + totals["deepseek"], "over_hard_cap": totals["qwen"] > 49 or totals["deepseek"] > 49}
 
 
@@ -973,11 +978,11 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
             w.writerows(rows)
 
 
-def append_csv(path: Path, row: dict[str, Any]) -> None:
+def append_csv(path: Path, row: dict[str, Any], fieldnames: list[str] | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     exists = path.exists() and path.stat().st_size > 0
     with path.open("a", encoding="utf-8", newline="") as h:
-        w = csv.DictWriter(h, fieldnames=list(row))
+        w = csv.DictWriter(h, fieldnames=fieldnames or list(row), extrasaction="ignore")
         if not exists:
             w.writeheader()
         w.writerow(row)
