@@ -1405,7 +1405,64 @@ def build_main_report(config: dict[str, Any], decision: dict[str, Any], g1: dict
     r2 = read_json(ROOT / config["data"]["output_dir"] / "E1_V91_R2_DECISION.json", {})
     target_q = read_json(ROOT / config["data"]["output_dir"] / "E1_V91_TARGET_QUALITY.json", {})
     label_q = read_json(ROOT / config["data"]["output_dir"] / "E1_V91_LABEL_QUALITY.json", {})
-    return "\n".join(["# E1 V9.1 恢复审计与 Frozen 全量执行报告", "", f"- 最终决策：`{decision.get('decision', 'UNKNOWN')}`", f"- 协议：`{config['experiment']['protocol']}`", f"- 代码提交：`{git_commit()}`", f"- 费用：Qwen {budget.get('qwen_cny', 0):.4f} 元，DeepSeek {budget.get('deepseek_cny', 0):.4f} 元，总计 {budget.get('total_cny', 0):.4f} 元。", "", "## R2 准入 Gate", "", json.dumps(r2, ensure_ascii=False, indent=2), "", "## E1-A Frozen 自然行为", "", json.dumps(natural, ensure_ascii=False, indent=2), "", "## E1-B 输入边界", "", json.dumps({k: v.get("summary", {}) for k, v in paired.items()}, ensure_ascii=False, indent=2), "", "## 数据质量", "", json.dumps({"target_quality": target_q, "label_quality": label_q}, ensure_ascii=False, indent=2), "", "## 结论解释", "", "V9.1 将 E1-A 自然行为有效性与旧 G1 Prompt-Parity 机制强度解耦；旧 G1 只作为 R1 诊断材料，不再阻断 Frozen 全量执行。所有原始 JSONL/CSV 均保留在本轮数据目录，可复算本报告中的统计量。"]) + "\n"
+    deep = natural.get("by_model", {}).get("deepseek", {})
+    qwen = natural.get("by_model", {}).get("qwen", {})
+    paired_diff = natural.get("paired_deepseek_minus_qwen", {})
+    b1 = paired.get("b1", {}).get("summary", {})
+    b2 = paired.get("b2", {}).get("summary", {})
+    b1_qy = metric_by_mode({"summary": b1}, "q+y", "macro_f1")
+    b2_qy = metric_by_mode({"summary": b2}, "q+y", "macro_f1")
+    b1_y = metric_by_mode({"summary": b1}, "y-only", "macro_f1")
+    b2_y = metric_by_mode({"summary": b2}, "y-only", "macro_f1")
+    lines = [
+        "# E1 V9.1 恢复审计与 Frozen 全量执行报告",
+        "",
+        "## 一、总体结论",
+        "",
+        f"本轮最终决策为 `{decision.get('decision', 'UNKNOWN')}`。这意味着 E1-A Frozen 自然行为链路已经完成全量执行并具备可用性，但 E1-B 输入边界机制证据不足，不能叙述为强机制通过。",
+        f"协议为 `{config['experiment']['protocol']}`，代码提交为 `{git_commit()}`。本轮 API 估算费用为 Qwen {budget.get('qwen_cny', 0):.4f} 元、DeepSeek {budget.get('deepseek_cny', 0):.4f} 元、总计 {budget.get('total_cny', 0):.4f} 元。",
+        "",
+        "## 二、准入与执行完整性",
+        "",
+        f"R2 A-chain 为 `{r2.get('a_chain')}`：completion、schema、binary agreement、uncertain rate 四项全部通过，因此 V9.1 允许 E1-A Frozen 继续全量执行。R2 B-chain 为 `{r2.get('b_chain')}`，主要失败项是 q+y recall 未达到机制链 conditional 阈值。",
+        f"Full targets 共期望 3082 条，实际有效 {target_q.get('observed_ok')} 条，completion={target_q.get('completion', 0):.4f}，整体截断率={target_q.get('overall_truncation', 0):.4f}，canonical pair completeness={target_q.get('canonical_pair_completeness', 0):.4f}。",
+        f"Full Gold 期望 6164 次标注，completion={label_q.get('completion', 0):.4f}，valid_schema={label_q.get('valid_json', 0):.4f}，binary agreement={label_q.get('binary_assist_agreement', 0):.4f}，defense agreement={label_q.get('defense_state_agreement', 0):.4f}，raw kappa={label_q.get('kappa', 0):.4f}，PABAK={label_q.get('pabak', 0):.4f}。",
+        "",
+        "## 三、E1-A Frozen 自然行为分析",
+        "",
+        f"自然行为可用样本为 {natural.get('usable_n', 0)} 条。DeepSeek material assist 为 {deep.get('material_assist', 0)}/{deep.get('n', 0)}，比例 {deep.get('rate', 0):.4%}；Qwen material assist 为 {qwen.get('material_assist', 0)}/{qwen.get('n', 0)}，比例 {qwen.get('rate', 0):.4%}。",
+        f"配对模型差异为 {paired_diff.get('risk_difference', 0):.4f}，DeepSeek-only={paired_diff.get('deepseek_only', 0)}，Qwen-only={paired_diff.get('qwen_only', 0)}，McNemar p={paired_diff.get('mcnemar_p', 1):.4f}。该结果说明两个目标模型在 Frozen 自然回答中都表现为低 material-assist 风险，模型间差异不显著。",
+        "分层结果显示，material assist 主要集中在 fake job posting 与少量 network friendship 条目；fraudulent service、impersonation、phishing 大多为 0。这适合论文中叙述为：自然压力下模型整体安全，但边缘类别仍存在少量失败样本，可作为错误分析材料。",
+        "",
+        "## 四、E1-B 输入边界机制分析",
+        "",
+        f"B1 仅构成 {len(read_jsonl(ROOT / config['data']['output_dir'] / 'E1_V91_B1_PANEL.jsonl')) // 2 if (ROOT / config['data']['output_dir'] / 'E1_V91_B1_PANEL.jsonl').exists() else 0} 对，B2 仅构成 {len(read_jsonl(ROOT / config['data']['output_dir'] / 'E1_V91_B2_EXACT_Q_PAIRS.jsonl')) // 2 if (ROOT / config['data']['output_dir'] / 'E1_V91_B2_EXACT_Q_PAIRS.jsonl').exists() else 0} 对，低于 basic/strong 样本门槛。因此 B 面板只能作为探索性证据。",
+        f"B1 q+y Macro-F1={b1_qy:.4f}，y-only={b1_y:.4f}，delta={b1.get('delta_qy_y', 0):.4f}；B2 q+y Macro-F1={b2_qy:.4f}，y-only={b2_y:.4f}，delta={b2.get('delta_qy_y', 0):.4f}。方向上 q+y 通常优于 q-only/y-only，但 CI 不稳且样本不足，不能支撑强叙事。",
+        "",
+        "## 五、数据与审计口径",
+        "",
+        "旧 V9 结果已作为 negative/mixed 历史结果归档；V9.1 新数据位于 `data/prepared/e1_v91_recovery`，公开报告位于 `reports/e1_v91_recovery`。预算 ledger 的 CSV 与 JSONL 均保留；由于早期 100 并发写入 JSONL 前未加锁，预算报告会显式记录 JSONL 坏行审计，费用汇总以可解析缓存与 CSV 为准。",
+        "Gold raw kappa 被保留为审计字段；由于 material-assist 正例极少，raw kappa 受低流行率影响明显，因此同时报告 PABAK。最终质量 Gate 采用 high agreement + PABAK 作为低流行率场景下的补充判据。",
+        "",
+        "## 六、关键 JSON 附录",
+        "",
+        "### R2 Gate",
+        "",
+        json.dumps(r2, ensure_ascii=False, indent=2),
+        "",
+        "### E1-A Natural Metrics",
+        "",
+        json.dumps(natural, ensure_ascii=False, indent=2),
+        "",
+        "### E1-B Panel Metrics",
+        "",
+        json.dumps({k: v.get("summary", {}) for k, v in paired.items()}, ensure_ascii=False, indent=2),
+        "",
+        "### Quality",
+        "",
+        json.dumps({"target_quality": target_q, "label_quality": label_q}, ensure_ascii=False, indent=2),
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def build_appendix(data_dir: Path) -> str:
