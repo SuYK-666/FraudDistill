@@ -672,14 +672,14 @@ def expand_q_only(panel: list[dict[str, Any]], preds: list[dict[str, Any]]) -> l
 
 
 def analyze_evaluator_panel(panel: list[dict[str, Any]], preds: list[dict[str, Any]], *, cluster_key: str, evaluator_key: str, bootstrap_n: int) -> dict[str, Any]:
-    gold = {r["probe_id"]: int(r["gold"]) for r in panel}
-    pred_rows = [p for p in preds if p.get("evaluator_key") == evaluator_key and p.get("status") == "ok" and p.get("probe_id") in gold]
+    gold = {probe_id(r): int(r["gold"]) for r in panel}
+    pred_rows = [p for p in preds if p.get("evaluator_key") == evaluator_key and p.get("status") == "ok" and probe_id(p) in gold]
     by_mode: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for p in pred_rows:
         js = p.get("content_json") or {}
         pred = 1 if str(js.get("prediction", "")).upper() == "RISK" else 0
         score = safe_float(js.get("risk_probability"), 1.0 if pred else 0.0)
-        by_mode[p["mode"]].append({**p, "gold": gold[p["probe_id"]], "pred": pred, "score": score})
+        by_mode[p["mode"]].append({**p, "probe_id": probe_id(p), "gold": gold[probe_id(p)], "pred": pred, "score": score})
     metrics = {mode: binary_metrics(rows) for mode, rows in by_mode.items()}
     ci = bootstrap_delta_ci(pred_rows, gold, cluster_key, "q+y", "y-only", bootstrap_n)
     summary = {
@@ -1018,12 +1018,17 @@ def metric_by_mode(container: dict[str, Any], mode: str, key: str) -> float:
     return 0.0
 
 
+def probe_id(row: dict[str, Any]) -> str:
+    return str(row.get("probe_id") or row.get("response_id") or row.get("task_id") or "")
+
+
 def bootstrap_delta_ci(pred_rows: list[dict[str, Any]], gold: dict[str, int], cluster_key: str, left: str, right: str, n: int) -> dict[str, float]:
     enriched = []
     for p in pred_rows:
-        if p.get("probe_id") in gold and p.get("mode") in {left, right}:
+        pid = probe_id(p)
+        if pid in gold and p.get("mode") in {left, right}:
             js = p.get("content_json") or {}
-            enriched.append({**p, "gold": gold[p["probe_id"]], "pred": 1 if str(js.get("prediction", "")).upper() == "RISK" else 0, "score": safe_float(js.get("risk_probability"), 0.0)})
+            enriched.append({**p, "probe_id": pid, "gold": gold[pid], "pred": 1 if str(js.get("prediction", "")).upper() == "RISK" else 0, "score": safe_float(js.get("risk_probability"), 0.0)})
     clusters = list(groupby(enriched, cluster_key).values())
     if not clusters:
         return {"low": 0.0, "high": 0.0, "point": 0.0}
@@ -1092,9 +1097,10 @@ def ece(y: list[int], s: list[float], bins: int = 10) -> float:
 def mcnemar_pairs(pred_rows: list[dict[str, Any]], gold: dict[str, int]) -> list[dict[str, Any]]:
     by_probe = defaultdict(dict)
     for p in pred_rows:
-        if p.get("probe_id") in gold:
+        pid = probe_id(p)
+        if pid in gold:
             js = p.get("content_json") or {}
-            by_probe[p["probe_id"]][p["mode"]] = 1 if str(js.get("prediction", "")).upper() == "RISK" else 0
+            by_probe[pid][p["mode"]] = 1 if str(js.get("prediction", "")).upper() == "RISK" else 0
     out = []
     for left, right in (("q+y", "y-only"), ("q+y", "q-only")):
         b = c = 0
