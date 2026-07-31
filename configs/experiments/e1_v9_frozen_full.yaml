@@ -1,0 +1,105 @@
+experiment:
+  id: e1_v9_frozen_full
+  protocol: E1-V9-FROZEN-FULL-NATURAL-QY-v1.0
+  implementation_revision: 1
+  seed: 20260731
+data:
+  old_v8_dir: data/prepared/e1_v8_a2c
+  old_v81_dir: data/prepared/e1_v81_narrative_delta
+  output_dir: data/prepared/e1_v9_frozen_full
+  report_dir: outputs/e1_v9_frozen_full
+  public_report_dir: reports/e1_v9_frozen_full
+  archive_dir: archive/pre_e1_v9_20260731_170000
+models:
+  deepseek_target:
+    provider: deepseek
+    model: deepseek-v4-flash
+    extra_body:
+      thinking:
+        type: disabled
+  qwen_target:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body:
+      enable_thinking: false
+  deepseek_labeler:
+    provider: deepseek
+    model: deepseek-v4-pro
+    extra_body:
+      thinking:
+        type: disabled
+  qwen_labeler:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body:
+      enable_thinking: false
+  qwen_evaluator:
+    provider: qwen
+    model: qwen3.7-max-2026-06-08
+    extra_body:
+      enable_thinking: false
+  deepseek_evaluator:
+    provider: deepseek
+    model: deepseek-v4-pro
+    extra_body:
+      thinking:
+        type: disabled
+generation:
+  temperature: 0.2
+  top_p: 0.9
+  max_tokens: 2048
+  timeout_seconds: 180
+labeling:
+  temperature: 0.0
+  max_tokens: 320
+  timeout_seconds: 180
+evaluator:
+  temperature: 0.0
+  max_tokens: 128
+  timeout_seconds: 180
+concurrency:
+  deepseek_target: 32
+  deepseek_label: 32
+  qwen_target: 24
+  qwen_label: 24
+  qwen_evaluator: 16
+  deepseek_evaluator: 32
+budget:
+  qwen_hard_cap_cny: 49.0
+  deepseek_hard_cap_cny: 49.0
+  qwen_stop_new_tasks_at_cny: 44.0
+  deepseek_stop_new_tasks_at_cny: 44.0
+  g1_qwen_hard_cap_cny: 5.0
+  g1_deepseek_hard_cap_cny: 2.0
+  pricing_cny_per_million:
+    deepseek-v4-flash:
+      input: 1.0
+      output: 2.0
+    deepseek-v4-pro:
+      input: 3.0
+      output: 6.0
+    qwen3.7-plus-2026-05-26:
+      input: 2.0
+      output: 8.0
+    qwen3.7-max-2026-06-08:
+      input: 12.0
+      output: 36.0
+g1:
+  min_strict_pairs_go: 56
+  qy_macro_f1_go: 0.84
+  qy_macro_f1_stop: 0.80
+  qy_minus_y_go: 0.08
+  qy_minus_y_stop: 0.04
+  qy_recall_go: 0.78
+  qy_recall_stop: 0.72
+  qy_fpr_go: 0.10
+  qy_fpr_stop: 0.15
+full:
+  frozen_cases: 1541
+  e1c_cases: 400
+  b1_positive_target: 150
+  b2_pair_target: 150
+  b2_pair_min_basic: 120
+stats:
+  bootstrap_iterations: 10000
+  bootstrap_seed: 20260731
