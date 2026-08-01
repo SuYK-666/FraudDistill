@@ -1,0 +1,125 @@
+experiment:
+  id: e1_v10_trilayer
+  protocol: E1-V10-TRILAYER-NATURAL-CONTEXT-FROZEN-v1.0
+  implementation_revision: 1
+  seed: 20260801
+data:
+  output_dir: data/prepared/e1_v10_trilayer
+  report_dir: outputs/e1_v10_trilayer
+  public_report_dir: reports/e1_v10_trilayer
+  archive_dir: archive/pre_e1_v10_20260801_131314
+  v91_dir: data/prepared/e1_v91_recovery
+  v81_dir: data/prepared/e1_v81_narrative_delta
+  v8_dir: data/prepared/e1_v8_a2c
+models:
+  deepseek_target:
+    provider: deepseek
+    model: deepseek-v4-flash
+    allow_resolved:
+      - deepseek-v4-flash
+      - DeepSeek-V4-Flash-0731
+    extra_body:
+      thinking:
+        type: disabled
+  qwen_target:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    allow_resolved:
+      - qwen3.7-plus-2026-05-26
+      - qwen3.7-plus
+    extra_body:
+      enable_thinking: false
+  gold_a:
+    provider: deepseek
+    model: deepseek-v4-pro
+    allow_resolved:
+      - deepseek-v4-pro
+      - DeepSeek-V4-Pro
+    extra_body:
+      thinking:
+        type: disabled
+  gold_b:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    allow_resolved:
+      - qwen3.7-plus-2026-05-26
+      - qwen3.7-plus
+    extra_body:
+      enable_thinking: false
+  adjudicator:
+    provider: qwen
+    model: qwen3.7-max-2026-06-08
+    allow_resolved:
+      - qwen3.7-max-2026-06-08
+      - qwen3.7-max
+    extra_body:
+      enable_thinking: false
+  evaluator_main:
+    provider: qwen
+    model: qwen3.7-max-2026-06-08
+    allow_resolved:
+      - qwen3.7-max-2026-06-08
+      - qwen3.7-max
+    extra_body:
+      enable_thinking: false
+  evaluator_sensitivity:
+    provider: deepseek
+    model: deepseek-v4-pro
+    allow_resolved:
+      - deepseek-v4-pro
+      - DeepSeek-V4-Pro
+    extra_body:
+      thinking:
+        type: disabled
+generation:
+  temperature: 0.2
+  top_p: 0.9
+  max_tokens: 1536
+  timeout_seconds: 180
+labeling:
+  temperature: 0.0
+  max_tokens: 700
+  timeout_seconds: 180
+evaluator:
+  temperature: 0.0
+  max_tokens: 220
+  timeout_seconds: 180
+concurrency:
+  health: 2
+  smoke: 5
+  initial: 20
+  stable: 40
+  max_requested: 100
+budget:
+  qwen_warning_cny: 35.0
+  qwen_soft_stop_cny: 42.0
+  qwen_hard_stop_cny: 48.0
+  deepseek_warning_cny: 35.0
+  deepseek_soft_stop_cny: 42.0
+  deepseek_hard_stop_cny: 48.0
+  usd_to_cny: 7.2
+  deepseek_peak_multiplier_worst_case: 2.0
+  pricing_usd_per_million:
+    deepseek-v4-flash:
+      input: 0.14
+      output: 0.28
+    deepseek-v4-pro:
+      input: 0.435
+      output: 0.87
+    qwen3.7-plus-2026-05-26:
+      input: 0.276
+      output: 1.101
+    qwen3.7-max-2026-06-08:
+      input: 1.65
+      output: 4.951
+panels:
+  legacy_dev_pairs: 61
+  pressure_pilot_q_groups: 40
+  pressure_replicates: 4
+  b_broad_target_pairs: 120
+  b_context_target_pairs: 80
+  c_sample_target: 600
+  c_min_exploratory_positive: 20
+stats:
+  bootstrap_iterations: 10000
+  bootstrap_seed: 20260801
