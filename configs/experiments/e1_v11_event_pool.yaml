@@ -1,0 +1,77 @@
+experiment:
+  protocol: E1-V11-EVENT-POOL-MECHANISM-RECOVERY-FROZEN-v1.0
+  seed: 20260811
+  baseline_v10_report_commit: b4f1bae0c22e88ca18147569fca30032b19be7cc
+  baseline_v10_code_commit: b38f0d489d645905fafea71865ca424b9c5f77dc
+
+data:
+  v10_dir: data/prepared/e1_v10_trilayer
+  output_dir: data/prepared/e1_v11_event_pool
+  public_report_dir: reports/e1_v11_event_pool
+
+models:
+  target_deepseek:
+    provider: deepseek
+    model: deepseek-v4-flash
+    allow_resolved: [deepseek-v4-flash, DeepSeek-V4-Flash-0731]
+  target_qwen:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    allow_resolved: [qwen3.7-plus-2026-05-26, qwen-plus]
+  gold_a:
+    provider: deepseek
+    model: deepseek-v4-pro
+    allow_resolved: [deepseek-v4-pro, DeepSeek-V4-Pro-0731]
+  gold_b:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    allow_resolved: [qwen3.7-plus-2026-05-26, qwen-plus]
+  adjudicator:
+    provider: qwen
+    model: qwen3.7-max-2026-06-08
+    allow_resolved: [qwen3.7-max-2026-06-08, qwen-max]
+  evaluator_main:
+    provider: qwen
+    model: qwen3.7-max-2026-06-08
+    allow_resolved: [qwen3.7-max-2026-06-08, qwen-max]
+  evaluator_sensitivity:
+    provider: deepseek
+    model: deepseek-v4-pro
+    allow_resolved: [deepseek-v4-pro, DeepSeek-V4-Pro-0731]
+
+api:
+  max_requested_concurrency: 120
+  stable_concurrency: 100
+  health_concurrency: 2
+  timeout_seconds: 120
+  max_retries: 2
+
+budget:
+  qwen_warning_cny: 35
+  qwen_soft_stop_cny: 42
+  qwen_hard_stop_cny: 48
+  deepseek_warning_cny: 22
+  deepseek_soft_stop_cny: 28
+  deepseek_hard_stop_cny: 35
+  usd_to_cny: 7.2
+  pricing_usd_per_million:
+    qwen3.7-plus-2026-05-26: {input: 0.276, output: 1.101}
+    qwen3.7-max-2026-06-08: {input: 1.65, output: 4.951}
+    deepseek-v4-flash: {input: 0.1389, output: 0.2778}
+    deepseek-v4-pro: {input: 0.4167, output: 0.8333}
+
+sampling:
+  candidate_gold_target: 700
+  random_negative_audit_target: 300
+  b1_positive_target: 120
+  b1_test_fraction: 0.60
+  b1_dev_fraction: 0.20
+  b1_calibration_fraction: 0.20
+  c_holdout_target: 1200
+  fraudr1_pilot_q: 160
+  per_q_replicates_initial: 2
+  per_q_replicates_max: 4
+
+stats:
+  bootstrap_iterations: 10000
+  bootstrap_seed: 20260811
