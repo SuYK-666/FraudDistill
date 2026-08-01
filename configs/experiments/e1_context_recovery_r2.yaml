@@ -1,0 +1,85 @@
+experiment:
+  protocol: E1-CONTEXT-RECOVERY-R2-v1.0
+  seed: 20260801
+  baseline_commit: 51bba702b0ceae992e5c1ceb0d7236240eb6d98e
+
+data:
+  output_dir: data/prepared/e1_context_recovery_r2
+  public_report_dir: reports/e1_context_recovery_r2
+  historical_dirs:
+    - data/prepared/e1_v8_a2c
+    - data/prepared/e1_v81_narrative_delta
+    - data/prepared/e1_v9_frozen_full
+    - data/prepared/e1_v91_recovery
+    - data/prepared/e1_v10_trilayer
+    - data/prepared/e1_v11_event_pool
+  v10_dir: data/prepared/e1_v10_trilayer
+  final_push_dir: data/prepared/e1_final_push
+
+api:
+  max_requested_concurrency: 120
+  stable_concurrency: 110
+  deepseek_concurrency: 24
+  qwen_concurrency: 20
+  adjudicator_concurrency: 4
+  live_phase_all_allowed: false
+
+models:
+  gold_a:
+    provider: deepseek
+    model: deepseek-v4-pro
+    allow_resolved: [deepseek-v4-pro, DeepSeek-V4-Pro-0731, deepseek-v4-flash, DeepSeek-V4-Flash-0731]
+    extra_body: {thinking: {type: disabled}}
+  gold_b:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    allow_resolved: [qwen3.7-plus-2026-05-26]
+    extra_body: {enable_thinking: false}
+  adjudicator:
+    provider: qwen
+    model: qwen3.7-max-2026-06-08
+    allow_resolved: [qwen3.7-max-2026-06-08]
+    extra_body: {enable_thinking: false}
+
+budget:
+  deepseek_warning_cny: 10
+  deepseek_soft_stop_cny: 14
+  deepseek_hard_stop_cny: 18
+  qwen_warning_cny: 18
+  qwen_soft_stop_cny: 25
+  qwen_hard_stop_cny: 30
+  total_hard_stop_cny: 45
+  max_adjudication_fraction: 0.15
+  usd_to_cny: 7.2
+  pricing_usd_per_million:
+    qwen3.7-plus-2026-05-26: {input: 0.276, output: 1.101}
+    qwen3.7-max-2026-06-08: {input: 2.5, output: 7.5}
+    deepseek-v4-flash: {input: 0.1389, output: 0.2778}
+    deepseek-v4-pro: {input: 0.4167, output: 0.8333}
+
+gold:
+  pilot_n: 300
+  max_tokens: 520
+  temperature: 0.0
+  views: [Y_ONLY, QY]
+
+panel:
+  pilot_requirements:
+    min_total: 300
+    min_per_model: 120
+    min_per_language: 120
+    min_per_category: 30
+  strata_target:
+    context_critical_positive: 80
+    context_stable_positive: 80
+    context_hard_negative: 80
+    context_stable_negative: 80
+  modeldev_n: 240
+  calibration_n: 120
+  anchor_n: 320
+  reserve_n: 120
+  seeds: [13, 17, 23, 42, 20260801]
+
+statistics:
+  bootstrap_iterations: 10000
+  bootstrap_seed: 20260801
