@@ -1,0 +1,92 @@
+experiment:
+  protocol: E1-TRIAD-VALIDITY-REPAIR-v1.0
+  seed: 20260801
+  baseline_commit: b091e0c403c4bcbc47598cef6a7484a5d69c867e
+  experiment_1_frozen: false
+
+data:
+  output_dir: data/prepared/e1_triad_final
+  public_report_dir: reports/e1_triad_final
+  pku_cache_dir: data/raw/pku_saferlhf/.cache
+  harmbench_behaviors: third_party/HarmBench/data/behavior_datasets/harmbench_behaviors_text_all.csv
+  fraudr1_prompts: data/raw/fraudr1/prompts.jsonl
+  v10_dir: data/prepared/e1_v10_trilayer
+  final_push_dir: data/prepared/e1_final_push
+
+api:
+  max_requested_concurrency: 120
+  stable_concurrency: 110
+  health_concurrency: 5
+  timeout_seconds: 120
+  live_phase_all_allowed: false
+
+budget:
+  qwen_warning_cny: 32
+  qwen_soft_stop_cny: 40
+  qwen_hard_stop_cny: 45
+  deepseek_warning_cny: 14
+  deepseek_soft_stop_cny: 18
+  deepseek_hard_stop_cny: 20
+  total_hard_stop_cny: 60
+  usd_to_cny: 7.2
+  pricing_usd_per_million:
+    qwen3.7-plus-2026-05-26: {input: 0.276, output: 1.101}
+    qwen3.7-max-2026-06-08: {input: 2.5, output: 7.5}
+    deepseek-v4-flash: {input: 0.1389, output: 0.2778}
+    deepseek-v4-pro: {input: 0.4167, output: 0.8333}
+
+models:
+  qwen_target:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    allow_resolved: [qwen3.7-plus-2026-05-26]
+    extra_body: {enable_thinking: false}
+  deepseek_target:
+    provider: deepseek
+    model: deepseek-v4-flash
+    allow_resolved: [deepseek-v4-flash, DeepSeek-V4-Flash-0731]
+    extra_body: {thinking: {type: disabled}}
+  gold_a:
+    provider: deepseek
+    model: deepseek-v4-pro
+    allow_resolved: [deepseek-v4-pro, DeepSeek-V4-Pro-0731]
+    extra_body: {thinking: {type: disabled}}
+  gold_b:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    allow_resolved: [qwen3.7-plus-2026-05-26]
+    extra_body: {enable_thinking: false}
+  adjudicator:
+    provider: qwen
+    model: qwen3.7-max-2026-06-08
+    allow_resolved: [qwen3.7-max-2026-06-08]
+    extra_body: {enable_thinking: false}
+  evaluator_main:
+    provider: qwen
+    model: qwen3.7-max-2026-06-08
+    allow_resolved: [qwen3.7-max-2026-06-08]
+    extra_body: {enable_thinking: false}
+  evaluator_sensitivity:
+    provider: deepseek
+    model: deepseek-v4-pro
+    allow_resolved: [deepseek-v4-pro, DeepSeek-V4-Pro-0731]
+    extra_body: {thinking: {type: disabled}}
+
+generation: {temperature: 0.2, top_p: 0.9, max_tokens: 1024, timeout_seconds: 120}
+labeling: {temperature: 0.0, max_tokens: 700, timeout_seconds: 120}
+evaluator: {temperature: 0.0, max_tokens: 260, timeout_seconds: 120}
+
+triad:
+  seeds: [13, 17, 23, 42, 20260801]
+  smoke_q: 24
+  b_model_dev_groups: 60
+  b_calibration_groups: 40
+  b_anchor_groups: 160
+  b_anchor_minimum_groups: 120
+  b_context_minimum_groups: 80
+  b_reserve_groups: 80
+  c1_target_n: 500
+  c1_minimum_n: 300
+  bootstrap_iterations: 10000
+  pku_relevant_categories: [Economic Crime, Privacy Violation, Mental Manipulation, Cybercrime, White-Collar Crime]
+  fraud_categories: [phishing, impersonation, fraudulent_service, fake_job, relationship_investment]
