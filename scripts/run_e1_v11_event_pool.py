@@ -136,6 +136,10 @@ def phase_p1_gold(config: dict[str, Any], data_dir: Path, cache_only: bool) -> d
             tid = f"v11_gold|{row['response_id']}|{labeler}"
             tasks.append(("v11_gold", tid, config["models"][key], [{"role": "user", "content": gold_prompt(row)}], {**row, "labeler_key": labeler}))
     votes = v10.run_tasks(config, data_dir, "E1_V11_GOLD_VOTES.jsonl", tasks, json_mode=True, role="labeling", cache_only=cache_only, core=True)
+    retry_tasks = invalid_gold_retry_tasks(config, pool, votes)
+    if retry_tasks:
+        retry_votes = v10.run_tasks(config, data_dir, "E1_V11_GOLD_VOTE_RETRIES.jsonl", retry_tasks, json_mode=True, role="labeling", cache_only=cache_only, core=True)
+        votes = [*votes, *retry_votes]
     consensus, quality, discord = build_consensus(pool, votes)
     write_jsonl(data_dir / "E1_V11_GOLD_CONSENSUS.jsonl", consensus)
     write_json(data_dir / "E1_V11_GOLD_QUALITY.json", quality)
@@ -399,9 +403,27 @@ def build_consensus(pool: list[dict[str, Any]], votes: list[dict[str, Any]]) -> 
             discord_row = {**row, "gold": None, "gold_source": "v11_disagreement", "judge_a_gold": av, "judge_b_gold": bv, "context_necessity": "UNCERTAIN"}
             consensus.append(discord_row)
             discord.append(discord_row)
-    quality = gold_quality(pairs, expected_tasks=len(pool) * 2, valid_tasks=valid_tasks, uncertain_n=sum(1 for r in consensus if r.get("gold") is None))
+    quality = gold_quality(pairs, expected_tasks=len(pool) * 2, valid_tasks=valid_tasks, uncertain_n=sum(1 for r in consensus if r.get("gold") is None), response_n=len(pool))
     quality["passed"] = gate_gold_quality(quality)
     return consensus, quality, discord
+
+
+def invalid_gold_retry_tasks(config: dict[str, Any], pool: list[dict[str, Any]], votes: list[dict[str, Any]]) -> list[tuple[str, str, dict[str, Any], list[dict[str, str]], dict[str, Any]]]:
+    pool_map = {r["response_id"]: r for r in pool}
+    latest: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in votes:
+        key = (row.get("response_id"), row.get("labeler_key", row.get("provider", "")))
+        latest[key] = row
+    tasks = []
+    for row in pool:
+        for model_key, labeler in (("gold_a", "deepseek_pro"), ("gold_b", "qwen_plus")):
+            vote = latest.get((row["response_id"], labeler))
+            js = (vote or {}).get("content_json") or {}
+            valid = bool(vote and vote.get("status") == "ok" and isinstance(js, dict) and not js.get("parse_error") and validate_gold_schema(js, row.get("q", ""), row.get("y", "")))
+            if not valid:
+                tid = f"v11_gold_retry1|{row['response_id']}|{labeler}"
+                tasks.append(("v11_gold_retry1", tid, config["models"][model_key], [{"role": "user", "content": gold_prompt(row)}], {**row, "labeler_key": labeler, "retry_of": (vote or {}).get("task_id", "")}))
+    return tasks
 
 
 def apply_adjudication(consensus: list[dict[str, Any]], adjud: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -504,6 +526,8 @@ def bias_audit(data_dir: Path, decision: dict[str, Any]) -> dict[str, Any]:
 
 
 def compare_modes(rows: list[dict[str, Any]], left: str, right: str) -> dict[str, Any]:
+    if not rows or not any(r.get("mode") == left for r in rows) or not any(r.get("mode") == right for r in rows):
+        return {"comparison": f"{left} vs {right}", "point_delta": 0.0, "ci_low": 0.0, "ci_high": 0.0, "status": "NA_missing_mode"}
     ci = cluster_bootstrap_delta(rows, "pair_id", left, right, 1000, 20260811)
     return {"comparison": f"{left} vs {right}", "point_delta": ci["point"], "ci_low": ci["low"], "ci_high": ci["high"]}
 
@@ -601,7 +625,14 @@ def write_parquet(path: Path, rows: list[dict[str, Any]]) -> bool:
 
 
 def load_config(path: Path) -> dict[str, Any]:
-    return yaml.safe_load((ROOT / path).read_text(encoding="utf-8"))
+    config = yaml.safe_load((ROOT / path).read_text(encoding="utf-8"))
+    config.setdefault("concurrency", {})
+    config["concurrency"].setdefault("stable", config.get("api", {}).get("stable_concurrency", 40))
+    config["concurrency"].setdefault("health", config.get("api", {}).get("health_concurrency", 2))
+    config.setdefault("labeling", {"temperature": 0.0, "max_tokens": 1400, "timeout_seconds": config.get("api", {}).get("timeout_seconds", 120)})
+    config.setdefault("evaluator", {"temperature": 0.0, "max_tokens": 240, "timeout_seconds": config.get("api", {}).get("timeout_seconds", 120)})
+    config.setdefault("generation", {"temperature": 0.2, "top_p": 0.9, "max_tokens": 1536, "timeout_seconds": config.get("api", {}).get("timeout_seconds", 120)})
+    return config
 
 
 def read_jsonl(path: Path):

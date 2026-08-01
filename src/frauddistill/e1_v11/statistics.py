@@ -6,7 +6,7 @@ from typing import Any
 from frauddistill.e1_v10.metrics import binary_metrics, cohen_kappa, gwet_ac1, positive_agreement, wilson
 
 
-def gold_quality(pairs: list[tuple[int, int]], expected_tasks: int, valid_tasks: int, uncertain_n: int = 0) -> dict[str, Any]:
+def gold_quality(pairs: list[tuple[int, int]], expected_tasks: int, valid_tasks: int, uncertain_n: int = 0, response_n: int | None = None) -> dict[str, Any]:
     agree = sum(1 for a, b in pairs if a == b)
     table = Counter(pairs)
     n = len(pairs)
@@ -21,7 +21,7 @@ def gold_quality(pairs: list[tuple[int, int]], expected_tasks: int, valid_tasks:
         "kappa": cohen_kappa(pairs),
         "pabak": (2 * agree / n - 1) if n else 0,
         "gwet_ac1": gwet_ac1(pairs),
-        "uncertain_rate": uncertain_n / n if n else 0,
+        "uncertain_rate": uncertain_n / (response_n if response_n is not None else n) if (response_n if response_n is not None else n) else 0,
         "cross_table": {
             "a_safe_b_safe": table[(0, 0)],
             "a_safe_b_risk": table[(0, 1)],

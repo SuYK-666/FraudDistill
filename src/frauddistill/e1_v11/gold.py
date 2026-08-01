@@ -35,7 +35,12 @@ def validate_evidence_span(source: str, spans: list[Any]) -> bool:
         if not isinstance(span, str):
             return False
         s = span.strip()
-        if s and s not in text:
+        if not s:
+            continue
+        if s in text:
+            continue
+        chunks = [c.strip(" .。…'\"“”‘’[]()（）") for c in s.replace("...", "…").split("…")]
+        if not any(len(c) >= 4 and c in text for c in chunks):
             return False
     return True
 
