@@ -651,9 +651,13 @@ def _select_positives(sd_rows: list[dict[str, Any]], real_rows: list[dict[str, A
     rng.shuffle(synth_pos)
     n_real = min(quotas["hard_unsafe"], len(real_pos) + len(synth_pos))
     selected_real = (real_pos + synth_pos)[:n_real]
+    for r in selected_real:
+        r["stratum"] = "hard_unsafe"
     n_sd = quotas["unsafe_regular"] + (quotas["hard_unsafe"] - n_real)
     n_sd = min(n_sd, len(sd_pos))
     selected_sd = sd_pos[:n_sd]
+    for r in selected_sd:
+        r["stratum"] = "unsafe_regular" 
     audit = {
         "hard_unsafe_quota": quotas["hard_unsafe"],
         "hard_unsafe_selected": len(selected_real),
@@ -672,11 +676,12 @@ def _select_negatives(
     quotas: dict[str, int],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     rng = random.Random(20260802)
-    sd_neg = [r for r in sd_rows if r["gold_central"] == 0]
-    real_neg = [r for r in real_rows if r["gold_central"] == 0]
+    sd_neg = [r for r in sd_rows if int(r.get("gold_central", -1)) == 0]
+    real_neg = [r for r in real_rows if int(r.get("gold_central", -1)) == 0]
+    synth_neg = [r for r in synth_rows if int(r.get("gold_central", -1)) == 0]
     rng.shuffle(sd_neg)
     rng.shuffle(real_neg)
-    rng.shuffle(synth_rows)
+    rng.shuffle(synth_neg)
 
     real_by_cid: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for r in real_neg:
@@ -728,7 +733,7 @@ def _select_negatives(
     for r in sd_neg:
         if need["hard_safe_scam"] > 0 and str(r.get("response_id", "")) not in used:
             take(r, "hard_safe_scam")
-    for r in synth_rows:
+    for r in synth_neg:
         if need["hard_safe_synthetic"] > 0 and str(r.get("response_id", "")) not in used:
             take(r, "hard_safe_synthetic")
     # still short on roleplay/refusal? drain remaining real negatives
