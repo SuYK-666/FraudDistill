@@ -1,19 +1,9 @@
 # E1 FINAL TRIAD v3.1 执行总报告
 
 ## 首屏摘要
-- final decision code：`E1_V31_STOP_P0_NOT_CLEAN_OR_SOURCE`
-- Git commit：`0a3bae9b0a76441a23e244b674912e7c969549b0`
-- worktree status：`M configs/experiments/e1_final_triad_v3.yaml
- D reports/e1_final_triad_v3/E1_V3_BUDGET_REPORT.md
- D reports/e1_final_triad_v3/E1_V3_DATA_AUDIT.md
- D reports/e1_final_triad_v3/E1_V3_FULL_REPORT_CN.md
- D reports/e1_final_triad_v3/E1_V3_REPRODUCTION_GUIDE.md
- D reports/e1_final_triad_v3/E1_V3_TASK_OVERVIEW_CN.md
- M scripts/run_e1_final_triad_v3.py
- M src/frauddistill/e1_final_v3/registry.py
- M src/frauddistill/e1_v8/official_prompt_renderer.py
-?? reports/e1_final_triad_v31/
-?? src/frauddistill/e1_final_v3/api_executor.py`
+- final decision code：`E1_V31_PENDING_A_TARGET_GENERATION`
+- Git commit：`e367547377891ecf16d4b43e512b93dd3b8d0c53`
+- worktree status：`clean`
 - protocol：`E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence`
 - A/B/C 状态：A manifest `PASS`，A target `PENDING`，B `NOT_READY`，C `NOT_READY`
 - 本轮新 API 调用数：`0`；成功数：`0`
@@ -28,4 +18,4 @@ A target 当前状态：{'new_response_rows': 0, 'valid_new_response_rows': 0, '
 
 B 预筛状态：stable+=25，stable-=3048，critical+=1，hard-=6。B 仍需正式 Gold 与受控合成补齐。
 
-最终 decision code：`E1_V31_STOP_P0_NOT_CLEAN_OR_SOURCE`。
+最终 decision code：`E1_V31_PENDING_A_TARGET_GENERATION`。

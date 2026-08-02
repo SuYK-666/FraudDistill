@@ -8,4 +8,4 @@ A target 当前状态：{'new_response_rows': 0, 'valid_new_response_rows': 0, '
 
 B 预筛状态：stable+=25，stable-=3048，critical+=1，hard-=6。B 仍需正式 Gold 与受控合成补齐。
 
-最终 decision code：`E1_V31_STOP_P0_NOT_CLEAN_OR_SOURCE`。
+最终 decision code：`E1_V31_PENDING_A_TARGET_GENERATION`。

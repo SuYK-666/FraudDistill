@@ -2,8 +2,8 @@
 
 ```json
 {
-  "decision_code": "E1_V31_STOP_P0_NOT_CLEAN_OR_SOURCE",
-  "p0_gate": "STOP_P0_DIRTY_OR_SOURCE",
+  "decision_code": "E1_V31_PENDING_A_TARGET_GENERATION",
+  "p0_gate": "PASS",
   "a_manifest_gate": "PASS",
   "a_target_gate": "PENDING",
   "b_gate": "NOT_READY",

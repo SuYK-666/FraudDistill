@@ -4,9 +4,9 @@
 {
   "p0": {
     "protocol": "E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence",
-    "runtime_commit": "0a3bae9b0a76441a23e244b674912e7c969549b0",
-    "git_status": "M configs/experiments/e1_final_triad_v3.yaml\n D reports/e1_final_triad_v3/E1_V3_BUDGET_REPORT.md\n D reports/e1_final_triad_v3/E1_V3_DATA_AUDIT.md\n D reports/e1_final_triad_v3/E1_V3_FULL_REPORT_CN.md\n D reports/e1_final_triad_v3/E1_V3_REPRODUCTION_GUIDE.md\n D reports/e1_final_triad_v3/E1_V3_TASK_OVERVIEW_CN.md\n M scripts/run_e1_final_triad_v3.py\n M src/frauddistill/e1_final_v3/registry.py\n M src/frauddistill/e1_v8/official_prompt_renderer.py\n?? reports/e1_final_triad_v31/\n?? src/frauddistill/e1_final_v3/api_executor.py",
-    "git_clean": false,
+    "runtime_commit": "e367547377891ecf16d4b43e512b93dd3b8d0c53",
+    "git_status": "",
+    "git_clean": true,
     "budget": {
       "pricing_sources": [
         {
@@ -104,8 +104,8 @@
       "returncode": 1,
       "matches": ""
     },
-    "api_allowed_now": false,
-    "gate": "STOP_P0_DIRTY_OR_SOURCE"
+    "api_allowed_now": true,
+    "gate": "PASS"
   },
   "license": {
     "download_date": "2026-08-02",
