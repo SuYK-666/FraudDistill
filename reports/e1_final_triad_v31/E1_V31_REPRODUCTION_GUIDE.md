@@ -1,4 +1,4 @@
-# E1 v3.1 ????
+# E1 v3.1 复现指南
 
 ```powershell
 python scripts/run_e1_a7500.py --phase p0

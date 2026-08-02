@@ -884,13 +884,13 @@ def analysis(
     y = agg.get("y_only", {})
     q = agg.get("q_only", {})
     parts = [
-        f"A7500?canonical cases={a_audit.get('canonical_cases')}?prompt instances={a_audit.get('target_prompt_instances')}??? responses={a_audit.get('reused_target_responses')}?? API ??={target_quality.get('valid_new_response_rows', 0)}?",
-        f"A Gold?{gold_quality.get('gate', 'NOT_RUN')}?completion={gold_quality.get('completion_rate')}?binary agreement={gold_quality.get('binary_agreement')}?PABAK={gold_quality.get('pabak')}?",
-        f"A central prevalence={central.get('rate')}?positive={central.get('positive')}?95% CI {central.get('wilson_95', {}).get('low')}-{central.get('wilson_95', {}).get('high')}??",
-        f"B ???formal_panel_ready={b_audit.get('formal_panel_ready')}?by stratum={b_audit.get('panel', {}).get('by_stratum')}?",
-        f"B Anchor?q+y Macro-F1={qy.get('anchor_macro_f1_mean')}?SD {qy.get('anchor_macro_f1_sd')}??y-only={y.get('anchor_macro_f1_mean')}?q-only={q.get('anchor_macro_f1_mean')}?",
-        f"C ???can_run={c_result.get('can_run_c')}?q+y AUPRC={c_result.get('q_y', {}).get('auprc')}?y-only AUPRC={c_result.get('y_only', {}).get('auprc')}?",
-        f"?? decision code?`{decision['decision_code']}`?",
+        f"A7500：canonical cases={a_audit.get('canonical_cases')}，prompt instances={a_audit.get('target_prompt_instances')}，复用 responses={a_audit.get('reused_target_responses')}，新增 API 调用={target_quality.get('valid_new_response_rows', 0)}。",
+        f"A Gold：{gold_quality.get('gate', 'NOT_RUN')}，completion={gold_quality.get('completion_rate')}，binary agreement={gold_quality.get('binary_agreement')}，PABAK={gold_quality.get('pabak')}。",
+        f"A central prevalence={central.get('rate')}，positive={central.get('positive')}，95% CI {central.get('wilson_95', {}).get('low')}-{central.get('wilson_95', {}).get('high')}。",
+        f"B 面板：formal_panel_ready={b_audit.get('formal_panel_ready')}，by stratum={b_audit.get('panel', {}).get('by_stratum')}。",
+        f"B Anchor：q+y Macro-F1={qy.get('anchor_macro_f1_mean')}，SD {qy.get('anchor_macro_f1_sd')}；y-only={y.get('anchor_macro_f1_mean')}；q-only={q.get('anchor_macro_f1_mean')}。",
+        f"C 回放：can_run={c_result.get('can_run_c')}，q+y AUPRC={c_result.get('q_y', {}).get('auprc')}，y-only AUPRC={c_result.get('y_only', {}).get('auprc')}。",
+        f"最终 decision code：`{decision['decision_code']}`。",
     ]
     return "\n".join(parts)
 
@@ -918,28 +918,28 @@ def write_v31_reports(report_dir: Path, payload: dict[str, Any]) -> None:
         "E1_V31_TASK_CLOSEOUT_CN.md",
     ]
     executive = render_executive(payload)
-    full = executive + "\n\n## A ??\n" + block(payload["a"]) + "\n\n## B ??\n" + block(payload["b"]) + "\n\n## C ??\n" + block(payload["c"]) + "\n\n## ?? ledger\n" + block(payload.get("ledger_summary", {})) + "\n"
+    full = executive + "\n\n## A 层详情\n" + block(payload["a"]) + "\n\n## B 层详情\n" + block(payload["b"]) + "\n\n## C 层详情\n" + block(payload["c"]) + "\n\n## 预算 ledger\n" + block(payload.get("ledger_summary", {})) + "\n"
     contents = {
         names[0]: executive,
         names[1]: full,
-        names[2]: "# E1 v3.1 ????? provenance ??\n\n" + block(payload["data_audit"]) + "\n\n## B ??????\n" + block(payload["b"].get("panel_build", {})) + "\n",
-        names[3]: "# E1 v3.1 A Target ????\n\n" + block(payload["a"]) + "\n",
-        names[4]: "# E1 v3.1 Gold ????\n\n" + block({"A": payload["a"].get("gold_quality"), "B": payload["b"].get("gold_quality"), "coverage": payload["a"].get("gold_coverage")}) + "\n",
-        names[5]: "# E1 v3.1 ????\n\n" + block(payload["budget"]) + "\n\n## ?? ledger\n" + block(payload.get("ledger_summary", {})) + "\n",
-        names[6]: "# E1 v3.1 ???????\n\n" + block({"analysis": payload["analysis"], "b_rejects": payload["b"].get("panel_audit", {}).get("rejects_total"), "shortcut_audits": payload["b"].get("freeze", {}).get("shortcut_audits"), "c_note": payload["c"].get("result", {}).get("note")}) + "\n",
-        names[7]: "# E1 v3.1 ????\n\n" + block(payload["a"].get("behavior_stats", {})) + "\n\n## B ??\n" + block(payload["b"].get("anchor", {})) + "\n\n## C ??\n" + block(payload["c"].get("result", {})) + "\n",
+        names[2]: "# E1 v3.1 数据溯源与 provenance 审计\n\n" + block(payload["data_audit"]) + "\n\n## B 面板构建记录\n" + block(payload["b"].get("panel_build", {})) + "\n",
+        names[3]: "# E1 v3.1 A 层 Target 质量报告\n\n" + block(payload["a"]) + "\n",
+        names[4]: "# E1 v3.1 Gold 质量报告\n\n" + block({"A": payload["a"].get("gold_quality"), "B": payload["b"].get("gold_quality"), "coverage": payload["a"].get("gold_coverage")}) + "\n",
+        names[5]: "# E1 v3.1 预算报告\n\n" + block(payload["budget"]) + "\n\n## 调用 ledger\n" + block(payload.get("ledger_summary", {})) + "\n",
+        names[6]: "# E1 v3.1 失败偏差与反快捷方式审计\n\n" + block({"analysis": payload["analysis"], "b_rejects": payload["b"].get("panel_audit", {}).get("rejects_total"), "shortcut_audits": payload["b"].get("freeze", {}).get("shortcut_audits"), "c_note": payload["c"].get("result", {}).get("note")}) + "\n",
+        names[7]: "# E1 v3.1 统计附录\n\n" + block(payload["a"].get("behavior_stats", {})) + "\n\n## B 层 Anchor\n" + block(payload["b"].get("anchor", {})) + "\n\n## C 层回放\n" + block(payload["c"].get("result", {})) + "\n",
         names[8]: paper_tables(payload),
-        names[9]: "# E1 v3.1 ????\n\n```powershell\npython scripts/run_e1_a7500.py --phase p0\npython scripts/run_e1_a7500.py --phase build-manifest\npython scripts/run_e1_a7500.py --phase health --run-api --confirm-budget --limit-q 50\npython scripts/run_e1_a7500.py --phase generate --run-api --confirm-budget --batch-size-q 500 --resume\npython scripts/run_e1_a7500.py --phase validate-targets\npython scripts/run_e1_a7500.py --phase gold --run-api --confirm-budget --resume\npython scripts/run_e1_a7500.py --phase adjudicate --run-api --confirm-budget --resume\npython scripts/run_e1_a7500.py --phase freeze\npython scripts/run_e1_b3200.py --phase build-panel --run-api --confirm-budget --resume\npython scripts/run_e1_b3200.py --phase b-gold --run-api --confirm-budget --resume\npython scripts/run_e1_b3200.py --phase b-adjudicate --run-api --confirm-budget --resume\npython scripts/run_e1_b3200.py --phase b-consensus\npython scripts/run_e1_b3200.py --phase validate-panel\npython scripts/run_e1_b3200.py --phase model-dev\npython scripts/run_e1_b3200.py --phase calibration\npython scripts/run_e1_b3200.py --phase freeze-b\npython scripts/run_e1_b3200.py --phase anchor --consume-anchor\npython scripts/run_e1_c_real_prevalence.py --phase c-all\npython scripts/run_e1_final_triad_v3.py --phase final-report\n```\n",
-        names[10]: "# E1 v3.1 ????\n\n```json\n" + json_dump(payload["decision"]) + "\n```\n",
+        names[9]: "# E1 v3.1 复现指南\n\n```powershell\npython scripts/run_e1_a7500.py --phase p0\npython scripts/run_e1_a7500.py --phase build-manifest\npython scripts/run_e1_a7500.py --phase health --run-api --confirm-budget --limit-q 50\npython scripts/run_e1_a7500.py --phase generate --run-api --confirm-budget --batch-size-q 500 --resume\npython scripts/run_e1_a7500.py --phase validate-targets\npython scripts/run_e1_a7500.py --phase gold --run-api --confirm-budget --resume\npython scripts/run_e1_a7500.py --phase adjudicate --run-api --confirm-budget --resume\npython scripts/run_e1_a7500.py --phase freeze\npython scripts/run_e1_b3200.py --phase build-panel --run-api --confirm-budget --resume\npython scripts/run_e1_b3200.py --phase b-gold --run-api --confirm-budget --resume\npython scripts/run_e1_b3200.py --phase b-adjudicate --run-api --confirm-budget --resume\npython scripts/run_e1_b3200.py --phase b-consensus\npython scripts/run_e1_b3200.py --phase validate-panel\npython scripts/run_e1_b3200.py --phase model-dev\npython scripts/run_e1_b3200.py --phase calibration\npython scripts/run_e1_b3200.py --phase freeze-b\npython scripts/run_e1_b3200.py --phase anchor --consume-anchor\npython scripts/run_e1_c_real_prevalence.py --phase c-all\npython scripts/run_e1_final_triad_v3.py --phase final-report\n```\n",
+        names[10]: "# E1 v3.1 任务收尾\n\n```json\n" + json_dump(payload["decision"]) + "\n```\n",
     }
     for name in names:
         (report_dir / name).write_text(contents[name], encoding="utf-8")
 
 
 def paper_tables(payload: dict[str, Any]) -> str:
-    lines = ["# E1 v3.1 ????", ""]
+    lines = ["# E1 v3.1 论文表格", ""]
     a = payload["a"].get("behavior_stats", {})
-    lines.append("## A. ???? central ???")
+    lines.append("## A. 行为发生率 central 分布")
     rows = [{"model": row["stratum"], "n": row["n"], "positive": row["positive"], "rate": f"{row['rate']:.4f}", "ci_low": f"{row['wilson_95']['low']:.4f}", "ci_high": f"{row['wilson_95']['high']:.4f}"} for row in a.get("by_model", [])]
     lines.append(table(rows))
     lines.append("")
@@ -959,28 +959,28 @@ def paper_tables(payload: dict[str, Any]) -> str:
     lines.append(block(a.get("mcnemar_qwen_vs_deepseek", {})))
     lines.append("")
     b = payload["b"].get("anchor", {})
-    lines.append("## B. Frozen Anchor ??? 5-seed ???")
+    lines.append("## B. Frozen Anchor 主指标（5-seed 均值）")
     agg_rows = []
     for view in ["q_only", "y_only", "q+y"]:
         v = b.get("aggregate", {}).get(view, {})
         agg_rows.append({"view": view, "macro_f1_mean": f"{v.get('anchor_macro_f1_mean', 0):.4f}", "macro_f1_sd": f"{v.get('anchor_macro_f1_sd', 0):.4f}", "auprc_mean": f"{v.get('anchor_auprc_mean', 0):.4f}", "fpr_mean": f"{v.get('anchor_fpr_mean', 0):.4f}", "recall_mean": f"{v.get('anchor_recall_mean', 0):.4f}"})
     lines.append(table(agg_rows))
     lines.append("")
-    lines.append("### B. q+y vs y-only ????? CI")
+    lines.append("### B. q+y vs y-only 对比与 Bootstrap CI")
     lines.append(block({"mcnemar": b.get("mcnemar_qy_vs_y"), "ci_qy": b.get("cluster_bootstrap_ci_qy"), "ci_y": b.get("cluster_bootstrap_ci_y"), "transitions": b.get("error_transitions")}))
     lines.append("")
     c = payload["c"].get("result", {})
-    lines.append("## C. ???????")
+    lines.append("## C. 真实低基率回放")
     c_rows = []
     for view in ["y_only", "q_y"]:
         v = c.get(view, {})
         c_rows.append({"view": view, "auprc": f"{v.get('auprc', 0):.4f}", "auroc": f"{v.get('auroc', 0):.4f}", "fpr": f"{v.get('fpr', 0):.4f}", "recall": f"{v.get('recall', 0):.4f}", "precision": f"{v.get('precision', 0):.4f}", "brier": f"{v.get('brier', 0):.4f}", "ece": f"{v.get('ece', 0):.4f}"})
     lines.append(table(c_rows))
     lines.append("")
-    lines.append("### C. AUPRC ratio / FPR ????")
+    lines.append("### C. AUPRC ratio / FPR 相对变化")
     lines.append(block({"auprc_ratio_qy_over_y": c.get("auprc_ratio_qy_over_y"), "fpr_relative_drop": c.get("fpr_relative_drop"), "paired_bootstrap_gain": c.get("paired_bootstrap_gain"), "note": c.get("note")}))
     lines.append("")
-    lines.append("## ??")
+    lines.append("## 最终决策")
     lines.append(block(payload["decision"]))
     return "\n".join(lines)
 
@@ -995,21 +995,21 @@ def render_executive(payload: dict[str, Any]) -> str:
     q = agg.get("q_only", {})
     c = payload["c"].get("result", {})
     lines = [
-        "# E1 FINAL TRIAD v3.1 ?????",
+        "# E1 FINAL TRIAD v3.1 正式推进与大规模执行冻结方案",
         "",
-        "## ????",
-        f"- final decision code?`{d['decision_code']}`",
-        f"- Git commit?`{payload['runtime_commit']}`",
-        f"- worktree status?`{payload['worktree_status'] or 'clean'}`",
-        f"- protocol?`{payload['protocol']}`",
-        f"- A/B/C ???A manifest `{d['a_manifest_gate']}`?A target `{d['a_target_gate']}`?A Gold `{d['a_gold_gate']}`?B `{d['b_gate']}`?C `{d['c_gate']}`",
-        f"- ??? API ???target `{a['target_quality'].get('valid_new_response_rows', 0)}` ????Gold ?? `{a.get('gold_coverage', {}).get('new_gold_known', 0)}` ??ledger rows=`{payload.get('ledger_summary', {}).get('rows', 0)}`",
-        f"- A7500 ?????`{a['target_quality'].get('valid_new_response_rows', 0)}` ? + `{a.get('manifest_audit', {}).get('reused_target_responses', 0)}` ?????? pair=`{a['target_quality'].get('complete_new_pairs', 0)}`",
-        f"- A central prevalence?`{central.get('rate')}`?positive=`{central.get('positive')}`?95% CI `{central.get('wilson_95', {}).get('low')}`-`{central.get('wilson_95', {}).get('high')}`?",
-        f"- B ??? Anchor Macro-F1?q-only=`{q.get('anchor_macro_f1_mean', 'N/A')}`?y-only=`{y.get('anchor_macro_f1_mean', 'N/A')}`?q+y=`{qy.get('anchor_macro_f1_mean', 'N/A')}`",
-        f"- C ???q+y AUPRC=`{c.get('q_y', {}).get('auprc', 'N/A')}`?y-only AUPRC=`{c.get('y_only', {}).get('auprc', 'N/A')}`?AUPRC ratio=`{c.get('auprc_ratio_qy_over_y', 'N/A')}`",
+        "## 首屏关键信息",
+        f"- final decision code：`{d['decision_code']}`",
+        f"- Git commit：`{payload['runtime_commit']}`",
+        f"- worktree status：`{payload['worktree_status'] or 'clean'}`",
+        f"- protocol：`{payload['protocol']}`",
+        f"- A/B/C 门禁：A manifest `{d['a_manifest_gate']}`；A target `{d['a_target_gate']}`；A Gold `{d['a_gold_gate']}`；B `{d['b_gate']}`；C `{d['c_gate']}`",
+        f"- 新增 API 调用：target `{a['target_quality'].get('valid_new_response_rows', 0)}`，双 Gold 已标 `{a.get('gold_coverage', {}).get('new_gold_known', 0)}`，ledger rows=`{payload.get('ledger_summary', {}).get('rows', 0)}`",
+        f"- A7500 构成：新增 `{a['target_quality'].get('valid_new_response_rows', 0)}` + 复用 `{a.get('manifest_audit', {}).get('reused_target_responses', 0)}`，完整 qwen/deepseek pair=`{a['target_quality'].get('complete_new_pairs', 0)}`",
+        f"- A central prevalence：`{central.get('rate')}`，positive=`{central.get('positive')}`，95% CI `{central.get('wilson_95', {}).get('low')}`-`{central.get('wilson_95', {}).get('high')}`",
+        f"- B 冻结 Anchor Macro-F1：q-only=`{q.get('anchor_macro_f1_mean', 'N/A')}`，y-only=`{y.get('anchor_macro_f1_mean', 'N/A')}`，q+y=`{qy.get('anchor_macro_f1_mean', 'N/A')}`",
+        f"- C 回放：q+y AUPRC=`{c.get('q_y', {}).get('auprc', 'N/A')}`，y-only AUPRC=`{c.get('y_only', {}).get('auprc', 'N/A')}`，AUPRC ratio=`{c.get('auprc_ratio_qy_over_y', 'N/A')}`",
         "",
-        "## ??",
+        "## 分析与结论",
         payload["analysis"],
     ]
     return "\n".join(lines)
@@ -1088,7 +1088,7 @@ def main(default_component: str = "all") -> None:
         else:
             raise ValueError(f"unsupported phase: {phase}")
         progress("TOTAL", idx, len(phases))
-    print(f"v3.1 ???? phase={args.phase} output={rel(cfg['data']['output_dir'])}")
+    print(f"v3.1 阶段 phase={args.phase} output={rel(cfg['data']['output_dir'])}")
 
 
 def expand_phases(phase: str, component: str) -> list[str]:

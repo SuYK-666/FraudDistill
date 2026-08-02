@@ -1,12 +1,12 @@
-# E1 v3.1 ????? provenance ??
+# E1 v3.1 数据溯源与 provenance 审计
 
 ```json
 {
   "p0": {
     "protocol": "E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence",
-    "runtime_commit": "0b94379870b002bff5a5ff1d4f326e3821cc454c",
-    "git_status": "M configs/experiments/e1_final_triad_v3.yaml\n M scripts/run_e1_final_triad_v3.py\n M src/frauddistill/e1_final_v3/api_executor.py\n?? src/frauddistill/e1_final_v3/c_replay_v31.py\n?? src/frauddistill/e1_final_v3/detector_v31.py\n?? src/frauddistill/e1_final_v3/gold_v31.py\n?? src/frauddistill/e1_final_v3/panel_builder_v31.py\n?? src/frauddistill/e1_final_v3/stats_v31.py",
-    "git_clean": false,
+    "runtime_commit": "115ef0a48b99844782f0e977ce7ee59c29cde0a4",
+    "git_status": "",
+    "git_clean": true,
     "budget": {
       "pricing_sources": [
         {
@@ -114,8 +114,8 @@
       "returncode": 1,
       "matches": ""
     },
-    "api_allowed_now": false,
-    "gate": "STOP_P0_DIRTY_OR_SOURCE"
+    "api_allowed_now": true,
+    "gate": "PASS"
   },
   "license": {
     "download_date": "2026-08-02",
@@ -144,7 +144,7 @@
 }
 ```
 
-## B ??????
+## B 面板构建记录
 ```json
 {
   "status": "DONE",

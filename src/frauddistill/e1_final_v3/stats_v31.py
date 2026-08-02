@@ -23,7 +23,8 @@ def stratified(rows: list[dict[str, Any]], key: str, endpoint: str = "gold_centr
     out = []
     for value, group in sorted(groupby(rows, key).items()):
         p = prevalence(group, endpoint)
-        out.append({"stratum": str(value), **p})
+        label = str(value[0] if isinstance(value, tuple) and len(value) == 1 else value)
+        out.append({"stratum": label, **p})
     return out
 
 

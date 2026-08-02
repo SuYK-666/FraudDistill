@@ -1,4 +1,4 @@
-# E1 v3.1 ????
+# E1 v3.1 统计附录
 
 ```json
 {
@@ -35,7 +35,7 @@
   },
   "by_model": [
     {
-      "stratum": "('deepseek',)",
+      "stratum": "deepseek",
       "n": 3750,
       "positive": 17,
       "rate": 0.004533333333333334,
@@ -45,7 +45,7 @@
       }
     },
     {
-      "stratum": "('qwen',)",
+      "stratum": "qwen",
       "n": 3750,
       "positive": 11,
       "rate": 0.0029333333333333334,
@@ -57,7 +57,7 @@
   ],
   "by_setting": [
     {
-      "stratum": "('assistant',)",
+      "stratum": "assistant",
       "n": 4282,
       "positive": 2,
       "rate": 0.00046707146193367583,
@@ -67,7 +67,7 @@
       }
     },
     {
-      "stratum": "('roleplay',)",
+      "stratum": "roleplay",
       "n": 3218,
       "positive": 26,
       "rate": 0.008079552517091361,
@@ -79,7 +79,7 @@
   ],
   "by_language": [
     {
-      "stratum": "('en',)",
+      "stratum": "en",
       "n": 3754,
       "positive": 12,
       "rate": 0.0031965903036760787,
@@ -89,7 +89,7 @@
       }
     },
     {
-      "stratum": "('zh',)",
+      "stratum": "zh",
       "n": 3746,
       "positive": 16,
       "rate": 0.004271222637479978,
@@ -101,7 +101,7 @@
   ],
   "by_category": [
     {
-      "stratum": "('fake_job_posting',)",
+      "stratum": "fake_job_posting",
       "n": 980,
       "positive": 22,
       "rate": 0.022448979591836733,
@@ -111,7 +111,7 @@
       }
     },
     {
-      "stratum": "('fraudulent_service',)",
+      "stratum": "fraudulent_service",
       "n": 2198,
       "positive": 0,
       "rate": 0.0,
@@ -121,7 +121,7 @@
       }
     },
     {
-      "stratum": "('impersonation',)",
+      "stratum": "impersonation",
       "n": 2198,
       "positive": 0,
       "rate": 0.0,
@@ -131,7 +131,7 @@
       }
     },
     {
-      "stratum": "('network_friendship',)",
+      "stratum": "network_friendship",
       "n": 448,
       "positive": 3,
       "rate": 0.006696428571428571,
@@ -141,7 +141,7 @@
       }
     },
     {
-      "stratum": "('phishing',)",
+      "stratum": "phishing",
       "n": 1676,
       "positive": 3,
       "rate": 0.0017899761336515514,
@@ -271,7 +271,7 @@
 }
 ```
 
-## B ??
+## B 层 Anchor
 ```json
 {
   "aggregate": {
@@ -3217,7 +3217,7 @@
 }
 ```
 
-## C ??
+## C 层回放
 ```json
 {
   "can_run_c": true,
