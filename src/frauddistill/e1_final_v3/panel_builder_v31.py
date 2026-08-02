@@ -107,7 +107,7 @@ def select_real_panel(classified: list[dict[str, Any]], seed: int) -> tuple[list
     selected_ids: set[str] = set()
     per_stratum_rows: dict[str, int] = Counter()
     audit: dict[str, Any] = {}
-    for stratum in STRATA:
+    for stratum in strata:
         rows = by_stratum.get(stratum, [])
         cases: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for row in rows:
@@ -284,10 +284,11 @@ def assemble_panel(real_selected: list[dict[str, Any]], synthetic: list[dict[str
     return panel, audit
 
 
-def split_by_family(panel: list[dict[str, Any]], cfg_splits: dict[str, dict[str, int]], seed: int) -> tuple[dict[str, list[dict[str, Any]]], dict[str, Any]]:
+def split_by_family(panel: list[dict[str, Any]], cfg_splits: dict[str, dict[str, int]], seed: int, strata: list[str] | None = None) -> tuple[dict[str, list[dict[str, Any]]], dict[str, Any]]:
     import random
 
     rng = random.Random(seed)
+    strata = strata or STRATA
     families: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in panel:
         families[str(row["canonical_case_id"])].append(row)
@@ -303,12 +304,12 @@ def split_by_family(panel: list[dict[str, Any]], cfg_splits: dict[str, dict[str,
         best, best_score = None, None
         for name, quotas in targets.items():
             current = Counter(r["stratum"] for r in splits[name])
-            fracs = [max(0, quotas[s] - current[s]) / max(1, quotas[s]) for s in STRATA]
+            fracs = [max(0, quotas[s] - current[s]) / max(1, quotas[s]) for s in strata]
             score = min(fracs)
             if best_score is None or score > best_score:
                 best, best_score = name, score
         splits[best].extend(rows)
-    for stratum in STRATA:
+    for stratum in strata:
         fams_s = [(cid, rows) for cid, rows in single.items() if rows[0]["stratum"] == stratum]
         for case_id, rows in sorted(fams_s, key=lambda kv: (len(kv[1]), rng.random())):
             best, best_need = None, None

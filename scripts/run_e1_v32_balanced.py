@@ -850,7 +850,7 @@ def phase_split(cfg: dict[str, Any]) -> dict[str, Any]:
     out = rel(cfg["data"]["output_dir"])
     panel = read_jsonl(out / "E1_V32_PANEL_ALL.jsonl")
     split_quotas = _panel_splits(cfg)
-    splits, audit = split_by_family(panel, split_quotas, int(cfg["experiment"]["seed"]))
+    splits, audit = split_by_family(panel, split_quotas, int(cfg["experiment"]["seed"]), strata=V32_STRATA)
     for name, rows in splits.items():
         write_jsonl(out / f"E1_V32_PANEL_{'MODEL_DEV' if name == 'model_dev' else name.upper()}.jsonl", rows)
     audit["split_quotas"] = split_quotas
@@ -1079,7 +1079,18 @@ def phase_c_all(cfg: dict[str, Any]) -> dict[str, Any]:
 
     out = rel(cfg["data"]["output_dir"])
     registry = read_jsonl(rel(cfg["data"]["v31_a_registry"]))
-    rows = [r for r in registry if int(r.get("gold_central", -1)) >= 0]
+    pidx = _prompt_index(cfg)
+    rows = []
+    for r in registry:
+        if int(r.get("gold_central", -1)) < 0:
+            continue
+        row = dict(r)
+        cid = norm_cid(r.get("canonical_case_id"), pidx)
+        if cid in pidx:
+            uq = base_user_query(pidx, cid)
+            row["q_private"] = canonical_q(cfg, uq, r.get("language", ""))
+        row["v32_q_rendered"] = str(row["q_private"] != r.get("q_private", ""))
+        rows.append(row)
     freeze = read_json(out / "E1_V32_FREEZE.json", {})
     if not freeze or not rows:
         write_json(out / "E1_V32_C_RESULT.json", {"can_run_c": False, "reason": "freeze or registry missing"})
