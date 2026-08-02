@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Callable
 
@@ -48,6 +50,7 @@ def execute_tasks(
     git_clean: bool,
     provider_factory: Callable[[str, str], Any] | None = None,
     limit: int | None = None,
+    concurrency_by_provider: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     if not run_api or not confirm_budget:
         return {"status": "DRY_RUN_NO_API", "created_calls": 0, "reason": "both --run-api and --confirm-budget are required"}
@@ -63,11 +66,61 @@ def execute_tasks(
     skipped = 0
     clients: dict[tuple[str, str], Any] = {}
     selected = tasks[:limit] if limit else tasks
+    pending: list[tuple[dict[str, Any], str]] = []
     for task in selected:
         fp = request_fingerprint(task)
         if fp in existing:
             skipped += 1
             continue
+        pending.append((task, fp))
+    if concurrency_by_provider:
+        provider_limits = {str(k).lower(): max(1, int(v)) for k, v in concurrency_by_provider.items()}
+        max_workers = max(1, sum(provider_limits.values()))
+        client_lock = threading.Lock()
+        semaphores = {provider: threading.Semaphore(limit) for provider, limit in provider_limits.items()}
+
+        def run_one(task_fp: tuple[dict[str, Any], str]) -> tuple[dict[str, Any], dict[str, Any]]:
+            task, fp = task_fp
+            provider = task["target_provider"]
+            model = task["requested_target_model"]
+            gate = semaphores.get(str(provider).lower(), threading.Semaphore(1))
+            with gate:
+                with client_lock:
+                    client_key = (provider, model)
+                    if client_key not in clients:
+                        clients[client_key] = (
+                            provider_factory(provider, model)
+                            if provider_factory
+                            else build_text_client(provider, model, task.get("timeout_seconds", 180))
+                        )
+                    client = clients[client_key]
+                return task, call_with_retry(client, task, fp)
+
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = [pool.submit(run_one, item) for item in pending]
+            for future in as_completed(futures):
+                if created and created % 200 == 0:
+                    budget = hard_stop_decision(read_jsonl(ledger_path), limits)
+                    if budget["hard_stop"]:
+                        return {
+                            "status": "STOP_BUDGET",
+                            "created_calls": created,
+                            "skipped_cache": skipped,
+                            "budget": budget,
+                            "concurrency_by_provider": provider_limits,
+                        }
+                task, row = future.result()
+                append_jsonl(output_path, row)
+                append_jsonl(ledger_path, ledger_row(row, task))
+                created += 1
+        return {
+            "status": "DONE",
+            "created_calls": created,
+            "skipped_cache": skipped,
+            "invalid_cache_rows": len(bad),
+            "concurrency_by_provider": provider_limits,
+        }
+    for task, fp in pending:
         if created and created % 200 == 0:
             budget = hard_stop_decision(read_jsonl(ledger_path), limits)
             if budget["hard_stop"]:

@@ -148,6 +148,7 @@ def phase_health(cfg: dict[str, Any], args: argparse.Namespace) -> dict[str, Any
         run_api=args.run_api,
         confirm_budget=args.confirm_budget,
         git_clean=git_clean(),
+        concurrency_by_provider=target_concurrency(cfg),
     )
     write_json(out / "E1_V31_A_HEALTH_RESULT.json", result)
     progress("HEALTH", 1, 1)
@@ -169,12 +170,21 @@ def phase_generate(cfg: dict[str, Any], args: argparse.Namespace) -> dict[str, A
         run_api=args.run_api,
         confirm_budget=args.confirm_budget,
         git_clean=git_clean(),
+        concurrency_by_provider=target_concurrency(cfg),
     )
     result["pending_before_batch"] = len(pending)
     result["selected_for_batch"] = len(selected)
     write_json(out / "E1_V31_A_GENERATE_RESULT.json", result)
     progress("GENERATE", 1, 1)
     return result
+
+
+def target_concurrency(cfg: dict[str, Any]) -> dict[str, int]:
+    api = cfg.get("api", {})
+    return {
+        "qwen": int(api.get("effective_qwen_concurrency", 1) or 1),
+        "deepseek": int(api.get("effective_deepseek_concurrency", 1) or 1),
+    }
 
 
 def phase_validate_targets(cfg: dict[str, Any]) -> dict[str, Any]:
