@@ -1,0 +1,70 @@
+experiment:
+  protocol: E1-REAL-TRIAD-v2.0
+  baseline_commit: d28cddee2058bc7d992593a77495d8add9e2713a
+  seed: 20260802
+
+data:
+  output_dir: data/prepared/e1_real_triad_v2
+  public_report_dir: reports/e1_real_triad_v2
+  v10_registry: data/prepared/e1_v10_trilayer/E1_V10_RESPONSE_REGISTRY.jsonl
+  v10_gold: data/prepared/e1_v10_trilayer/E1_V10_GOLD_CONSENSUS.jsonl
+  v81_p2_targets: data/prepared/e1_v81_narrative_delta/P2_TARGET_RESPONSES.jsonl
+  v10_a_metrics: data/prepared/e1_v10_trilayer/E1_V10_A_NATURAL_METRICS.json
+  v10_c_holdout: data/prepared/e1_v10_trilayer/E1_V10_GOLD_CONSENSUS.jsonl
+  r2_consensus: data/prepared/e1_context_recovery_r2/E1_R2_GOLD_PILOT_CONSENSUS.jsonl
+  synthetic_archive_note: archive/e1_final_synthetic_diagnostic
+
+api:
+  requested_concurrency: 120
+  qwen_concurrency: 60
+  deepseek_concurrency: 60
+  adjudicator_concurrency: 12
+
+models:
+  target_qwen: {provider: qwen, model: qwen3.7-plus-2026-05-26}
+  target_deepseek: {provider: deepseek, model: deepseek-v4-flash}
+  screen: {provider: qwen, model: qwen3.7-flash}
+  gold_a: {provider: deepseek, model: deepseek-v4-pro, extra_body: {thinking: {type: disabled}}}
+  gold_b: {provider: qwen, model: qwen3.7-plus-2026-05-26, extra_body: {enable_thinking: false}}
+  adjudicator: {provider: qwen, model: qwen3.7-max-2026-06-08, extra_body: {enable_thinking: false}}
+
+budget:
+  qwen_hard_stop_cny: 48
+  deepseek_hard_stop_cny: 48
+  total_hard_stop_cny: 92
+  usd_to_cny: 7.2
+
+panel:
+  target_rows: 1200
+  strata:
+    context_stable_positive: 420
+    context_stable_negative: 420
+    context_critical_positive: 180
+    context_hard_negative: 180
+  splits:
+    model_dev:
+      context_stable_positive: 168
+      context_stable_negative: 168
+      context_critical_positive: 72
+      context_hard_negative: 72
+    calibration:
+      context_stable_positive: 84
+      context_stable_negative: 84
+      context_critical_positive: 36
+      context_hard_negative: 36
+    anchor:
+      context_stable_positive: 126
+      context_stable_negative: 126
+      context_critical_positive: 54
+      context_hard_negative: 54
+    reserve:
+      context_stable_positive: 42
+      context_stable_negative: 42
+      context_critical_positive: 18
+      context_hard_negative: 18
+  amber_min_per_stratum: 120
+
+statistics:
+  bootstrap_iterations: 10000
+  bootstrap_seed: 20260802
+  seeds: [13, 17, 23, 42, 20260802]
