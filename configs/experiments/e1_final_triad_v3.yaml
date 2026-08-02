@@ -2,7 +2,6 @@ experiment:
   protocol: E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence
   seed: 20260802
   baseline_commit: 0a3bae9b0a76441a23e244b674912e7c969549b0
-
 data:
   output_dir: data/prepared/e1_final_triad_v31
   public_report_dir: reports/e1_final_triad_v31
@@ -17,25 +16,64 @@ data:
   v8_a2c_targets: data/prepared/e1_v8_a2c/TARGET_RESPONSES.jsonl
   v10_pressure_targets: data/prepared/e1_v10_trilayer/E1_V10_PRESSURE_TARGET_RESPONSES.jsonl
   or_bench_prompts: data/prepared/full/prompts/or_bench_hard_safe_prompts.jsonl
-
+  v10_pressure_gold: data/prepared/e1_v10_trilayer/E1_V10_PRESSURE_GOLD_CONSENSUS.jsonl
+  v91_frozen_responses: data/prepared/e1_v91_recovery/E1_V91_TARGET_RESPONSES.jsonl
 api:
   user_requested_total_concurrency: 120
   effective_qwen_concurrency: 24
   effective_deepseek_concurrency: 20
   effective_adjudicator_concurrency: 8
   budget_check_interval_calls: 200
-
 models:
-  target_qwen: {provider: qwen, model: qwen-plus}
-  target_qwen_v31: {provider: qwen, model: qwen3.7-plus-2026-05-26, extra_body: {enable_thinking: false}}
-  target_deepseek: {provider: deepseek, model: deepseek-v4-flash}
-  target_deepseek_v31: {provider: deepseek, model: deepseek-v4-flash, extra_body: {thinking: {type: disabled}}}
-  gold_deepseek: {provider: deepseek, model: deepseek-chat}
-  gold_qwen: {provider: qwen, model: qwen-plus}
-  adjudicator_qwen: {provider: qwen, model: qwen-max}
-  evaluator_qwen: {provider: qwen, model: qwen-plus}
-  evaluator_deepseek: {provider: deepseek, model: deepseek-chat}
-
+  target_qwen:
+    provider: qwen
+    model: qwen-plus
+  target_qwen_v31:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body:
+      enable_thinking: false
+  target_deepseek:
+    provider: deepseek
+    model: deepseek-v4-flash
+  target_deepseek_v31:
+    provider: deepseek
+    model: deepseek-v4-flash
+    extra_body:
+      thinking:
+        type: disabled
+  gold_deepseek:
+    provider: deepseek
+    model: deepseek-chat
+  gold_qwen:
+    provider: qwen
+    model: qwen-plus
+  adjudicator_qwen:
+    provider: qwen
+    model: qwen-max
+  evaluator_qwen:
+    provider: qwen
+    model: qwen-plus
+  evaluator_deepseek:
+    provider: deepseek
+    model: deepseek-chat
+  gold_qwen_v31:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body:
+      enable_thinking: false
+  gold_deepseek_v31:
+    provider: deepseek
+    model: deepseek-v4-pro
+    api_surface: chat_completions
+    extra_body:
+      thinking:
+        type: disabled
+  adjudicator_qwen_v31:
+    provider: qwen
+    model: qwen3.7-max-2026-05-20
+    extra_body:
+      enable_thinking: false
 budget:
   hard_stop_total_cny: 215
   e1_a_hard_stop_cny: 100
@@ -45,13 +83,11 @@ budget:
   deepseek_hard_stop_cny: 90
   e1_a_target_hard_stop_cny: 35
   e1_a_gold_hard_stop_cny: 70
-
 generation:
   temperature: 0.2
   top_p: 0.9
   max_tokens: 1536
   timeout_seconds: 180
-
 e1_a:
   canonical_cases: 2141
   assistant_prompt_instances: 2141
@@ -64,11 +100,12 @@ e1_a:
   min_valid_responses: 7425
   min_model_valid: 3710
   min_cell_model_valid: 370
-
 e1_b:
   target_rows: 3200
   min_real_target_response: 1600
-  target_real_range: [1800, 2000]
+  target_real_range:
+  - 1800
+  - 2000
   max_counterfactual_synthetic: 1200
   max_source_derived_open_control: 400
   strata:
@@ -77,11 +114,78 @@ e1_b:
     context_critical_positive: 320
     context_hard_negative: 320
   splits:
-    model_dev: {context_stable_positive: 640, context_stable_negative: 640, context_critical_positive: 160, context_hard_negative: 160}
-    calibration: {context_stable_positive: 256, context_stable_negative: 256, context_critical_positive: 64, context_hard_negative: 64}
-    anchor: {context_stable_positive: 320, context_stable_negative: 320, context_critical_positive: 80, context_hard_negative: 80}
-    reserve: {context_stable_positive: 64, context_stable_negative: 64, context_critical_positive: 16, context_hard_negative: 16}
-
+    model_dev:
+      context_stable_positive: 640
+      context_stable_negative: 640
+      context_critical_positive: 160
+      context_hard_negative: 160
+    calibration:
+      context_stable_positive: 256
+      context_stable_negative: 256
+      context_critical_positive: 64
+      context_hard_negative: 64
+    anchor:
+      context_stable_positive: 320
+      context_stable_negative: 320
+      context_critical_positive: 80
+      context_hard_negative: 80
+    reserve:
+      context_stable_positive: 64
+      context_stable_negative: 64
+      context_critical_positive: 16
+      context_hard_negative: 16
+  detector_C: 1.0
+  max_features: 60000
+  cv_folds: 5
 statistics:
-  seeds: [13, 17, 23, 42, 20260802]
+  seeds:
+  - 13
+  - 17
+  - 23
+  - 42
+  - 20260802
   bootstrap_iterations: 10000
+  cluster_bootstrap_iterations_b: 2000
+  cluster_bootstrap_iterations_c: 2000
+gold:
+  temperature: 0.0
+  max_tokens: 1024
+  timeout_seconds: 180
+  judge_a_provider: qwen
+  judge_b_provider: deepseek
+  adjudicator_provider: qwen
+  endpoints:
+  - lower
+  - central
+  - upper
+  quality:
+    min_completion_rate: 0.995
+    min_valid_schema_rate: 0.99
+    min_binary_agreement: 0.9
+    min_pabak: 0.8
+    max_uncertain_rate: 0.1
+    max_unresolved_disagreement: 0
+pricing_cny_per_million_tokens:
+  qwen:
+    qwen3.7-plus-2026-05-26:
+      input: 2.0
+      output: 8.0
+    qwen3.7-max-2026-05-20:
+      input: 4.0
+      output: 16.0
+    qwen-plus:
+      input: 2.0
+      output: 8.0
+    qwen-max:
+      input: 4.0
+      output: 16.0
+  deepseek:
+    deepseek-v4-flash:
+      input: 1.0
+      output: 4.0
+    deepseek-v4-pro:
+      input: 2.0
+      output: 8.0
+    deepseek-chat:
+      input: 1.0
+      output: 4.0
