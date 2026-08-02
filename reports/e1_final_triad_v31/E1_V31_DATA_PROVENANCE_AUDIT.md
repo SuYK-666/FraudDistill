@@ -1,12 +1,12 @@
-# E1 v3.1 数据来源审计
+# E1 v3.1 ????? provenance ??
 
 ```json
 {
   "p0": {
     "protocol": "E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence",
-    "runtime_commit": "7582a9603c5cfc7109ef401b13ecb7f47afb4547",
-    "git_status": "",
-    "git_clean": true,
+    "runtime_commit": "0b94379870b002bff5a5ff1d4f326e3821cc454c",
+    "git_status": "M configs/experiments/e1_final_triad_v3.yaml\n M scripts/run_e1_final_triad_v3.py\n M src/frauddistill/e1_final_v3/api_executor.py\n?? src/frauddistill/e1_final_v3/c_replay_v31.py\n?? src/frauddistill/e1_final_v3/detector_v31.py\n?? src/frauddistill/e1_final_v3/gold_v31.py\n?? src/frauddistill/e1_final_v3/panel_builder_v31.py\n?? src/frauddistill/e1_final_v3/stats_v31.py",
+    "git_clean": false,
     "budget": {
       "pricing_sources": [
         {
@@ -97,6 +97,16 @@
         "path": "C:\\Users\\18201\\Desktop\\FraudDistill\\data\\prepared\\full\\prompts\\or_bench_hard_safe_prompts.jsonl",
         "exists": true,
         "sha256": "50fb00dd75f09b0519a73ddbe206e76a600117af4e54e1c87767748ea7429921"
+      },
+      "v10_pressure_gold": {
+        "path": "C:\\Users\\18201\\Desktop\\FraudDistill\\data\\prepared\\e1_v10_trilayer\\E1_V10_PRESSURE_GOLD_CONSENSUS.jsonl",
+        "exists": true,
+        "sha256": "2983b86d8ce4f84abc37433009394cf9659be26e9125c6821c35371fbac04912"
+      },
+      "v91_frozen_responses": {
+        "path": "C:\\Users\\18201\\Desktop\\FraudDistill\\data\\prepared\\e1_v91_recovery\\E1_V91_TARGET_RESPONSES.jsonl",
+        "exists": true,
+        "sha256": "05ba449fdcfe64a247af7d3e9aea1e2e2e9746c09018d04ce95bbcb8d570b8f0"
       }
     },
     "secret_scan": {
@@ -104,8 +114,8 @@
       "returncode": 1,
       "matches": ""
     },
-    "api_allowed_now": true,
-    "gate": "PASS"
+    "api_allowed_now": false,
+    "gate": "STOP_P0_DIRTY_OR_SOURCE"
   },
   "license": {
     "download_date": "2026-08-02",
@@ -131,5 +141,91 @@
     ],
     "gate": "PASS_IDS_HASHES_STATISTICS_ONLY"
   }
+}
+```
+
+## B ??????
+```json
+{
+  "status": "DONE",
+  "real_pool_audit": {
+    "a7500_real_rows": 7500,
+    "pressure_real_rows": 160,
+    "unique_real_rows": 7660,
+    "by_provenance": {
+      "E1-v3.1-new": 4418,
+      "V9.1-reused": 3082,
+      "V10-pressure": 160
+    },
+    "by_provider": {
+      "qwen": 3750,
+      "deepseek": 3910
+    }
+  },
+  "real_selection_audit": {
+    "selected_real_rows": 2000,
+    "by_stratum": {
+      "context_stable_positive": 27,
+      "context_stable_negative": 2080,
+      "context_critical_positive": 1,
+      "context_hard_negative": 6
+    },
+    "real_total_within_bounds": true,
+    "by_provider": {
+      "qwen": 996,
+      "deepseek": 1004
+    }
+  },
+  "deficits": {
+    "context_stable_positive": 453,
+    "context_stable_negative": 114,
+    "context_critical_positive": 319,
+    "context_hard_negative": 314
+  },
+  "synthetic_allocation": {
+    "context_critical_positive": 319,
+    "context_hard_negative": 314,
+    "context_stable_positive": 453,
+    "context_stable_negative": 114
+  },
+  "synthetic_plan": {
+    "plan": {
+      "context_critical_positive": {
+        "family": "assist_subtle",
+        "target": 319,
+        "generate": 478
+      },
+      "context_hard_negative": {
+        "family": "procedural_generic",
+        "target": 314,
+        "generate": 471
+      },
+      "context_stable_positive": {
+        "family": "assist_explicit",
+        "target": 453,
+        "generate": 679
+      },
+      "context_stable_negative": {
+        "family": "defensive_safe",
+        "target": 114,
+        "generate": 171
+      }
+    },
+    "total_tasks": 1799
+  },
+  "synthetic_generation_result": {
+    "status": "DONE",
+    "created_calls": 1799,
+    "skipped_cache": 0,
+    "concurrency_by_provider": {
+      "qwen": 24,
+      "deepseek": 20
+    },
+    "invalid_cache_rows": 0
+  },
+  "generated_rows": 1799,
+  "synthetic_panel_rows": 1799,
+  "source_derived_rows": 400,
+  "source_derived_fix_note": "regenerated after raw_data dict->json fix (no API); gold for these rows must be re-run"
 }
 ```

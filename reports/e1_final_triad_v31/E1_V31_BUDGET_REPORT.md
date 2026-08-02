@@ -1,4 +1,4 @@
-# E1 v3.1 预算报告
+# E1 v3.1 ????
 
 ```json
 {
@@ -34,6 +34,25 @@
   "ledger_policy": {
     "check_every_calls": 200,
     "hard_stop_required": true
+  }
+}
+```
+
+## ?? ledger
+```json
+{
+  "rows": 19961,
+  "total_cost_cny": 54.2399,
+  "by_provider_cost": {
+    "qwen": 29.8126,
+    "deepseek": 24.4273
+  },
+  "calls_by_phase": {
+    "E1-A-target-generation-v31": 4418,
+    "E1-A-gold-v31": 8838,
+    "E1-A-gold-v31-reused": 4,
+    "E1-B-counterfactual-generation-v31": 1799,
+    "E1-B-gold-v31": 4902
   }
 }
 ```

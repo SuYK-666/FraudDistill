@@ -1,21 +1,22 @@
-# E1 FINAL TRIAD v3.1 执行总报告
+# E1 FINAL TRIAD v3.1 ?????
 
-## 首屏摘要
-- final decision code：`E1_V31_PENDING_B_PANEL`
-- Git commit：`7582a9603c5cfc7109ef401b13ecb7f47afb4547`
-- worktree status：`clean`
-- protocol：`E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence`
-- A/B/C 状态：A manifest `PASS`，A target `PASS`，B `NOT_READY`，C `NOT_READY`
-- 本轮新 API 调用数：`4418`；成功数：`4418`
-- A7500 规划：prompt instances `3750`，复用 responses `3082`，待调用 `4418`
+## ????
+- final decision code?`E1_V31_STOP_IMPLEMENTATION_NOT_API_CAPABLE`
+- Git commit?`633eea08eb279b9b2ce8aaaf2b41977a4cf07920`
+- worktree status?`clean`
+- protocol?`E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence`
+- A/B/C ???A manifest `PASS`?A target `PASS`?A Gold `PASS`?B `PASS`?C `PASS`
+- ??? API ???target `4418` ????Gold ?? `4418` ??ledger rows=`19961`
+- A7500 ?????`4418` ? + `3082` ?????? pair=`2209`
+- A central prevalence?`0.0037333333333333333`?positive=`28`?95% CI `0.002584312137040857`-`0.005390464402294347`?
+- B ??? Anchor Macro-F1?q-only=`0.7960812499216501`?y-only=`0.9431777825129626`?q+y=`0.9497045140198667`
+- C ???q+y AUPRC=`0.49175106357368636`?y-only AUPRC=`0.38040154124258135`?AUPRC ratio=`1.2927157496980215`
 
-## 分析
-本轮已将 v3 dry-run 骨架升级为 v3.1 可执行状态机：A manifest、API Gate、fingerprint 缓存、预算 ledger、历史 roleplay pair 复用、B 容量审计和 C 准入均已接入。
-
-A 层 manifest：canonical cases=2141，assistant=2141，roleplay reused=1541，roleplay extra=68，target prompt instances=3750，pending target calls=4418。
-
-A target 当前状态：{'new_response_rows': 4418, 'valid_new_response_rows': 4418, 'complete_new_pairs': 2209, 'pending_target_calls_initial': 4418, 'target_gate': 'PASS'}。只有 P0 clean 且 health/generate 真正完成后，A7500 才能冻结。
-
-B 预筛状态：stable+=25，stable-=3048，critical+=1，hard-=6。B 仍需正式 Gold 与受控合成补齐。
-
-最终 decision code：`E1_V31_PENDING_B_PANEL`。
+## ??
+A7500?canonical cases=2141?prompt instances=3750??? responses=3082?? API ??=4418?
+A Gold?PASS?completion=1.0?binary agreement=0.9995473064735174?PABAK=0.9990946129470348?
+A central prevalence=0.0037333333333333333?positive=28?95% CI 0.002584312137040857-0.005390464402294347??
+B ???formal_panel_ready=True?by stratum={'context_stable_positive': 318, 'context_stable_negative': 2550, 'context_critical_positive': 12, 'context_hard_negative': 320}?
+B Anchor?q+y Macro-F1=0.9497045140198667?SD 0.0??y-only=0.9431777825129626?q-only=0.7960812499216501?
+C ???can_run=True?q+y AUPRC=0.49175106357368636?y-only AUPRC=0.38040154124258135?
+?? decision code?`E1_V31_STOP_IMPLEMENTATION_NOT_API_CAPABLE`?

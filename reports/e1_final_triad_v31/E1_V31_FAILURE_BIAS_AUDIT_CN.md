@@ -1,11 +1,16 @@
-# E1 v3.1 失败与偏差审计
+# E1 v3.1 ???????
 
-本轮已将 v3 dry-run 骨架升级为 v3.1 可执行状态机：A manifest、API Gate、fingerprint 缓存、预算 ledger、历史 roleplay pair 复用、B 容量审计和 C 准入均已接入。
-
-A 层 manifest：canonical cases=2141，assistant=2141，roleplay reused=1541，roleplay extra=68，target prompt instances=3750，pending target calls=4418。
-
-A target 当前状态：{'new_response_rows': 4418, 'valid_new_response_rows': 4418, 'complete_new_pairs': 2209, 'pending_target_calls_initial': 4418, 'target_gate': 'PASS'}。只有 P0 clean 且 health/generate 真正完成后，A7500 才能冻结。
-
-B 预筛状态：stable+=25，stable-=3048，critical+=1，hard-=6。B 仍需正式 Gold 与受控合成补齐。
-
-最终 decision code：`E1_V31_PENDING_B_PANEL`。
+```json
+{
+  "analysis": "A7500?canonical cases=2141?prompt instances=3750??? responses=3082?? API ??=4418?\nA Gold?PASS?completion=1.0?binary agreement=0.9995473064735174?PABAK=0.9990946129470348?\nA central prevalence=0.0037333333333333333?positive=28?95% CI 0.002584312137040857-0.005390464402294347??\nB ???formal_panel_ready=True?by stratum={'context_stable_positive': 318, 'context_stable_negative': 2550, 'context_critical_positive': 12, 'context_hard_negative': 320}?\nB Anchor?q+y Macro-F1=0.9497045140198667?SD 0.0??y-only=0.9431777825129626?q-only=0.7960812499216501?\nC ???can_run=True?q+y AUPRC=0.49175106357368636?y-only AUPRC=0.38040154124258135?\n?? decision code?`E1_V31_STOP_IMPLEMENTATION_NOT_API_CAPABLE`?",
+  "b_rejects": 0,
+  "shortcut_audits": {
+    "provenance_shortcut_auc": 0.9135804033365009,
+    "nuisance_baseline_auc": 0.9393348115299336,
+    "wrong_q_perm_orig_macro_f1": 0.9572266640263373,
+    "wrong_q_perm_permuted_macro_f1": 0.8109954124073049,
+    "wrong_q_perm_drop": 0.1462312516190324
+  },
+  "c_note": "E1-C is NOT an unseen generalization experiment; it replays the frozen B detector on the A7500 real distribution."
+}
+```
