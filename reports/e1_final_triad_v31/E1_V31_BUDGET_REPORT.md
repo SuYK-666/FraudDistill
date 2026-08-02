@@ -1,4 +1,4 @@
-# E1 v3 预算报告
+# E1 v3.1 预算报告
 
 ```json
 {
@@ -20,7 +20,9 @@
     "e1_b_hard_stop_cny": 100,
     "e1_c_hard_stop_cny": 15,
     "qwen_hard_stop_cny": 120,
-    "deepseek_hard_stop_cny": 90
+    "deepseek_hard_stop_cny": 90,
+    "e1_a_target_hard_stop_cny": 35,
+    "e1_a_gold_hard_stop_cny": 70
   },
   "effective_concurrency": {
     "user_requested_total": 120,

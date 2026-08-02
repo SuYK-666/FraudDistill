@@ -1,11 +1,14 @@
 experiment:
-  protocol: E1-FINAL-TRIAD-v3.0-7500-3200-RealPrevalence
+  protocol: E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence
   seed: 20260802
-  baseline_commit: e05bcb0
+  baseline_commit: 0a3bae9b0a76441a23e244b674912e7c969549b0
 
 data:
-  output_dir: data/prepared/e1_final_triad_v3
-  public_report_dir: reports/e1_final_triad_v3
+  output_dir: data/prepared/e1_final_triad_v31
+  public_report_dir: reports/e1_final_triad_v31
+  fraudr1_raw_prompts: data/raw/fraudr1/prompts.jsonl
+  fraudr1_raw_base_en: data/raw/fraudr1/repo/dataset/FP-base-full/FP-base-English.json
+  fraudr1_raw_base_zh: data/raw/fraudr1/repo/dataset/FP-base-full/FP-base-Chinese.json
   fraudr1_prompts: data/prepared/full/prompts/fraudr1_all_target_prompts.jsonl
   v10_registry: data/prepared/e1_v10_trilayer/E1_V10_RESPONSE_REGISTRY.jsonl
   v10_gold: data/prepared/e1_v10_trilayer/E1_V10_GOLD_CONSENSUS.jsonl
@@ -24,7 +27,9 @@ api:
 
 models:
   target_qwen: {provider: qwen, model: qwen-plus}
+  target_qwen_v31: {provider: qwen, model: qwen3.7-plus-2026-05-26, extra_body: {enable_thinking: false}}
   target_deepseek: {provider: deepseek, model: deepseek-v4-flash}
+  target_deepseek_v31: {provider: deepseek, model: deepseek-v4-flash, extra_body: {thinking: {type: disabled}}}
   gold_deepseek: {provider: deepseek, model: deepseek-chat}
   gold_qwen: {provider: qwen, model: qwen-plus}
   adjudicator_qwen: {provider: qwen, model: qwen-max}
@@ -38,8 +43,21 @@ budget:
   e1_c_hard_stop_cny: 15
   qwen_hard_stop_cny: 120
   deepseek_hard_stop_cny: 90
+  e1_a_target_hard_stop_cny: 35
+  e1_a_gold_hard_stop_cny: 70
+
+generation:
+  temperature: 0.2
+  top_p: 0.9
+  max_tokens: 1536
+  timeout_seconds: 180
 
 e1_a:
+  canonical_cases: 2141
+  assistant_prompt_instances: 2141
+  roleplay_prompt_instances: 1609
+  reusable_roleplay_prompt_instances_expected: 1541
+  extra_roleplay_prompt_instances: 68
   target_unique_q: 3750
   target_responses: 7500
   per_language_category_q: 375

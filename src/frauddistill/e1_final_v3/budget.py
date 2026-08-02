@@ -35,10 +35,12 @@ def hard_stop_decision(ledger: list[dict[str, Any]], limits: dict[str, Any]) -> 
     for row in ledger:
         provider = str(row.get("provider", "unknown"))
         by_provider[provider] = by_provider.get(provider, 0.0) + float(row.get("cost_cny", 0) or 0)
+    total_limit = float(limits.get("hard_stop_total_cny", 0) or 0)
+    qwen_limit = float(limits.get("qwen_hard_stop_cny", 0) or 0)
+    deepseek_limit = float(limits.get("deepseek_hard_stop_cny", 0) or 0)
+    hard_stop = (total_limit > 0 and total >= total_limit) or (qwen_limit > 0 and by_provider.get("qwen", 0.0) >= qwen_limit) or (deepseek_limit > 0 and by_provider.get("deepseek", 0.0) >= deepseek_limit)
     return {
         "total_cny": total,
         "by_provider": by_provider,
-        "hard_stop": total >= float(limits.get("hard_stop_total_cny", 0) or 0)
-        or by_provider.get("qwen", 0.0) >= float(limits.get("qwen_hard_stop_cny", 0) or 0)
-        or by_provider.get("deepseek", 0.0) >= float(limits.get("deepseek_hard_stop_cny", 0) or 0),
+        "hard_stop": hard_stop,
     }

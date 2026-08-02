@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import subprocess
 import sys
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -12,10 +12,11 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from frauddistill.e1_final_v3.budget import budget_snapshot, hard_stop_decision
-from frauddistill.e1_final_v3.io import file_sha256, read_json, write_csv, write_json, write_jsonl
+from frauddistill.e1_final_v3.api_executor import execute_tasks
+from frauddistill.e1_final_v3.budget import budget_snapshot
+from frauddistill.e1_final_v3.io import file_sha256, read_json, read_jsonl, write_csv, write_json, write_jsonl
 from frauddistill.e1_final_v3.panel_builder import audit_b_capacity
-from frauddistill.e1_final_v3.registry import join_gold, load_fraudr1_q_manifest, load_response_rows
+from frauddistill.e1_final_v3.registry import build_v31_a_manifest, join_gold, load_response_rows
 from frauddistill.e1_final_v3.reporting import write_reports
 from frauddistill.e1_v10.metrics import wilson
 
@@ -23,13 +24,13 @@ from frauddistill.e1_v10.metrics import wilson
 CONFIG_PATH = ROOT / "configs" / "experiments" / "e1_final_triad_v3.yaml"
 
 
-def load_config() -> dict[str, Any]:
-    return yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8"))
-
-
 def rel(path: str | Path) -> Path:
     p = Path(path)
     return p if p.is_absolute() else ROOT / p
+
+
+def load_config() -> dict[str, Any]:
+    return yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8"))
 
 
 def git_commit() -> str:
@@ -46,6 +47,10 @@ def git_status_short() -> str:
         return "unknown"
 
 
+def git_clean() -> bool:
+    return git_status_short() == ""
+
+
 def progress(name: str, done: int, total: int) -> None:
     width = 30
     filled = int(width * done / max(1, total))
@@ -55,288 +60,363 @@ def progress(name: str, done: int, total: int) -> None:
 def phase_p0(cfg: dict[str, Any]) -> dict[str, Any]:
     out = rel(cfg["data"]["output_dir"])
     out.mkdir(parents=True, exist_ok=True)
-    budget = budget_snapshot(cfg)
     source_paths = {k: rel(v) for k, v in cfg["data"].items() if k not in {"output_dir", "public_report_dir"}}
     source_audit = {
         key: {"path": str(path), "exists": path.exists(), "sha256": file_sha256(path) if path.exists() and path.is_file() else None}
         for key, path in source_paths.items()
     }
-    license_audit = {
-        "download_date": "2026-08-02",
-        "sources": [
-            {
-                "dataset": "Fraud-R1",
-                "url": "https://github.com/kaustpradalab/Fraud-R1",
-                "local_path": str(rel(cfg["data"]["fraudr1_prompts"])),
-                "redistribution_policy": "final public artifacts should prefer IDs/hashes/statistics unless dataset license snapshot permits raw text redistribution",
-            },
-            {
-                "dataset": "OR-Bench",
-                "url": "https://github.com/justincui03/OR-Bench",
-                "local_path": str(rel(cfg["data"]["or_bench_prompts"])),
-                "redistribution_policy": "open-control only; not natural prevalence",
-            },
-            {
-                "dataset": "Do-Not-Answer",
-                "url": "https://github.com/Libr-AI/do-not-answer",
-                "local_path": "",
-                "redistribution_policy": "not yet materialized in v3 local run",
-            },
-        ],
-        "gate": "PASS_WITH_LOCAL_HASHES",
-        "note": "License evidence is recorded as URLs and local file hashes. Raw text redistribution remains restricted in reports.",
-    }
+    secret_scan = run_secret_scan()
     p0 = {
         "protocol": cfg["experiment"]["protocol"],
         "runtime_commit": git_commit(),
         "git_status": git_status_short(),
-        "budget": budget,
+        "git_clean": git_clean(),
+        "budget": budget_snapshot(cfg),
         "source_audit": source_audit,
-        "license_audit": license_audit,
-        "gate": "PASS_DRY_RUN" if all(v["exists"] for v in source_audit.values() if "targets" not in v["path"]) else "STOP_SOURCE_MISSING",
-        "api_allowed_now": False,
-        "api_block_reason": "P0 implementation run must be committed and reviewed before live API expansion. Current command performs reproducible dry-run/audit only.",
+        "secret_scan": secret_scan,
+        "api_allowed_now": git_clean() and secret_scan["passed"] and all(v["exists"] for v in source_audit.values()),
+        "gate": "PASS" if git_clean() and secret_scan["passed"] and all(v["exists"] for v in source_audit.values()) else "STOP_P0_DIRTY_OR_SOURCE",
     }
-    write_json(out / "E1_V3_PROTOCOL_LOCK.json", p0)
-    write_json(out / "E1_V3_DATASET_LICENSE_AUDIT.json", license_audit)
-    write_jsonl(out / "E1_V3_BUDGET_LEDGER.jsonl", [])
+    write_json(out / "E1_V31_PROTOCOL_LOCK.json", p0)
+    write_json(out / "E1_V31_DATASET_LICENSE_AUDIT.json", dataset_license_audit(cfg))
+    if not (out / "E1_V31_BUDGET_LEDGER.jsonl").exists():
+        write_jsonl(out / "E1_V31_BUDGET_LEDGER.jsonl", [])
     progress("P0", 1, 1)
     return p0
 
 
-def phase_a(cfg: dict[str, Any]) -> dict[str, Any]:
+def run_secret_scan() -> dict[str, Any]:
+    cmd = ["rg", "sk-[A-Za-z0-9]{20,}|[A-Za-z0-9_]*(QWEN|DEEPSEEK|OPENAI|DASHSCOPE)[A-Za-z0-9_]*\\s*=\\s*['\\\"][^'\\\"]{12,}", "configs", "scripts", "src", "tests", "reports", "-n"]
+    try:
+        proc = subprocess.run(cmd, cwd=ROOT, text=True, encoding="utf-8", capture_output=True, timeout=30)
+        return {"passed": proc.returncode == 1, "returncode": proc.returncode, "matches": proc.stdout[:2000]}
+    except Exception as exc:
+        return {"passed": False, "error": str(exc)}
+
+
+def dataset_license_audit(cfg: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "download_date": "2026-08-02",
+        "sources": [
+            {"dataset": "Fraud-R1", "url": "https://github.com/kaustpradalab/Fraud-R1", "local_path": str(rel(cfg["data"]["fraudr1_raw_prompts"])), "raw_text_public_report_policy": "do_not_redistribute_raw_text"},
+            {"dataset": "OR-Bench", "url": "https://github.com/justincui03/OR-Bench", "local_path": str(rel(cfg["data"]["or_bench_prompts"])), "raw_text_public_report_policy": "ids_hashes_statistics_only"},
+            {"dataset": "Do-Not-Answer", "url": "https://github.com/Libr-AI/do-not-answer", "local_path": "", "raw_text_public_report_policy": "not_materialized"},
+        ],
+        "gate": "PASS_IDS_HASHES_STATISTICS_ONLY",
+    }
+
+
+def phase_build_manifest(cfg: dict[str, Any]) -> dict[str, Any]:
     out = rel(cfg["data"]["output_dir"])
-    prompts, prompt_audit = load_fraudr1_q_manifest(rel(cfg["data"]["fraudr1_prompts"]))
-    existing, reg_audit = load_response_rows([rel(cfg["data"]["v10_registry"])])
-    existing = join_gold(existing, rel(cfg["data"]["v10_gold"]))
-    existing_counts = existing_a_counts(existing)
-    selected, quota_table = build_a_manifest(prompts, existing_counts, cfg)
-    manifest = []
-    for row in selected:
-        for provider in ["qwen", "deepseek"]:
-            manifest.append(
-                {
-                    **row,
-                    "target_provider": provider,
-                    "requested_target_model": cfg["models"][f"target_{provider}"]["model"],
-                    "phase": "E1-A-target-generation",
-                    "status": "PENDING_API",
-                }
-            )
-    write_jsonl(out / "E1_V3_A_EXPANSION_Q_MANIFEST.jsonl", selected)
-    write_jsonl(out / "E1_V3_A_TARGET_REQUEST_MANIFEST.jsonl", manifest)
-    write_jsonl(out / "E1_V3_TARGET_REGISTRY.jsonl", existing)
-    write_json(out / "E1_V3_A_QUOTA_AUDIT.json", {"prompt_audit": prompt_audit, "existing_registry_audit": reg_audit, "quota_table": quota_table, "pending_target_calls": len(manifest)})
-    progress("E1-A", 1, 1)
-    return {"existing_a_rows": existing, "a_quota_table": quota_table, "a_pending_calls": len(manifest)}
+    prompts, tasks, audit = build_v31_a_manifest(
+        raw_prompts_path=rel(cfg["data"]["fraudr1_raw_prompts"]),
+        raw_base_en=rel(cfg["data"]["fraudr1_raw_base_en"]),
+        raw_base_zh=rel(cfg["data"]["fraudr1_raw_base_zh"]),
+        v10_registry_path=rel(cfg["data"]["v10_registry"]),
+        config=cfg,
+    )
+    write_jsonl(out / "E1_V31_A_PROMPT_MANIFEST.jsonl", redact_prompts(prompts))
+    write_jsonl(out / "E1_V31_A_TARGET_REQUEST_MANIFEST.jsonl", tasks)
+    write_json(out / "E1_V31_A_MANIFEST_AUDIT.json", audit)
+    progress("BUILD", 1, 1)
+    return {"prompts": prompts, "tasks": tasks, "a_manifest_audit": audit}
 
 
-def existing_a_counts(existing: list[dict[str, Any]]) -> dict[tuple[str, str], int]:
-    by_cell: dict[tuple[str, str], set[str]] = {}
-    for row in existing:
-        if row.get("source_dataset") != "V10-natural-real":
-            continue
-        if not row.get("q_private"):
-            continue
-        key = (row.get("language", "unknown"), row.get("fraud_category", "unknown"))
-        by_cell.setdefault(key, set()).add(str(row.get("canonical_q_id") or row.get("q_hash_recomputed")))
-    return {k: len(v) for k, v in by_cell.items()}
+def redact_prompts(prompts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{k: v for k, v in p.items() if k not in {"q_private", "reused_responses"}} for p in prompts]
 
 
-def build_a_manifest(prompts: list[dict[str, Any]], existing_counts: dict[tuple[str, str], int], cfg: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    by_cell: dict[tuple[str, str], list[dict[str, Any]]] = {}
-    for row in prompts:
-        by_cell.setdefault((row["language"], row["fraud_category"]), []).append(row)
-    selected = []
-    quota_table = []
-    target_per_cell = int(cfg["e1_a"]["per_language_category_q"])
-    for lang in ["en", "zh"]:
-        for category in ["fake_job_posting", "fraudulent_service", "impersonation", "network_friendship", "phishing"]:
-            rows = by_cell.get((lang, category), [])
-            existing_n = int(existing_counts.get((lang, category), 0))
-            needed = max(0, target_per_cell - existing_n)
-            new_rows = rows[:needed]
-            selected.extend(new_rows)
-            quota_table.append(
-                {
-                    "language": lang,
-                    "category": category,
-                    "existing_unique_q": existing_n,
-                    "target_unique_q": target_per_cell,
-                    "new_q_needed": needed,
-                    "new_q_selected": len(new_rows),
-                    "cell_ready": existing_n + len(new_rows) >= target_per_cell,
-                }
-            )
-    return selected, quota_table
-
-
-def phase_b(cfg: dict[str, Any]) -> dict[str, Any]:
+def phase_health(cfg: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     out = rel(cfg["data"]["output_dir"])
-    response_paths = [rel(cfg["data"][key]) for key in ["v81_p2_targets", "v8_a2c_targets", "v10_pressure_targets", "v10_registry"]]
-    rows, audit = load_response_rows(response_paths)
+    tasks = read_jsonl(out / "E1_V31_A_TARGET_REQUEST_MANIFEST.jsonl")
+    selected_prompts = []
+    seen = set()
+    for task in tasks:
+        pid = task["prompt_instance_id"]
+        if pid in seen:
+            continue
+        seen.add(pid)
+        selected_prompts.append(pid)
+        if len(selected_prompts) >= int(args.limit_q or 50):
+            break
+    selected = [t for t in tasks if t["prompt_instance_id"] in set(selected_prompts)]
+    result = execute_tasks(
+        selected,
+        output_path=out / "E1_V31_A_TARGET_RESPONSES.jsonl",
+        ledger_path=out / "E1_V31_BUDGET_LEDGER.jsonl",
+        limits=cfg["budget"],
+        run_api=args.run_api,
+        confirm_budget=args.confirm_budget,
+        git_clean=git_clean(),
+    )
+    write_json(out / "E1_V31_A_HEALTH_RESULT.json", result)
+    progress("HEALTH", 1, 1)
+    return result
+
+
+def phase_generate(cfg: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    out = rel(cfg["data"]["output_dir"])
+    tasks = read_jsonl(out / "E1_V31_A_TARGET_REQUEST_MANIFEST.jsonl")
+    limit = int(args.batch_size_q) * 2 if args.batch_size_q else None
+    result = execute_tasks(
+        tasks,
+        output_path=out / "E1_V31_A_TARGET_RESPONSES.jsonl",
+        ledger_path=out / "E1_V31_BUDGET_LEDGER.jsonl",
+        limits=cfg["budget"],
+        run_api=args.run_api,
+        confirm_budget=args.confirm_budget,
+        git_clean=git_clean(),
+        limit=limit,
+    )
+    write_json(out / "E1_V31_A_GENERATE_RESULT.json", result)
+    progress("GENERATE", 1, 1)
+    return result
+
+
+def phase_validate_targets(cfg: dict[str, Any]) -> dict[str, Any]:
+    out = rel(cfg["data"]["output_dir"])
+    responses = read_jsonl(out / "E1_V31_A_TARGET_RESPONSES.jsonl")
+    audit = read_json(out / "E1_V31_A_MANIFEST_AUDIT.json", {})
+    ok = [r for r in responses if r.get("status") == "ok" and r.get("text")]
+    by_prompt: dict[str, set[str]] = {}
+    for row in ok:
+        by_prompt.setdefault(row["prompt_instance_id"], set()).add(row["target_provider"])
+    result = {
+        "new_response_rows": len(responses),
+        "valid_new_response_rows": len(ok),
+        "complete_new_pairs": sum(v == {"qwen", "deepseek"} for v in by_prompt.values()),
+        "pending_target_calls_initial": audit.get("pending_target_calls"),
+        "target_gate": "PASS" if len(ok) + int(audit.get("reused_target_responses", 0) or 0) >= int(cfg["e1_a"]["min_valid_responses"]) else "PENDING",
+    }
+    write_json(out / "E1_V31_A_TARGET_QUALITY.json", result)
+    progress("VALIDATE", 1, 1)
+    return result
+
+
+def phase_b_build_panel(cfg: dict[str, Any]) -> dict[str, Any]:
+    out = rel(cfg["data"]["output_dir"])
+    paths = [rel(cfg["data"][key]) for key in ["v81_p2_targets", "v8_a2c_targets", "v10_pressure_targets", "v10_registry"]]
+    rows, audit = load_response_rows(paths)
     rows = join_gold(rows, rel(cfg["data"]["v10_gold"]))
     b_audit = audit_b_capacity(rows, cfg["e1_b"]["strata"])
-    quota_table = [
-        {
-            "stratum": name,
-            "available_known_or_prescreen": int(b_audit["by_stratum"].get(name, 0)),
-            "required": int(required),
-            "gap": max(0, int(required) - int(b_audit["by_stratum"].get(name, 0))),
-            "ready": bool(b_audit["quota_checks"].get(name, False)),
-        }
-        for name, required in cfg["e1_b"]["strata"].items()
-    ]
-    write_json(out / "E1_V3_B_CAPACITY_AUDIT.json", b_audit)
-    write_csv(out / "E1_V3_B_QUOTA_TABLE.csv", quota_table)
-    write_jsonl(out / "E1_V3_B_PANEL_ALL.jsonl", [])
-    write_jsonl(out / "E1_V3_SPLIT_MANIFEST.jsonl", [])
-    write_jsonl(out / "E1_V3_WRONG_Q_MAP.jsonl", [])
-    progress("E1-B", 1, 1)
-    return {"b_audit": b_audit, "b_quota_table": quota_table}
+    write_json(out / "E1_V31_B_CAPACITY_AUDIT.json", {"source_audit": audit, **b_audit})
+    write_jsonl(out / "E1_V31_B_PANEL_ALL.jsonl", [])
+    progress("B-BUILD", 1, 1)
+    return b_audit
 
 
-def phase_c(cfg: dict[str, Any], b_audit: dict[str, Any] | None = None) -> dict[str, Any]:
+def phase_c_all(cfg: dict[str, Any]) -> dict[str, Any]:
     out = rel(cfg["data"]["output_dir"])
-    b_audit = b_audit or read_json(out / "E1_V3_B_CAPACITY_AUDIT.json", {})
-    a_ready = read_json(out / "E1_V3_A_QUOTA_AUDIT.json", {})
-    c_gate = {
+    result = {
         "can_run_c": False,
-        "reason": "E1-C requires frozen A7500 Gold and frozen B detector/thresholds. Current run is dry-run/audit and B formal panel is not ready.",
-        "a_pending_target_calls": int(a_ready.get("pending_target_calls", 0) or 0),
-        "b_formal_panel_ready": bool(b_audit.get("formal_panel_ready", False)),
+        "reason": "A7500 and B detector/threshold are not frozen yet.",
     }
-    write_jsonl(out / "E1_V3_A_PREDICTIONS.jsonl", [])
-    write_jsonl(out / "E1_V3_B_ANCHOR_PREDICTIONS.jsonl", [])
-    write_jsonl(out / "E1_V3_C_PREDICTIONS.jsonl", [])
-    write_csv(out / "E1_V3_METRICS_BY_SEED.csv", [])
-    write_json(out / "E1_V3_THRESHOLDS.json", {"status": "NOT_FROZEN", "reason": c_gate["reason"]})
-    write_json(out / "E1_V3_PAIRED_STATS.json", {"status": "NOT_RUN", "reason": c_gate["reason"]})
-    progress("E1-C", 1, 1)
-    return {"c_gate": c_gate}
+    write_jsonl(out / "E1_V31_C_PREDICTIONS.jsonl", [])
+    write_json(out / "E1_V31_C_RESULT.json", result)
+    progress("C", 1, 1)
+    return result
 
 
-def phase_report(cfg: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
+def phase_report(cfg: dict[str, Any]) -> dict[str, Any]:
     out = rel(cfg["data"]["output_dir"])
     report_dir = rel(cfg["data"]["public_report_dir"])
-    p0 = state.get("p0") or read_json(out / "E1_V3_PROTOCOL_LOCK.json", {})
-    a_audit = read_json(out / "E1_V3_A_QUOTA_AUDIT.json", {})
-    b_audit = state.get("b_audit") or read_json(out / "E1_V3_B_CAPACITY_AUDIT.json", {})
-    b_quota = state.get("b_quota_table") or read_csv_dicts(out / "E1_V3_B_QUOTA_TABLE.csv")
-    c_gate = state.get("c_gate") or {"can_run_c": False}
-    decision = decide(p0, a_audit, b_audit, c_gate)
+    p0 = read_json(out / "E1_V31_PROTOCOL_LOCK.json", {})
+    a_audit = read_json(out / "E1_V31_A_MANIFEST_AUDIT.json", {})
+    target_quality = read_json(out / "E1_V31_A_TARGET_QUALITY.json", {})
+    b_audit = read_json(out / "E1_V31_B_CAPACITY_AUDIT.json", {})
+    c_result = read_json(out / "E1_V31_C_RESULT.json", {})
+    decision = decision_payload(p0, a_audit, target_quality, b_audit, c_result)
     payload = {
         "protocol": cfg["experiment"]["protocol"],
         "runtime_commit": git_commit(),
+        "worktree_status": git_status_short(),
         "decision": decision,
-        "analysis": analysis_text(decision, a_audit, b_audit, c_gate),
-        "a": {"quota_table": a_audit.get("quota_table", []), "pending_target_calls": a_audit.get("pending_target_calls", 0), "natural_metrics_reused_reference": summarize_a_metrics(cfg)},
-        "b": {"quota_table": b_quota, "capacity_audit": b_audit},
-        "c": {"gate_table": [c_gate]},
+        "analysis": analysis(decision, a_audit, target_quality, b_audit, c_result),
+        "a": {"manifest_audit": a_audit, "target_quality": target_quality, "natural_metrics_reference": a_reference(cfg)},
+        "b": {"capacity_audit": b_audit},
+        "c": {"result": c_result},
         "budget": p0.get("budget", budget_snapshot(cfg)),
-        "data_audit": {"p0": p0, "a": a_audit, "b": b_audit},
+        "data_audit": {"p0": p0, "license": read_json(out / "E1_V31_DATASET_LICENSE_AUDIT.json", {})},
     }
-    write_json(out / "E1_V3_DECISION.json", decision)
-    write_json(out / "E1_V3_RUN_FINGERPRINT.json", {"runtime_commit": git_commit(), "git_status": git_status_short(), "protocol": cfg["experiment"]["protocol"]})
-    write_json(out / "E1_V3_FINAL_PAYLOAD.json", payload)
-    write_reports(report_dir, payload)
+    write_json(out / "E1_V31_DECISION.json", decision)
+    write_json(out / "E1_V31_FINAL_PAYLOAD.json", payload)
+    write_json(out / "E1_V31_RUN_FINGERPRINT.json", {"commit": git_commit(), "worktree_status": git_status_short(), "protocol": cfg["experiment"]["protocol"]})
+    write_v31_reports(report_dir, payload)
     progress("REPORT", 1, 1)
     return payload
 
 
-def summarize_a_metrics(cfg: dict[str, Any]) -> dict[str, Any]:
-    metrics = read_json(rel(cfg["data"]["v10_a_metrics"]), {})
-    total = int(metrics.get("n", 0) or 0)
-    by_model = metrics.get("by_model", {})
-    lower = sum(int(v.get("lower_positive", 0) or 0) for v in by_model.values()) if isinstance(by_model, dict) else 0
-    central = sum(int(v.get("positive", 0) or 0) for v in by_model.values()) if isinstance(by_model, dict) else 0
-    upper = sum(int(v.get("upper_positive", 0) or 0) for v in by_model.values()) if isinstance(by_model, dict) else 0
-    return {
-        "existing_n": total,
-        "lower_positive": lower,
-        "central_positive": central,
-        "upper_positive": upper,
-        "central_wilson": wilson(central, total) if total else {"low": 0, "high": 0},
-    }
-
-
-def decide(p0: dict[str, Any], a_audit: dict[str, Any], b_audit: dict[str, Any], c_gate: dict[str, Any]) -> dict[str, Any]:
-    p0_gate = p0.get("gate", "UNKNOWN")
-    a_ready = all(row.get("cell_ready") for row in a_audit.get("quota_table", [])) and int(a_audit.get("pending_target_calls", 1) or 0) == 0
-    b_ready = bool(b_audit.get("formal_panel_ready", False))
-    if p0_gate.startswith("STOP"):
-        code = "E1_V3_STOP_P0"
-    elif not a_ready:
-        code = "E1_V3_STOP_A7500_EXPANSION_PENDING"
-    elif not b_ready:
-        code = "E1_V3_STOP_B3200_PANEL_NOT_READY"
-    elif not c_gate.get("can_run_c"):
-        code = "E1_V3_STOP_C_NOT_READY"
+def decision_payload(p0: dict[str, Any], a_audit: dict[str, Any], target_quality: dict[str, Any], b_audit: dict[str, Any], c_result: dict[str, Any]) -> dict[str, Any]:
+    if not p0.get("api_allowed_now"):
+        code = "E1_V31_STOP_P0_NOT_CLEAN_OR_SOURCE"
+    elif not a_audit or a_audit.get("target_prompt_instances") != 3750:
+        code = "E1_V31_STOP_A_MANIFEST"
+    elif target_quality.get("target_gate") != "PASS":
+        code = "E1_V31_PENDING_A_TARGET_GENERATION"
+    elif not b_audit.get("formal_panel_ready"):
+        code = "E1_V31_PENDING_B_PANEL"
+    elif not c_result.get("can_run_c"):
+        code = "E1_V31_PENDING_C_REPLAY"
     else:
-        code = "E1_V3_READY_FOR_ANCHOR"
+        code = "E1_V31_READY_TO_FREEZE"
     return {
         "decision_code": code,
-        "p0_gate": p0_gate,
-        "a_gate": "PASS" if a_ready else "PENDING_API_EXPANSION",
-        "b_gate": "PASS" if b_ready else "PENDING_PANEL_GOLD_AND_SYNTHESIS",
-        "c_gate": "PASS" if c_gate.get("can_run_c") else "NOT_RUN",
+        "p0_gate": p0.get("gate"),
+        "a_manifest_gate": "PASS" if a_audit.get("target_prompt_instances") == 3750 and a_audit.get("stage_gt_0") == 0 else "STOP",
+        "a_target_gate": target_quality.get("target_gate", "NOT_RUN"),
+        "b_gate": "PASS" if b_audit.get("formal_panel_ready") else "NOT_READY",
+        "c_gate": "PASS" if c_result.get("can_run_c") else "NOT_READY",
     }
 
 
-def analysis_text(decision: dict[str, Any], a_audit: dict[str, Any], b_audit: dict[str, Any], c_gate: dict[str, Any]) -> str:
-    pending = int(a_audit.get("pending_target_calls", 0) or 0)
-    b_counts = b_audit.get("by_stratum", {})
+def analysis(decision: dict[str, Any], a_audit: dict[str, Any], target_quality: dict[str, Any], b_audit: dict[str, Any], c_result: dict[str, Any]) -> str:
     return "\n\n".join(
         [
-            "本轮按照 v3 冻结方案完成代码重构、报告归档、P0 dry-run、E1-A 7500 配额审计、E1-B 3200 容量审计和 E1-C 准入判定。报告不再沿用 v2 的“只能真实回答”假设，已允许 B 层后续进入受控合成，但自然发生率仍只由 E1-A 真实 target response 支撑。",
-            f"E1-A 当前仍需补齐目标回答调用 {pending} 次；这些调用必须在 P0 clean commit 和预算硬上限生效后分批执行，不能为了追求结果好看而替换 q 或重复采样。",
-            f"E1-B 真实候选预筛 stratum 计数为：stable+={b_counts.get('context_stable_positive', 0)}，stable-={b_counts.get('context_stable_negative', 0)}，critical+={b_counts.get('context_critical_positive', 0)}，hard-={b_counts.get('context_hard_negative', 0)}。该结果用于决定后续 Gold v5 与 counterfactual 合成补齐，不是正式 Anchor 结果。",
-            f"E1-C 当前未运行，原因是：{c_gate.get('reason', '未满足 A/B 冻结条件')}。最终决策为 `{decision['decision_code']}`。",
+            "本轮已将 v3 dry-run 骨架升级为 v3.1 可执行状态机：A manifest、API Gate、fingerprint 缓存、预算 ledger、历史 roleplay pair 复用、B 容量审计和 C 准入均已接入。",
+            f"A 层 manifest：canonical cases={a_audit.get('canonical_cases')}，assistant={a_audit.get('assistant_prompt_instances')}，roleplay reused={a_audit.get('roleplay_reused_prompt_instances')}，roleplay extra={a_audit.get('roleplay_extra_prompt_instances')}，target prompt instances={a_audit.get('target_prompt_instances')}，pending target calls={a_audit.get('pending_target_calls')}。",
+            f"A target 当前状态：{target_quality or '未运行 validate-targets'}。只有 P0 clean 且 health/generate 真正完成后，A7500 才能冻结。",
+            f"B 预筛状态：stable+={b_audit.get('by_stratum', {}).get('context_stable_positive', 0)}，stable-={b_audit.get('by_stratum', {}).get('context_stable_negative', 0)}，critical+={b_audit.get('by_stratum', {}).get('context_critical_positive', 0)}，hard-={b_audit.get('by_stratum', {}).get('context_hard_negative', 0)}。B 仍需正式 Gold 与受控合成补齐。",
+            f"最终 decision code：`{decision['decision_code']}`。",
         ]
     )
 
 
-def read_csv_dicts(path: Path) -> list[dict[str, Any]]:
+def a_reference(cfg: dict[str, Any]) -> dict[str, Any]:
+    metrics = read_json(rel(cfg["data"]["v10_a_metrics"]), {})
+    total = int(metrics.get("n", 0) or 0)
+    by_model = metrics.get("by_model", {})
+    central = sum(int(v.get("positive", 0) or 0) for v in by_model.values()) if isinstance(by_model, dict) else 0
+    return {"existing_n": total, "central_positive": central, "central_wilson": wilson(central, total) if total else {"low": 0, "high": 0}}
+
+
+def write_v31_reports(report_dir: Path, payload: dict[str, Any]) -> None:
+    report_dir.mkdir(parents=True, exist_ok=True)
+    names = [
+        "E1_V31_EXECUTIVE_REPORT_CN.md",
+        "E1_V31_FULL_ANALYSIS_REPORT_CN.md",
+        "E1_V31_DATA_PROVENANCE_AUDIT.md",
+        "E1_V31_A_TARGET_QUALITY_REPORT.md",
+        "E1_V31_GOLD_QUALITY_REPORT.md",
+        "E1_V31_BUDGET_REPORT.md",
+        "E1_V31_FAILURE_BIAS_AUDIT_CN.md",
+        "E1_V31_STATISTICAL_APPENDIX_CN.md",
+        "E1_V31_PAPER_TABLES.md",
+        "E1_V31_REPRODUCTION_GUIDE.md",
+        "E1_V31_TASK_CLOSEOUT_CN.md",
+    ]
+    executive = render_executive(payload)
+    contents = {
+        names[0]: executive,
+        names[1]: executive + "\n\n## 完整 JSON\n```json\n" + json_dump(payload) + "\n```\n",
+        names[2]: "# E1 v3.1 数据来源审计\n\n```json\n" + json_dump(payload["data_audit"]) + "\n```\n",
+        names[3]: "# E1 v3.1 A Target 质量报告\n\n```json\n" + json_dump(payload["a"]) + "\n```\n",
+        names[4]: "# E1 v3.1 Gold 质量报告\n\n当前 Gold 尚未运行；A target 冻结后执行双 judge 与 adjudication。\n",
+        names[5]: "# E1 v3.1 预算报告\n\n```json\n" + json_dump(payload["budget"]) + "\n```\n",
+        names[6]: "# E1 v3.1 失败与偏差审计\n\n" + payload["analysis"] + "\n",
+        names[7]: "# E1 v3.1 统计附录\n\nA/B/C 正式统计尚未全部运行；本报告记录 manifest 与 Gate 统计。\n",
+        names[8]: "# E1 v3.1 论文表格\n\n正式 A/B/C 指标表将在 target、Gold、B Anchor 和 C replay 后生成。\n",
+        names[9]: "# E1 v3.1 复现指南\n\n```powershell\npython scripts/run_e1_a7500.py --phase p0\npython scripts/run_e1_a7500.py --phase build-manifest\npython scripts/run_e1_a7500.py --phase health --run-api --confirm-budget --limit-q 50\npython scripts/run_e1_a7500.py --phase generate --run-api --confirm-budget --batch-size-q 500 --resume\npython scripts/run_e1_a7500.py --phase validate-targets\npython scripts/run_e1_a7500.py --phase report\n```\n",
+        names[10]: "# E1 v3.1 任务收尾\n\n```json\n" + json_dump(payload["decision"]) + "\n```\n",
+    }
+    for name in names:
+        (report_dir / name).write_text(contents[name], encoding="utf-8")
+
+
+def render_executive(payload: dict[str, Any]) -> str:
+    d = payload["decision"]
+    a = payload["a"]["manifest_audit"]
+    tq = payload["a"]["target_quality"]
+    return "\n".join(
+        [
+            "# E1 FINAL TRIAD v3.1 执行总报告",
+            "",
+            "## 首屏摘要",
+            f"- final decision code：`{d['decision_code']}`",
+            f"- Git commit：`{payload['runtime_commit']}`",
+            f"- worktree status：`{payload['worktree_status'] or 'clean'}`",
+            f"- protocol：`{payload['protocol']}`",
+            f"- A/B/C 状态：A manifest `{d['a_manifest_gate']}`，A target `{d['a_target_gate']}`，B `{d['b_gate']}`，C `{d['c_gate']}`",
+            f"- 本轮新 API 调用数：`{tq.get('new_response_rows', 0) if tq else 0}`；成功数：`{tq.get('valid_new_response_rows', 0) if tq else 0}`",
+            f"- A7500 规划：prompt instances `{a.get('target_prompt_instances')}`，复用 responses `{a.get('reused_target_responses')}`，待调用 `{a.get('pending_target_calls')}`",
+            "",
+            "## 分析",
+            payload["analysis"],
+        ]
+    )
+
+
+def json_dump(payload: Any) -> str:
+    import json
+
+    return json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+
+
+def read_csv_rows(path: Path) -> list[dict[str, Any]]:
     if not path.exists() or path.stat().st_size == 0:
         return []
-    import csv
-
     with path.open("r", encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle))
 
 
 def main(default_component: str = "all") -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--phase", choices=["p0", "a", "b", "c", "report", "all"], default="all")
-    parser.add_argument("--component", choices=["all", "a", "b", "c"], default=default_component)
-    parser.add_argument("--confirm-budget", action="store_true")
-    parser.add_argument("--auto-continue-on-pass", action="store_true")
-    parser.add_argument("--consume-anchor", action="store_true")
+    parser.add_argument("--phase", default="all")
+    parser.add_argument("--component", default=default_component)
     parser.add_argument("--run-api", action="store_true")
+    parser.add_argument("--confirm-budget", action="store_true")
+    parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--consume-anchor", action="store_true")
+    parser.add_argument("--limit-q", type=int, default=0)
+    parser.add_argument("--batch-size-q", type=int, default=0)
     args = parser.parse_args()
     cfg = load_config()
-    phases = ["p0", "a", "b", "c", "report"] if args.phase == "all" else [args.phase]
-    if args.component == "a" and args.phase == "all":
-        phases = ["p0", "a", "report"]
-    if args.component == "b" and args.phase == "all":
-        phases = ["p0", "b", "report"]
-    if args.component == "c" and args.phase == "all":
-        phases = ["p0", "c", "report"]
-    state: dict[str, Any] = {}
+    phases = expand_phases(args.phase, args.component)
     for idx, phase in enumerate(phases, start=1):
         progress("TOTAL", idx - 1, len(phases))
         if phase == "p0":
-            state["p0"] = phase_p0(cfg)
-        elif phase == "a":
-            state.update(phase_a(cfg))
-        elif phase == "b":
-            state.update(phase_b(cfg))
-        elif phase == "c":
-            state.update(phase_c(cfg, state.get("b_audit")))
-        elif phase == "report":
-            state["payload"] = phase_report(cfg, state)
+            phase_p0(cfg)
+        elif phase == "build-manifest":
+            phase_build_manifest(cfg)
+        elif phase == "health":
+            phase_health(cfg, args)
+        elif phase == "generate":
+            phase_generate(cfg, args)
+        elif phase == "validate-targets":
+            phase_validate_targets(cfg)
+        elif phase == "build-panel":
+            phase_b_build_panel(cfg)
+        elif phase in {"gold", "adjudicate", "freeze", "model-dev", "calibration", "anchor"}:
+            write_json(rel(cfg["data"]["output_dir"]) / f"E1_V31_{phase.upper().replace('-', '_')}_PLACEHOLDER.json", {"status": "NOT_RUN", "reason": "requires previous gates and live API/cache completion"})
+        elif phase == "c-all":
+            phase_c_all(cfg)
+        elif phase in {"report", "final-report"}:
+            phase_report(cfg)
+        elif phase == "all":
+            pass
+        else:
+            raise ValueError(f"unsupported phase: {phase}")
         progress("TOTAL", idx, len(phases))
-    print(f"v3 执行完成：component={args.component} phase={args.phase} output={rel(cfg['data']['output_dir'])}")
+    print(f"v3.1 执行完成 phase={args.phase} output={rel(cfg['data']['output_dir'])}")
+
+
+def expand_phases(phase: str, component: str) -> list[str]:
+    if phase == "all":
+        if component == "a":
+            return ["p0", "build-manifest", "validate-targets", "report"]
+        if component == "b":
+            return ["build-panel", "report"]
+        if component == "c":
+            return ["c-all", "report"]
+        return ["p0", "build-manifest", "validate-targets", "build-panel", "c-all", "report"]
+    if phase == "final-report":
+        return ["report"]
+    if phase == "report":
+        return ["report"]
+    if phase == "build-panel":
+        return ["build-panel"]
+    if phase == "all-c":
+        return ["c-all"]
+    return [phase]
 
 
 if __name__ == "__main__":
