@@ -291,7 +291,7 @@ def phase_gold_sd(cfg: dict[str, Any], args: argparse.Namespace) -> dict[str, An
     if not v32_budget_ok(cfg):
         return {"status": "STOP_BUDGET_V32", "v32_spend_cny": v32_spend_cny(cfg)}
     sd = read_jsonl(out / "E1_V32_SD_POOL.jsonl")
-    pending = [r for r in sd if r["gold_status"] == "PENDING_GOLD"]
+    pending = [r for r in sd if r["gold_status"] in ("PENDING_GOLD", "MISSING_VOTE")]
     tasks = _gold_tasks(cfg, pending, phase="E1-v32-B-gold-sd")
     result = execute_json_tasks(
         tasks,
@@ -353,25 +353,31 @@ def phase_consensus(cfg: dict[str, Any]) -> dict[str, Any]:
     real_rows = read_jsonl(out / "E1_V32_REAL_POOL.jsonl")
     votes = read_jsonl(out / "E1_V32_GOLD_SD_VOTES.jsonl") + read_jsonl(out / "E1_V32_GOLD_REAL_VOTES.jsonl")
     adjud = read_jsonl(out / "E1_V32_GOLD_ADJUDICATION.jsonl")
-    consensus, quality = consensus_from_votes(sd_rows + real_rows, votes, adjud)
+    # only rows that actually need fresh consensus (no reused gold / re-golded real rows)
+    to_consense = [r for r in sd_rows if r["gold_status"] == "PENDING_GOLD"] + [r for r in real_rows if str(r.get("response_id", "")) in {str(v.get("response_id", "")) for v in votes}]
+    consensus, quality = consensus_from_votes(to_consense, votes, adjud)
     write_jsonl(out / "E1_V32_GOLD_CONSENSUS.jsonl", consensus)
     write_json(out / "E1_V32_GOLD_QUALITY.json", quality)
     by_rid = {str(c["response_id"]): c for c in consensus}
     for rows in (sd_rows, real_rows):
         for row in rows:
-            c = by_rid.get(str(row["response_id"]), {})
-            if c:
-                row["gold_status"] = c.get("gold_status", row.get("gold_status"))
-                row["gold_central"] = c.get("gold_central", row.get("gold_central", -1))
-                row["gold_upper"] = c.get("gold_upper", row.get("gold_upper", -1))
-                row["gold_lower"] = c.get("gold_lower", row.get("gold_lower", -1))
+            c = by_rid.get(str(row["response_id"]))
+            if c and c.get("gold_status") == "KNOWN":
+                row["gold_status"] = "KNOWN"
+                row["gold_central"] = c.get("gold_central", -1)
+                row["gold_upper"] = c.get("gold_upper", -1)
+                row["gold_lower"] = c.get("gold_lower", -1)
                 row["gold_uncertain"] = c.get("gold_uncertain", False)
                 row["judge_a_positive"] = c.get("judge_a_positive", -1)
                 row["judge_b_positive"] = c.get("judge_b_positive", -1)
+            elif c and c.get("gold_status") == "MISSING_VOTE" and row.get("gold_status") == "PENDING_GOLD":
+                row["gold_status"] = "MISSING_VOTE"
     write_jsonl(out / "E1_V32_SD_POOL.jsonl", sd_rows)
     write_jsonl(out / "E1_V32_REAL_POOL.jsonl", real_rows)
     stats = {
         "consensus_rows": len(consensus),
+        "known_rows": sum(1 for c in consensus if c.get("gold_status") == "KNOWN"),
+        "missing_vote_rows": sum(1 for c in consensus if c.get("gold_status") == "MISSING_VOTE"),
         "sd_gold1": sum(1 for r in sd_rows if r["gold_central"] == 1),
         "sd_gold0": sum(1 for r in sd_rows if r["gold_central"] == 0),
         "real_gold1": sum(1 for r in real_rows if r["gold_central"] == 1),
