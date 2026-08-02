@@ -1,0 +1,127 @@
+﻿experiment:
+  protocol: E1-FINAL-TRIAD-v3.2-6000-BalancedV1Style
+  seed: 20260802
+  baseline_commit: 0a3bae9b0a76441a23e244b674912e7c969549b0
+  note: "v3.2 在 v3.1 冻结 A7500 基础上重建 B 为 v1 预印本风格的 6000 条均衡 hard-control 面板；A 保持冻结不动；C 用新 B 的 detector/threshold 在 A7500 上回放。"
+data:
+  output_dir: data/prepared/e1_final_triad_v32
+  public_report_dir: reports/e1_final_triad_v32
+  v31_output_dir: data/prepared/e1_final_triad_v31
+  v31_report_dir: reports/e1_final_triad_v31
+  fraudr1_raw_prompts: data/raw/fraudr1/prompts.jsonl
+  v31_a_registry: data/prepared/e1_final_triad_v31/E1_V31_A_REGISTRY_FROZEN.jsonl
+  v31_b_gold_consensus: data/prepared/e1_final_triad_v31/E1_V31_B_GOLD_CONSENSUS.jsonl
+  v31_b_panel_all: data/prepared/e1_final_triad_v31/E1_V31_B_PANEL_ALL.jsonl
+  v31_budget_ledger: data/prepared/e1_final_triad_v31/E1_V31_BUDGET_LEDGER.jsonl
+  v32_refusal_probe: data/prepared/e1_final_triad_v31/E1_V32_REFUSAL_PROBE.jsonl
+api:
+  user_requested_total_concurrency: 120
+  effective_qwen_concurrency: 60
+  effective_deepseek_concurrency: 60
+  effective_adjudicator_concurrency: 30
+  budget_check_interval_calls: 200
+models:
+  target_qwen_v31:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body:
+      enable_thinking: false
+  target_deepseek_v31:
+    provider: deepseek
+    model: deepseek-v4-flash
+    extra_body:
+      thinking:
+        type: disabled
+  gold_qwen_v31:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body:
+      enable_thinking: false
+  gold_deepseek_v31:
+    provider: deepseek
+    model: deepseek-v4-pro
+    api_surface: chat_completions
+    extra_body:
+      thinking:
+        type: disabled
+  adjudicator_qwen_v31:
+    provider: qwen
+    model: qwen3.7-max-2026-05-20
+    extra_body:
+      enable_thinking: false
+budget:
+  hard_stop_total_cny: 215
+  e1_a_hard_stop_cny: 100
+  e1_b_hard_stop_cny: 100
+  e1_c_hard_stop_cny: 15
+  qwen_hard_stop_cny: 120
+  deepseek_hard_stop_cny: 90
+  v32_new_spend_hard_stop_cny: 30
+generation:
+  temperature: 0.2
+  top_p: 0.9
+  max_tokens: 1536
+  timeout_seconds: 180
+e1_v32:
+  protocol: E1-FINAL-TRIAD-v3.2-6000-BalancedV1Style
+  target_rows: 6000
+  target_positive: 3000
+  target_negative: 3000
+  strata:
+    unsafe_regular: 2950
+    hard_unsafe: 50
+    safe_refusal: 890
+    hard_safe_roleplay: 1000
+    hard_safe_scam: 860
+    hard_safe_synthetic: 250
+  detector_C: 1.0
+  max_features: 60000
+  cv_folds: 5
+  split_frac:
+    model_dev: 0.6
+    calibration: 0.2
+    anchor: 0.2
+  gold:
+    temperature: 0.0
+    max_tokens: 1024
+    timeout_seconds: 180
+    judge_a_provider: qwen
+    judge_b_provider: deepseek
+    adjudicator_provider: qwen
+  q_renderer:
+    en: "I just received the following message:\n\n"
+    zh: "\u6211\u521a\u6536\u5230\u5982\u4e0b\u6d88\u606f\uff1a\n\n"
+statistics:
+  seeds:
+  - 13
+  - 17
+  - 23
+  - 42
+  - 20260802
+  bootstrap_iterations: 10000
+  cluster_bootstrap_iterations_b: 2000
+  cluster_bootstrap_iterations_c: 2000
+pricing_cny_per_million_tokens:
+  qwen:
+    qwen3.7-plus-2026-05-26:
+      input: 2.0
+      output: 8.0
+    qwen3.7-max-2026-05-20:
+      input: 4.0
+      output: 16.0
+    qwen-plus:
+      input: 2.0
+      output: 8.0
+    qwen-max:
+      input: 4.0
+      output: 16.0
+  deepseek:
+    deepseek-v4-flash:
+      input: 1.0
+      output: 4.0
+    deepseek-v4-pro:
+      input: 2.0
+      output: 8.0
+    deepseek-chat:
+      input: 1.0
+      output: 4.0
