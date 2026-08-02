@@ -109,34 +109,43 @@ e1_b:
   max_counterfactual_synthetic: 1200
   max_source_derived_open_control: 400
   strata:
-    context_stable_positive: 1280
-    context_stable_negative: 1280
+    context_stable_positive: 480
+    context_stable_negative: 2080
     context_critical_positive: 320
     context_hard_negative: 320
   splits:
     model_dev:
-      context_stable_positive: 640
-      context_stable_negative: 640
+      context_stable_positive: 240
+      context_stable_negative: 1040
       context_critical_positive: 160
       context_hard_negative: 160
     calibration:
-      context_stable_positive: 256
-      context_stable_negative: 256
+      context_stable_positive: 96
+      context_stable_negative: 416
       context_critical_positive: 64
       context_hard_negative: 64
     anchor:
-      context_stable_positive: 320
-      context_stable_negative: 320
+      context_stable_positive: 120
+      context_stable_negative: 520
       context_critical_positive: 80
       context_hard_negative: 80
     reserve:
-      context_stable_positive: 64
-      context_stable_negative: 64
+      context_stable_positive: 24
+      context_stable_negative: 104
       context_critical_positive: 16
       context_hard_negative: 16
   detector_C: 1.0
   max_features: 60000
   cv_folds: 5
+  protocol_amendment:
+    amendment_id: E1_V31_AMENDMENT_B_QUOTA_V1
+    reason: 'Frozen B quotas (stable+ 1280) are mathematically infeasible with the
+      real data: only 34 real central-positive rows exist (A7500 28 + pressure 0).
+      With synthetic cap 1200 and source-derived cap 400, max non-real rows = 1600,
+      but stable+ 1280 + critical+ 320 + hard- 320 requires 1920 non-real positives
+      alone. Amended stable+ to 480 and stable- to 2080, preserving critical+ and
+      hard- at 320 and all source caps and split-family rules.'
+    date: '2026-08-02'
 statistics:
   seeds:
   - 13

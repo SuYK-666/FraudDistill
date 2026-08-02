@@ -109,22 +109,24 @@ def run_seed(dev: list[dict[str, Any]], cal: list[dict[str, Any]], anchor: list[
     d_rows, d_labels = panel_rows_to_eval(dev)
     c_rows, _ = panel_rows_to_eval(cal)
     a_rows, _ = panel_rows_to_eval(anchor)
-    if not d_rows or not c_rows or not a_rows:
+    if not d_rows or not c_rows:
         return {"mode": mode, "seed": seed, "error": "empty split"}
     detector = ViewDetector(mode=mode, seed=seed, C=float(cfg.get("detector_C", 1.0)), max_features=int(cfg.get("max_features", 60000)))
     detector.fit(d_rows, d_labels)
     cal_scores = detector.predict_proba(c_rows)
     threshold = choose_threshold(c_rows, cal_scores)
-    anchor_scores = detector.predict_proba(a_rows)
-    return {
+    out = {
         "mode": mode,
         "seed": seed,
         "threshold": threshold,
-        "anchor": metrics_at_threshold(a_rows, anchor_scores, threshold),
-        "anchor_auprc": auprc([int(r["gold_central"]) for r in a_rows], anchor_scores),
-        "anchor_auroc": roc_auc_score([int(r["gold_central"]) for r in a_rows], anchor_scores) if len(set(r["gold_central"] for r in a_rows)) > 1 else 0.0,
         "cal_macro_f1_at_threshold": metrics_at_threshold(c_rows, cal_scores, threshold)["macro_f1"],
     }
+    if a_rows:
+        anchor_scores = detector.predict_proba(a_rows)
+        out["anchor"] = metrics_at_threshold(a_rows, anchor_scores, threshold)
+        out["anchor_auprc"] = auprc([int(r["gold_central"]) for r in a_rows], anchor_scores)
+        out["anchor_auroc"] = roc_auc_score([int(r["gold_central"]) for r in a_rows], anchor_scores) if len(set(r["gold_central"] for r in a_rows)) > 1 else 0.0
+    return out
 
 
 def run_model_dev_cv(dev: list[dict[str, Any]], mode: str, seed: int, folds: int = 5) -> dict[str, Any]:
