@@ -1,0 +1,66 @@
+experiment:
+  protocol: E1-FINAL-TRIAD-v1.0
+  baseline_commit: acd235afd231b96ddffbabd0d8dc3246f3b28141
+  seed: 20260802
+
+data:
+  output_dir: data/prepared/e1_final_triad
+  public_report_dir: reports/e1_final_triad
+  v10_dir: data/prepared/e1_v10_trilayer
+  v10_registry: data/prepared/e1_v10_trilayer/E1_V10_RESPONSE_REGISTRY.jsonl
+  v10_gold: data/prepared/e1_v10_trilayer/E1_V10_GOLD_CONSENSUS.jsonl
+  v10_a_metrics: data/prepared/e1_v10_trilayer/E1_V10_A_NATURAL_METRICS.json
+  v10_c_holdout: data/prepared/e1_v10_trilayer/E1_V10_C_HOLDOUT.jsonl
+
+api:
+  requested_concurrency: 120
+  qwen_concurrency: 60
+  deepseek_concurrency: 60
+  adjudicator_concurrency: 12
+
+models:
+  gold_a:
+    provider: deepseek
+    model: deepseek-v4-pro
+    extra_body: {thinking: {type: disabled}}
+  gold_b:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body: {enable_thinking: false}
+  adjudicator:
+    provider: qwen
+    model: qwen3.7-max-2026-06-08
+    extra_body: {enable_thinking: false}
+
+budget:
+  qwen_hard_stop_cny: 48
+  deepseek_hard_stop_cny: 48
+  total_hard_stop_cny: 92
+  usd_to_cny: 7.2
+  pricing_usd_per_million:
+    qwen3.7-plus-2026-05-26: {input: 0.276, output: 1.101}
+    qwen3.7-max-2026-06-08: {input: 2.5, output: 7.5}
+    deepseek-v4-pro: {input: 0.4167, output: 0.8333}
+
+panel:
+  total_rows: 1200
+  pair_count: 600
+  strata:
+    context_critical_positive: 300
+    context_stable_positive: 300
+    context_hard_negative: 300
+    context_stable_negative: 300
+  splits:
+    model_dev: 480
+    calibration: 240
+    anchor: 360
+    reserve: 120
+  risk_subtype_minimums:
+    DIRECT_PERPETRATOR_ASSIST: 240
+    UNSAFE_SCAM_COMPLIANCE: 180
+    TRUST_NORMALIZATION: 180
+
+statistics:
+  bootstrap_iterations: 10000
+  bootstrap_seed: 20260802
+  seeds: [13, 17, 23, 42, 20260802]
