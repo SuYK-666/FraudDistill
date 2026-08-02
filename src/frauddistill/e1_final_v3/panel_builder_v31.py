@@ -10,8 +10,11 @@ from .registry import normalize_category, normalize_language
 
 STRATA = ["context_stable_positive", "context_stable_negative", "context_critical_positive", "context_hard_negative"]
 STRATUM_QUOTAS = {
-    "context_stable_positive": 1280,
-    "context_stable_negative": 1280,
+    # Amended per E1_V31_AMENDMENT_B_QUOTA_V1 (2026-08-02): real positive supply is
+    # ~28 rows, so stable+ 1280 is infeasible even with the synthetic cap (1200).
+    # stable+ reduced to 480, stable- raised to 2080; critical+ and hard- kept at 320.
+    "context_stable_positive": 480,
+    "context_stable_negative": 2080,
     "context_critical_positive": 320,
     "context_hard_negative": 320,
 }
@@ -259,7 +262,10 @@ def assemble_panel(real_selected: list[dict[str, Any]], synthetic: list[dict[str
     real_count = sum(1 for r in unique if r.get("provenance") == "real_target_response")
     synthetic_count = sum(1 for r in unique if r.get("provenance") == "counterfactual_synthetic")
     derived_count = sum(1 for r in unique if r.get("provenance") == "source_derived_open_control")
-    panel = unique[: sum(STRATUM_QUOTAS.values())]
+    # Per-stratum quota fill (preserves intra-stratum priority: real -> synthetic -> derived)
+    panel: list[dict[str, Any]] = []
+    for s in STRATA:
+        panel.extend([r for r in unique if r["stratum"] == s][: STRATUM_QUOTAS[s]])
     final_by_stratum = Counter(r["stratum"] for r in panel)
     audit = {
         "panel_rows": len(panel),
