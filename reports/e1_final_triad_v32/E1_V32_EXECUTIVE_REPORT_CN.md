@@ -1,7 +1,7 @@
 # E1-FINAL-TRIAD v3.2 均衡面板（B 重建）执行报告
 
 - 协议：`E1-FINAL-TRIAD-v3.2-6000-BalancedV1Style`
-- 运行提交：`bfa8b6b64321d7adc1e32aa878ff861893de84a8`（worktree dirty）
+- 运行提交：`d8558e430e6e99b0c307b4ad33e9860fff5cbff5`（worktree clean）
 - v3.2 新增 API 花费：¥29.70（硬停 ¥30）
 
 ## 1. 面板构成（v1 预印本 hard-control 风格，均衡）
