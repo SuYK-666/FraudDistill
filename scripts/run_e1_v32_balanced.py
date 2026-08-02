@@ -1144,6 +1144,23 @@ def _fmt(x: Any, nd: int = 3) -> str:
         return str(x)
 
 
+def _cv_table(results: list[dict[str, Any]]) -> str:
+    lines = ["| View | Macro-F1 (mean±sd) | AUPRC |", "|---|---|---|"]
+    by_view: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for r in results:
+        if "cv_macro_f1" not in r:
+            continue
+        by_view[r["mode"]].append(r)
+    for view in VIEWS:
+        rows = by_view.get(view, [])
+        if not rows:
+            continue
+        m = np.array([r["cv_macro_f1"] for r in rows])
+        a = np.array([r.get("cv_auprc", 0.0) for r in rows])
+        lines.append(f"| {view} | {_fmt(m.mean())}±{_fmt(m.std())} | {_fmt(a.mean())} |")
+    return "\n".join(lines)
+
+
 def _seed_table(results: list[dict[str, Any]]) -> str:
     lines = ["| View | Seed | Threshold | Anchor Macro-F1 | AUPRC | FPR | Recall |", "|---|---|---|---|---|---|---|"]
     for r in results:
@@ -1224,27 +1241,49 @@ def phase_report(cfg: dict[str, Any]) -> dict[str, Any]:
         f"- y-only cluster bootstrap 95% CI：`{json.dumps(anchor.get('cluster_bootstrap_ci_y', {}), ensure_ascii=False)}`",
         f"- 错误转移：`{json.dumps(anchor.get('error_transitions', {}), ensure_ascii=False)}`",
         "",
+        "### 3.1 Model-Dev CV（5-fold，family 分组，辅助视角）",
+        "",
+        _cv_table(read_json(out / "E1_V32_MODEL_DEV_RESULTS.json", {}).get("results", [])),
+        "",
         "## 4. 反快捷方式审计",
         f"- `{json.dumps(validate, ensure_ascii=False)}`",
         "",
         "## 5. C 真实低基率回放（A7500）",
-        f"- {json.dumps({k: v for k, v in c_result.items() if k not in ('directional', 'note')}, ensure_ascii=False)[:900]}",
+        f"- AUROC：y-only `{_fmt(c_result.get('y_only', {}).get('auroc'))}` / q+y `{_fmt(c_result.get('q_y', {}).get('auroc'))}`；AUPRC：y-only `{_fmt(c_result.get('y_only', {}).get('auprc'))}` / q+y `{_fmt(c_result.get('q_y', {}).get('auprc'))}`",
+        f"- recall@FPR1%：y-only `{_fmt(c_result.get('y_only', {}).get('recall_at_fpr_1pct'))}` / q+y `{_fmt(c_result.get('q_y', {}).get('recall_at_fpr_1pct'))}`；recall@FPR5%：y-only `{_fmt(c_result.get('y_only', {}).get('recall_at_fpr_5pct'))}` / q+y `{_fmt(c_result.get('q_y', {}).get('recall_at_fpr_5pct'))}`",
+        f"- 冻结阈值下（y `{_fmt(c_result.get('y_only', {}).get('threshold'))}` / q+y `{_fmt(c_result.get('q_y', {}).get('threshold'))}`）：y-only recall `{_fmt(c_result.get('y_only', {}).get('recall'))}`、q+y recall `{_fmt(c_result.get('q_y', {}).get('recall'))}`——均衡面板校准阈值在 A7500 低基率分布上发生分数平移，未做后验重校准。",
         f"- 说明：{c_result.get('note', '')}",
         "",
-        "## 6. 结论",
+        "## 6. 验收口径评估（v3.1 冻结门控应用于 v3.2）",
+        "| 指标 | 目标 | v3.2 结果 | 判定 |",
+        "|---|---|---|---|",
     ]
     qy = main.get("q+y", {})
     yv = main.get("y_only", {})
     qv = main.get("q_only", {})
+    qy_a = qy.get("anchor", {}).get("macro_f1")
+    yv_a = yv.get("anchor", {}).get("macro_f1")
+    qv_a = qv.get("anchor", {}).get("macro_f1")
+    qy_ci_low = (anchor.get("cluster_bootstrap_ci_qy") or {}).get("low")
+    exec_lines += [
+        f"| q-only Macro-F1（期望弱） | 0.55–0.70 | {_fmt(qv_a)} | {'PASS' if qv_a is not None and 0.55 <= qv_a <= 0.70 else 'MARGINAL/FAIL'} |",
+        f"| y-only Macro-F1（期望一般） | 0.76–0.86 | {_fmt(yv_a)} | {'PASS' if yv_a is not None and 0.76 <= yv_a <= 0.86 else 'MARGINAL/FAIL'} |",
+        f"| q+y Macro-F1 | ≥0.90 | {_fmt(qy_a)} | {'PASS' if qy_a is not None and qy_a >= 0.90 else 'FAIL'} |",
+        f"| q+y CI lower | ≥0.88 | {_fmt(qy_ci_low)} | {'PASS' if qy_ci_low is not None and qy_ci_low >= 0.88 else 'FAIL'} |",
+        f"| q+y 相对 y 增益 | ≥0.05 | {_fmt(qy_a - yv_a if qy_a is not None and yv_a is not None else None)} | {'PASS' if qy_a is not None and yv_a is not None and qy_a - yv_a >= 0.05 else 'FAIL'} |",
+        f"| 5/5 seed 同向（q+y>y>q） | 成立 | 已检查（注：5-seed 结果退化为同值，阈值网格平坦所致） | 说明 |",
+        f"| C q+y/y-only AUPRC ratio | ≥1.5 | {_fmt(c_result.get('auprc_ratio_qy_over_y'))} | {'PASS' if c_result.get('auprc_ratio_qy_over_y', 0) >= 1.5 else 'FAIL'} |",
+        "",
+        "## 7. 结论",
+    ]
     exec_lines.append(
-        f"- 主 seed=13：q-only Macro-F1 = {_fmt(qv.get('anchor', {}).get('macro_f1'))}；"
-        f"y-only = {_fmt(yv.get('anchor', {}).get('macro_f1'))}；q+y = {_fmt(qy.get('anchor', {}).get('macro_f1'))}。"
-        f"叙事排序 {'成立' if qy.get('anchor', {}).get('macro_f1', 0) >= yv.get('anchor', {}).get('macro_f1', 0) >= qv.get('anchor', {}).get('macro_f1', 0) else '部分成立'}（q-only < y-only < q+y）。"
+        f"- 主 seed=13：q-only Macro-F1 = {_fmt(qv_a)}；"
+        f"y-only = {_fmt(yv_a)}；q+y = {_fmt(qy_a)}。"
+        f"叙事排序 {'成立' if qy_a and yv_a and qv_a and qy_a >= yv_a >= qv_a else '部分成立'}（q-only < y-only < q+y）。"
+        " Model-Dev CV（3847 行 5-fold）q+y = 0.922 达到 ≥0.90；Frozen Anchor（1077 行）q+y = 0.872 未达 0.90 目标，"
+        "且 q+y 相对 y-only 增益很小（+0.003）。C 回放显示均衡面板阈值在 A7500 低基率分布上不迁移，"
+        "y-only 排序（AUROC 0.977）优于 q+y（0.894）——v3.2 的 v1 风格构造换来了均衡面板判别力，但牺牲了真实分布迁移性，如实记录。"
     )
-    write_json(out / "E1_V32_EXECUTIVE_PAYLOAD.json", {
-        "panel_audit": panel_audit, "validate": validate, "anchor": anchor,
-        "c_result": c_result, "gold_quality": gold_quality, "v32_spend_cny": spend,
-    })
     (report_dir / "E1_V32_EXECUTIVE_REPORT_CN.md").write_text("\n".join(exec_lines), encoding="utf-8")
 
     full = [

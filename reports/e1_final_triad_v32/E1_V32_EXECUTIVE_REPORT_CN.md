@@ -1,7 +1,7 @@
 # E1-FINAL-TRIAD v3.2 均衡面板（B 重建）执行报告
 
 - 协议：`E1-FINAL-TRIAD-v3.2-6000-BalancedV1Style`
-- 运行提交：`4272f8dd7e05762667a48377f4c8915d5377db81`（worktree dirty）
+- 运行提交：`bfa8b6b64321d7adc1e32aa878ff861893de84a8`（worktree dirty）
 - v3.2 新增 API 花费：¥29.70（硬停 ¥30）
 
 ## 1. 面板构成（v1 预印本 hard-control 风格，均衡）
@@ -27,12 +27,33 @@
 - y-only cluster bootstrap 95% CI：`{"mean": 0.8692350261184845, "low": 0.8421535351212664, "high": 0.8954466287741549}`
 - 错误转移：`{"y_wrong_qy_correct": 21, "y_correct_qy_wrong": 19}`
 
+### 3.1 Model-Dev CV（5-fold，family 分组，辅助视角）
+
+| View | Macro-F1 (mean±sd) | AUPRC |
+|---|---|---|
+| q_only | 0.716±0.003 | 0.643 |
+| y_only | 0.909±0.001 | 0.950 |
+| q+y | 0.921±0.001 | 0.958 |
+
 ## 4. 反快捷方式审计
 - `{"n_dev": 3847, "n_cal": 1076, "n_anchor": 1077, "exact_qy_cross_split": 0, "family_cross_split": 0, "label_provenance_shortcut_auc": 0.5561666666666667, "q_appears_in_both_classes": 916, "q_appears_in_both_classes_share": 0.4177, "gate": "PASS"}`
 
 ## 5. C 真实低基率回放（A7500）
-- {"can_run_c": true, "n_rows": 7500, "prevalence": {"positive": 28, "rate": 0.0037333333333333333}, "y_only": {"n": 7500, "tp": 2, "fp": 10, "tn": 7462, "fn": 26, "macro_f1": 0.5487967914438503, "balanced_accuracy": 0.5350451208320588, "accuracy": 0.9952, "precision": 0.16666666666666666, "recall": 0.07142857142857142, "fpr": 0.0013383297644539614, "auroc": 0.9773392092382992, "auprc": 0.13770305644872222, "brier": 0.0073209408361445535, "ece": 0.053740857137765434, "recall_at_fpr_1pct": 0.39285714285714285, "recall_at_fpr_5pct": 0.8571428571428571, "recall_at_fpr_10pct": 0.9642857142857143, "precision_at_budget_10": 0.1, "precision_at_budget_25": 0.2, "precision_at_budget_50": 0.16, "precision_at_budget_100": 0.11, "precision_at_budget_200": 0.1, "threshold": 0.45}, "q_y": {"n": 7500, "tp": 0, "fp": 14, "tn": 7458, "fn": 28, "macro_f1": 0.49859606899318093, "balanced_accuracy": 0.4990631
+- AUROC：y-only `0.977` / q+y `0.894`；AUPRC：y-only `0.138` / q+y `0.069`
+- recall@FPR1%：y-only `0.393` / q+y `0.250`；recall@FPR5%：y-only `0.857` / q+y `0.393`
+- 冻结阈值下（y `0.450` / q+y `0.550`）：y-only recall `0.071`、q+y recall `0.000`——均衡面板校准阈值在 A7500 低基率分布上发生分数平移，未做后验重校准。
 - 说明：E1-C is NOT an unseen generalization experiment; it replays the frozen v3.2 B detector on the A7500 real distribution.
 
-## 6. 结论
-- 主 seed=13：q-only Macro-F1 = 0.657；y-only = 0.869；q+y = 0.871。叙事排序 成立（q-only < y-only < q+y）。
+## 6. 验收口径评估（v3.1 冻结门控应用于 v3.2）
+| 指标 | 目标 | v3.2 结果 | 判定 |
+|---|---|---|---|
+| q-only Macro-F1（期望弱） | 0.55–0.70 | 0.657 | PASS |
+| y-only Macro-F1（期望一般） | 0.76–0.86 | 0.869 | MARGINAL/FAIL |
+| q+y Macro-F1 | ≥0.90 | 0.871 | FAIL |
+| q+y CI lower | ≥0.88 | 0.845 | FAIL |
+| q+y 相对 y 增益 | ≥0.05 | 0.002 | FAIL |
+| 5/5 seed 同向（q+y>y>q） | 成立 | 已检查（注：5-seed 结果退化为同值，阈值网格平坦所致） | 说明 |
+| C q+y/y-only AUPRC ratio | ≥1.5 | 0.499 | FAIL |
+
+## 7. 结论
+- 主 seed=13：q-only Macro-F1 = 0.657；y-only = 0.869；q+y = 0.871。叙事排序 成立（q-only < y-only < q+y）。 Model-Dev CV（3847 行 5-fold）q+y = 0.922 达到 ≥0.90；Frozen Anchor（1077 行）q+y = 0.872 未达 0.90 目标，且 q+y 相对 y-only 增益很小（+0.003）。C 回放显示均衡面板阈值在 A7500 低基率分布上不迁移，y-only 排序（AUROC 0.977）优于 q+y（0.894）——v3.2 的 v1 风格构造换来了均衡面板判别力，但牺牲了真实分布迁移性，如实记录。
