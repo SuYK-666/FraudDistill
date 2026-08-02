@@ -261,10 +261,16 @@ def load_ok_new_responses(cfg: dict[str, Any]) -> list[dict[str, Any]]:
 def phase_gold(cfg: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     out = rel(cfg["data"]["output_dir"])
     responses = load_ok_new_responses(cfg)
+    pending = read_jsonl(out / "E1_V31_A_GOLD_REUSED_PENDING.jsonl")
+    pending_ids = {v31_response_id(r) for r in pending}
+    responses = responses + pending
     limit_q = int(args.limit_q or 0)
     if limit_q:
         responses = responses[: limit_q * 2]
-    tasks = [gold_judge_task(r, judge, cfg) for r in responses for judge in ["judge_a", "judge_b"]]
+    tasks = []
+    for r in responses:
+        ph = "E1-A-gold-v31-reused" if v31_response_id(r) in pending_ids else "E1-A-gold-v31"
+        tasks.extend(gold_judge_task(r, judge, cfg, phase=ph) for judge in ["judge_a", "judge_b"])
     result = execute_json_tasks(
         tasks,
         output_path=out / "E1_V31_A_GOLD_VOTES.jsonl",
@@ -284,7 +290,9 @@ def phase_gold(cfg: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
 
 def phase_adjudicate(cfg: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     out = rel(cfg["data"]["output_dir"])
-    responses = load_ok_new_responses(cfg)
+    pending = read_jsonl(out / "E1_V31_A_GOLD_REUSED_PENDING.jsonl")
+    pending_ids = {v31_response_id(r) for r in pending}
+    responses = load_ok_new_responses(cfg) + pending
     votes = read_jsonl(out / "E1_V31_A_GOLD_VOTES.jsonl")
     by_resp = votes_by_response(votes)
     tasks = []
@@ -293,7 +301,8 @@ def phase_adjudicate(cfg: dict[str, Any], args: argparse.Namespace) -> dict[str,
         va = by_resp.get(rid, {}).get("judge_a")
         vb = by_resp.get(rid, {}).get("judge_b")
         if va is not None and vb is not None and needs_adjudication(va, vb):
-            tasks.append(adjudication_task(row, va, vb, cfg))
+            ph = "E1-A-gold-v31-reused" if rid in pending_ids else "E1-A-gold-v31"
+            tasks.append(adjudication_task(row, va, vb, cfg, phase=ph))
     result = execute_json_tasks(
         tasks,
         output_path=out / "E1_V31_A_GOLD_ADJUDICATION.jsonl",
@@ -319,8 +328,26 @@ def phase_freezer(cfg: dict[str, Any], args: argparse.Namespace) -> dict[str, An
     consensus, quality = consensus_from_votes(responses, votes, adjud)
     write_jsonl(out / "E1_V31_A_GOLD_CONSENSUS.jsonl", consensus)
     write_json(out / "E1_V31_A_GOLD_QUALITY.json", quality)
-    reused, _audit = load_v31_reusable_roleplay(rel(cfg["data"]["v10_registry"]))
+    reused_pairs, _audit = load_v31_reusable_roleplay(rel(cfg["data"]["v10_registry"]))
+    reused = [row for pair in reused_pairs.values() for row in pair.values()]
     reused_gold, reuse_stats = reuse_v10_gold(reused, rel(cfg["data"]["v10_gold"]), rel(cfg["data"]["v10_registry"]))
+    pending_reuse = [r for r in reused_gold if r["gold_status"] == "REUSE_REJECTED" and r.get("reuse_reason") == "missing_gold"]
+    write_jsonl(out / "E1_V31_A_GOLD_REUSED_PENDING.jsonl", pending_reuse)
+    if pending_reuse:
+        reuse_votes = [v for v in votes if v.get("phase") == "E1-A-gold-v31-reused"]
+        reuse_adjud = [a for a in adjud if a.get("phase") == "E1-A-gold-v31-reused"]
+        reuse_consensus, _ = consensus_from_votes(pending_reuse, reuse_votes, reuse_adjud)
+        reuse_map = {str(c["response_id"]): c for c in reuse_consensus}
+        for row in reused_gold:
+            c = reuse_map.get(str(row.get("response_id", "")))
+            if c and c.get("gold_status") == "KNOWN":
+                row["gold_status"] = "KNOWN_REUSED"
+                row["gold_lower"] = c["gold_lower"]
+                row["gold_central"] = c["gold_central"]
+                row["gold_upper"] = c["gold_upper"]
+                row["gold_uncertain"] = c["gold_uncertain"]
+                row["judge_a_positive"] = c["judge_a_positive"]
+                row["judge_b_positive"] = c["judge_b_positive"]
     registry = a7500_registry(responses, reused_gold, consensus)
     write_jsonl(out / "E1_V31_A_REGISTRY_FROZEN.jsonl", registry)
     stats = a_behavior_stats(registry, cfg)

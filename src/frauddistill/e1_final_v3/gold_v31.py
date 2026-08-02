@@ -271,32 +271,31 @@ def reuse_v10_gold(reused_rows: list[dict[str, Any]], v10_gold_path, v10_registr
         rid = str(row.get("response_id", ""))
         g = gold.get(rid)
         reg = registry.get(rid)
+        # hash drift exists between V10 registry and the current normalizer, so the reuse
+        # gate verifies CONTENT: normalized q/y text must match the gold-labeled row exactly.
+        if g is None:
+            stats["rejected_reuse_missing_gold"] += 1
+            out.append(_reject_row(row))
+            continue
+        gold_q = str(g.get("q") or "")
+        gold_y = str(g.get("text") or g.get("y") or "")
+        q_text_ok = bool(gold_q) and norm(str(row.get("q_private", ""))) == norm(gold_q)
+        y_text_ok = bool(gold_y) and norm(str(row.get("y_private", ""))) == norm(gold_y)
         q_hash_ok = True
         y_hash_ok = True
         if reg:
             q_hash_ok = str(row.get("q_hash_recomputed", "")) == str(reg.get("normalized_q_sha256", ""))
             y_hash_ok = str(row.get("y_hash", "")) == str(reg.get("normalized_y_sha256", ""))
-        if not g or not q_hash_ok or not y_hash_ok:
-            stats["rejected_reuse"] += 1
-            out.append(
-                {
-                    **row,
-                    "gold_status": "REUSE_REJECTED",
-                    "gold_lower": -1,
-                    "gold_central": -1,
-                    "gold_upper": -1,
-                    "judge_a_positive": -1,
-                    "judge_b_positive": -1,
-                    "gold_uncertain": False,
-                }
-            )
+        if not (q_text_ok and y_text_ok):
+            stats["rejected_reuse_content_mismatch"] += 1
+            out.append({**row, "gold_status": "REUSE_REJECTED", "gold_lower": -1, "gold_central": -1, "gold_upper": -1, "judge_a_positive": -1, "judge_b_positive": -1, "gold_uncertain": False, "reuse_reason": "content_mismatch"})
             continue
         stats["reused"] += 1
         out.append(
             {
                 **row,
                 "gold_status": "KNOWN_REUSED",
-                "gold_lower": int(g.get("material_lower", g.get("material_lower", 0)) or 0),
+                "gold_lower": int(g.get("material_lower", g.get("material_assist", 0)) or 0),
                 "gold_central": int(g.get("material_central", g.get("material_assist", 0)) or 0),
                 "gold_upper": int(g.get("material_upper", 0) or 0),
                 "judge_a_positive": int(g.get("judge_a_positive", 0) or 0),
@@ -304,9 +303,25 @@ def reuse_v10_gold(reused_rows: list[dict[str, Any]], v10_gold_path, v10_registr
                 "gold_uncertain": bool(g.get("gold_uncertain", False)),
                 "reused_gold_source": "V9.1/V10",
                 "vote_count": int(g.get("vote_count", 2) or 2),
+                "q_hash_drift_detected": not q_hash_ok,
+                "y_hash_drift_detected": not y_hash_ok,
             }
         )
     return out, dict(stats)
+
+
+def _reject_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **row,
+        "gold_status": "REUSE_REJECTED",
+        "gold_lower": -1,
+        "gold_central": -1,
+        "gold_upper": -1,
+        "judge_a_positive": -1,
+        "judge_b_positive": -1,
+        "gold_uncertain": False,
+        "reuse_reason": "missing_gold",
+    }
 
 
 def a7500_registry(new_response_rows: list[dict[str, Any]], reused_rows: list[dict[str, Any]], new_consensus: list[dict[str, Any]]) -> list[dict[str, Any]]:

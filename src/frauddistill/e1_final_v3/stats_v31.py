@@ -71,7 +71,7 @@ def mcnemar_paired(rows: list[dict[str, Any]]) -> dict[str, Any]:
 def cluster_bootstrap_risk_diff(
     rows: list[dict[str, Any]],
     cluster_key: str = "canonical_case_id",
-    iterations: int = 10000,
+    iterations: int = 2000,
     seed: int = 20260802,
 ) -> dict[str, Any]:
     valid = [r for r in rows if int(r.get("gold_central", -1)) >= 0]
