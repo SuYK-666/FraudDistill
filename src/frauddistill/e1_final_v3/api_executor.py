@@ -103,6 +103,7 @@ def call_with_retry(client: Any, task: dict[str, Any], fp: str) -> dict[str, Any
                     max_tokens=int(task.get("max_tokens", 1536)),
                     temperature=float(task.get("temperature", 0.2)),
                     top_p=float(task.get("top_p", 0.9)),
+                    extra_body=task.get("extra_body"),
                 )
                 result = {"text": text, "response_model": getattr(client, "model", task["requested_target_model"]), "request_id": "", "usage": {}, "finish_reason": ""}
             return {

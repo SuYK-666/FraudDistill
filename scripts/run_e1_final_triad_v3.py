@@ -12,7 +12,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from frauddistill.e1_final_v3.api_executor import execute_tasks
+from frauddistill.e1_final_v3.api_executor import cache_index, execute_tasks, request_fingerprint
 from frauddistill.e1_final_v3.budget import budget_snapshot
 from frauddistill.e1_final_v3.io import file_sha256, read_json, read_jsonl, write_csv, write_json, write_jsonl
 from frauddistill.e1_final_v3.panel_builder import audit_b_capacity
@@ -158,16 +158,20 @@ def phase_generate(cfg: dict[str, Any], args: argparse.Namespace) -> dict[str, A
     out = rel(cfg["data"]["output_dir"])
     tasks = read_jsonl(out / "E1_V31_A_TARGET_REQUEST_MANIFEST.jsonl")
     limit = int(args.batch_size_q) * 2 if args.batch_size_q else None
+    existing, _bad = cache_index(out / "E1_V31_A_TARGET_RESPONSES.jsonl")
+    pending = [task for task in tasks if request_fingerprint(task) not in existing]
+    selected = pending[:limit] if limit else pending
     result = execute_tasks(
-        tasks,
+        selected,
         output_path=out / "E1_V31_A_TARGET_RESPONSES.jsonl",
         ledger_path=out / "E1_V31_BUDGET_LEDGER.jsonl",
         limits=cfg["budget"],
         run_api=args.run_api,
         confirm_budget=args.confirm_budget,
         git_clean=git_clean(),
-        limit=limit,
     )
+    result["pending_before_batch"] = len(pending)
+    result["selected_for_batch"] = len(selected)
     write_json(out / "E1_V31_A_GENERATE_RESULT.json", result)
     progress("GENERATE", 1, 1)
     return result

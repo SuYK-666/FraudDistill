@@ -83,20 +83,56 @@ class OpenAITextClient:
         max_tokens: int = 256,
         temperature: float = 0.2,
         top_p: float = 1.0,
+        extra_body: dict[str, Any] | None = None,
         system_prompt: str | None = None,
     ) -> str:
+        return self.complete_text_envelope(
+            {
+                "q_private": prompt,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "top_p": top_p,
+                "extra_body": extra_body,
+                "system_prompt": system_prompt,
+            }
+        )["text"]
+
+    def complete_text_envelope(self, task: dict[str, Any]) -> dict[str, Any]:
+        prompt = str(task.get("q_private") or task.get("prompt") or "")
+        system_prompt = task.get("system_prompt")
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            temperature=temperature,
-            top_p=top_p,
-            max_tokens=max_tokens,
-        )
-        return (response.choices[0].message.content or "").strip()
+        kwargs: dict[str, Any] = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": float(task.get("temperature", 0.2)),
+            "top_p": float(task.get("top_p", 1.0)),
+            "max_tokens": int(task.get("max_tokens", 256)),
+        }
+        if task.get("extra_body"):
+            kwargs["extra_body"] = task["extra_body"]
+        response = self.client.chat.completions.create(**kwargs)
+        choice = response.choices[0]
+        text = (choice.message.content or "").strip()
+        raw_payload = _model_dump(response)
+        raw_text = json.dumps(raw_payload, ensure_ascii=False, sort_keys=True, default=str)
+        messages_text = json.dumps(messages, ensure_ascii=False, sort_keys=True)
+        return {
+            "text": text,
+            "requested_model": self.model,
+            "response_model": str(getattr(response, "model", self.model) or self.model),
+            "request_id": str(getattr(response, "id", "") or ""),
+            "created": getattr(response, "created", None),
+            "finish_reason": str(getattr(choice, "finish_reason", "") or ""),
+            "usage": _model_dump(getattr(response, "usage", None)) or {},
+            "raw_response_sha256": hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
+            "system_prompt_sha256": hashlib.sha256(str(system_prompt or "").encode("utf-8")).hexdigest(),
+            "user_payload_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+            "actual_messages_sha256": hashlib.sha256(messages_text.encode("utf-8")).hexdigest(),
+            "extra_body": task.get("extra_body") or None,
+        }
 
 
 def parse_json_content(content: str) -> dict[str, Any]:
