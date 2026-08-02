@@ -4,7 +4,7 @@
 {
   "p0": {
     "protocol": "E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence",
-    "runtime_commit": "e367547377891ecf16d4b43e512b93dd3b8d0c53",
+    "runtime_commit": "7582a9603c5cfc7109ef401b13ecb7f47afb4547",
     "git_status": "",
     "git_clean": true,
     "budget": {

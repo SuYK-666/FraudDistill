@@ -1,12 +1,12 @@
 # E1 FINAL TRIAD v3.1 执行总报告
 
 ## 首屏摘要
-- final decision code：`E1_V31_PENDING_A_TARGET_GENERATION`
-- Git commit：`e367547377891ecf16d4b43e512b93dd3b8d0c53`
+- final decision code：`E1_V31_PENDING_B_PANEL`
+- Git commit：`7582a9603c5cfc7109ef401b13ecb7f47afb4547`
 - worktree status：`clean`
 - protocol：`E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence`
-- A/B/C 状态：A manifest `PASS`，A target `PENDING`，B `NOT_READY`，C `NOT_READY`
-- 本轮新 API 调用数：`0`；成功数：`0`
+- A/B/C 状态：A manifest `PASS`，A target `PASS`，B `NOT_READY`，C `NOT_READY`
+- 本轮新 API 调用数：`4418`；成功数：`4418`
 - A7500 规划：prompt instances `3750`，复用 responses `3082`，待调用 `4418`
 
 ## 分析
@@ -14,27 +14,27 @@
 
 A 层 manifest：canonical cases=2141，assistant=2141，roleplay reused=1541，roleplay extra=68，target prompt instances=3750，pending target calls=4418。
 
-A target 当前状态：{'new_response_rows': 0, 'valid_new_response_rows': 0, 'complete_new_pairs': 0, 'pending_target_calls_initial': 4418, 'target_gate': 'PENDING'}。只有 P0 clean 且 health/generate 真正完成后，A7500 才能冻结。
+A target 当前状态：{'new_response_rows': 4418, 'valid_new_response_rows': 4418, 'complete_new_pairs': 2209, 'pending_target_calls_initial': 4418, 'target_gate': 'PASS'}。只有 P0 clean 且 health/generate 真正完成后，A7500 才能冻结。
 
 B 预筛状态：stable+=25，stable-=3048，critical+=1，hard-=6。B 仍需正式 Gold 与受控合成补齐。
 
-最终 decision code：`E1_V31_PENDING_A_TARGET_GENERATION`。
+最终 decision code：`E1_V31_PENDING_B_PANEL`。
 
 ## 完整 JSON
 ```json
 {
   "protocol": "E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence",
-  "runtime_commit": "e367547377891ecf16d4b43e512b93dd3b8d0c53",
+  "runtime_commit": "7582a9603c5cfc7109ef401b13ecb7f47afb4547",
   "worktree_status": "",
   "decision": {
-    "decision_code": "E1_V31_PENDING_A_TARGET_GENERATION",
+    "decision_code": "E1_V31_PENDING_B_PANEL",
     "p0_gate": "PASS",
     "a_manifest_gate": "PASS",
-    "a_target_gate": "PENDING",
+    "a_target_gate": "PASS",
     "b_gate": "NOT_READY",
     "c_gate": "NOT_READY"
   },
-  "analysis": "本轮已将 v3 dry-run 骨架升级为 v3.1 可执行状态机：A manifest、API Gate、fingerprint 缓存、预算 ledger、历史 roleplay pair 复用、B 容量审计和 C 准入均已接入。\n\nA 层 manifest：canonical cases=2141，assistant=2141，roleplay reused=1541，roleplay extra=68，target prompt instances=3750，pending target calls=4418。\n\nA target 当前状态：{'new_response_rows': 0, 'valid_new_response_rows': 0, 'complete_new_pairs': 0, 'pending_target_calls_initial': 4418, 'target_gate': 'PENDING'}。只有 P0 clean 且 health/generate 真正完成后，A7500 才能冻结。\n\nB 预筛状态：stable+=25，stable-=3048，critical+=1，hard-=6。B 仍需正式 Gold 与受控合成补齐。\n\n最终 decision code：`E1_V31_PENDING_A_TARGET_GENERATION`。",
+  "analysis": "本轮已将 v3 dry-run 骨架升级为 v3.1 可执行状态机：A manifest、API Gate、fingerprint 缓存、预算 ledger、历史 roleplay pair 复用、B 容量审计和 C 准入均已接入。\n\nA 层 manifest：canonical cases=2141，assistant=2141，roleplay reused=1541，roleplay extra=68，target prompt instances=3750，pending target calls=4418。\n\nA target 当前状态：{'new_response_rows': 4418, 'valid_new_response_rows': 4418, 'complete_new_pairs': 2209, 'pending_target_calls_initial': 4418, 'target_gate': 'PASS'}。只有 P0 clean 且 health/generate 真正完成后，A7500 才能冻结。\n\nB 预筛状态：stable+=25，stable-=3048，critical+=1，hard-=6。B 仍需正式 Gold 与受控合成补齐。\n\n最终 decision code：`E1_V31_PENDING_B_PANEL`。",
   "a": {
     "manifest_audit": {
       "case_audit": {
@@ -78,11 +78,11 @@ B 预筛状态：stable+=25，stable-=3048，critical+=1，hard-=6。B 仍需正
       "exact_q_hash_conflicts": 0
     },
     "target_quality": {
-      "new_response_rows": 0,
-      "valid_new_response_rows": 0,
-      "complete_new_pairs": 0,
+      "new_response_rows": 4418,
+      "valid_new_response_rows": 4418,
+      "complete_new_pairs": 2209,
       "pending_target_calls_initial": 4418,
-      "target_gate": "PENDING"
+      "target_gate": "PASS"
     },
     "natural_metrics_reference": {
       "existing_n": 3080,
@@ -428,7 +428,7 @@ B 预筛状态：stable+=25，stable-=3048，critical+=1，hard-=6。B 仍需正
   "data_audit": {
     "p0": {
       "protocol": "E1-FINAL-TRIAD-v3.1-7500-3200-RealPrevalence",
-      "runtime_commit": "e367547377891ecf16d4b43e512b93dd3b8d0c53",
+      "runtime_commit": "7582a9603c5cfc7109ef401b13ecb7f47afb4547",
       "git_status": "",
       "git_clean": true,
       "budget": {

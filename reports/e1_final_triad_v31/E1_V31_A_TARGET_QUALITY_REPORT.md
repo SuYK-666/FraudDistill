@@ -44,11 +44,11 @@
     "exact_q_hash_conflicts": 0
   },
   "target_quality": {
-    "new_response_rows": 0,
-    "valid_new_response_rows": 0,
-    "complete_new_pairs": 0,
+    "new_response_rows": 4418,
+    "valid_new_response_rows": 4418,
+    "complete_new_pairs": 2209,
     "pending_target_calls_initial": 4418,
-    "target_gate": "PENDING"
+    "target_gate": "PASS"
   },
   "natural_metrics_reference": {
     "existing_n": 3080,
