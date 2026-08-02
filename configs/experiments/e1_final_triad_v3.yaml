@@ -1,0 +1,69 @@
+experiment:
+  protocol: E1-FINAL-TRIAD-v3.0-7500-3200-RealPrevalence
+  seed: 20260802
+  baseline_commit: e05bcb0
+
+data:
+  output_dir: data/prepared/e1_final_triad_v3
+  public_report_dir: reports/e1_final_triad_v3
+  fraudr1_prompts: data/prepared/full/prompts/fraudr1_all_target_prompts.jsonl
+  v10_registry: data/prepared/e1_v10_trilayer/E1_V10_RESPONSE_REGISTRY.jsonl
+  v10_gold: data/prepared/e1_v10_trilayer/E1_V10_GOLD_CONSENSUS.jsonl
+  v10_a_metrics: data/prepared/e1_v10_trilayer/E1_V10_A_NATURAL_METRICS.json
+  v81_p2_targets: data/prepared/e1_v81_narrative_delta/P2_TARGET_RESPONSES.jsonl
+  v8_a2c_targets: data/prepared/e1_v8_a2c/TARGET_RESPONSES.jsonl
+  v10_pressure_targets: data/prepared/e1_v10_trilayer/E1_V10_PRESSURE_TARGET_RESPONSES.jsonl
+  or_bench_prompts: data/prepared/full/prompts/or_bench_hard_safe_prompts.jsonl
+
+api:
+  user_requested_total_concurrency: 120
+  effective_qwen_concurrency: 24
+  effective_deepseek_concurrency: 20
+  effective_adjudicator_concurrency: 8
+  budget_check_interval_calls: 200
+
+models:
+  target_qwen: {provider: qwen, model: qwen-plus}
+  target_deepseek: {provider: deepseek, model: deepseek-v4-flash}
+  gold_deepseek: {provider: deepseek, model: deepseek-chat}
+  gold_qwen: {provider: qwen, model: qwen-plus}
+  adjudicator_qwen: {provider: qwen, model: qwen-max}
+  evaluator_qwen: {provider: qwen, model: qwen-plus}
+  evaluator_deepseek: {provider: deepseek, model: deepseek-chat}
+
+budget:
+  hard_stop_total_cny: 215
+  e1_a_hard_stop_cny: 100
+  e1_b_hard_stop_cny: 100
+  e1_c_hard_stop_cny: 15
+  qwen_hard_stop_cny: 120
+  deepseek_hard_stop_cny: 90
+
+e1_a:
+  target_unique_q: 3750
+  target_responses: 7500
+  per_language_category_q: 375
+  min_valid_responses: 7425
+  min_model_valid: 3710
+  min_cell_model_valid: 370
+
+e1_b:
+  target_rows: 3200
+  min_real_target_response: 1600
+  target_real_range: [1800, 2000]
+  max_counterfactual_synthetic: 1200
+  max_source_derived_open_control: 400
+  strata:
+    context_stable_positive: 1280
+    context_stable_negative: 1280
+    context_critical_positive: 320
+    context_hard_negative: 320
+  splits:
+    model_dev: {context_stable_positive: 640, context_stable_negative: 640, context_critical_positive: 160, context_hard_negative: 160}
+    calibration: {context_stable_positive: 256, context_stable_negative: 256, context_critical_positive: 64, context_hard_negative: 64}
+    anchor: {context_stable_positive: 320, context_stable_negative: 320, context_critical_positive: 80, context_hard_negative: 80}
+    reserve: {context_stable_positive: 64, context_stable_negative: 64, context_critical_positive: 16, context_hard_negative: 16}
+
+statistics:
+  seeds: [13, 17, 23, 42, 20260802]
+  bootstrap_iterations: 10000
