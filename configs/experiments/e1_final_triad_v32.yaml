@@ -86,12 +86,12 @@ e1_v32:
   target_positive: 3000
   target_negative: 3000
   strata:
-    unsafe_regular: 2950
-    hard_unsafe: 50
-    safe_refusal: 890
-    hard_safe_roleplay: 1000
-    hard_safe_scam: 860
-    hard_safe_synthetic: 250
+    unsafe_regular: 2666
+    hard_unsafe: 334
+    safe_refusal: 450
+    hard_safe_roleplay: 750
+    hard_safe_scam: 1271
+    hard_safe_synthetic: 529
   detector_C: 1.0
   max_features: 60000
   cv_folds: 5
