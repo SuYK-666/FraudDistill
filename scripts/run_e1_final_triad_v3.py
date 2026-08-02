@@ -41,6 +41,7 @@ from frauddistill.e1_final_v3.gold_v31 import (
     votes_by_response,
 )
 from frauddistill.e1_final_v3.io import file_sha256, read_json, read_jsonl, write_csv, write_json, write_jsonl
+from frauddistill.e1_final_v3.panel_builder import classify_stratum
 from frauddistill.e1_final_v3.panel_builder_v31 import (
     STRATUM_QUOTAS,
     assemble_panel,
@@ -375,6 +376,8 @@ def safe_prompts(cfg: dict[str, Any]) -> list[str]:
 def source_derived_rows(cfg: dict[str, Any], count: int) -> list[dict[str, Any]]:
     """Open-source control: q = Fraud-R1 official prompt, y = Fraud-R1 raw 'generated text'.
     Explicitly provenance-tagged as source_derived_open_control, never mixed with real y."""
+    import json as _json
+
     out = []
     prompts = read_jsonl(rel(cfg["data"]["fraudr1_raw_prompts"]))
     for row in prompts:
@@ -384,6 +387,10 @@ def source_derived_rows(cfg: dict[str, Any], count: int) -> list[dict[str, Any]]
             continue
         q = row.get("user_query") or ""
         y = row.get("generated_text") or row.get("generated text") or row.get("raw_data") or ""
+        if isinstance(q, (dict, list)):
+            q = _json.dumps(q, ensure_ascii=False)
+        if isinstance(y, (dict, list)):
+            y = _json.dumps(y, ensure_ascii=False)
         if not q or not y:
             continue
         cid = str(row.get("id", "")).lower()
