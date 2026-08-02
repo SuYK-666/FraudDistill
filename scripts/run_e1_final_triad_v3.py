@@ -383,7 +383,7 @@ def source_derived_rows(cfg: dict[str, Any], count: int) -> list[dict[str, Any]]
         if "FP-base" not in str(row.get("source_file", "")):
             continue
         q = row.get("user_query") or ""
-        y = row.get("generated_text") or row.get("generated text") or ""
+        y = row.get("generated_text") or row.get("generated text") or row.get("raw_data") or ""
         if not q or not y:
             continue
         cid = str(row.get("id", "")).lower()
