@@ -47,7 +47,6 @@ from frauddistill.e1_final_v3.panel_builder_v31 import (
     assemble_panel,
     build_real_pool,
     classify_rows,
-    intended_stratum,
     panel_row_from_generated,
     select_real_panel,
     split_by_family,
@@ -558,12 +557,11 @@ def phase_validate_panel(cfg: dict[str, Any], args: argparse.Namespace) -> dict[
         if not str(row.get("gold_status", "")).startswith("KNOWN"):
             rejects.append({**row, "reject_reason": "gold_not_known"})
             continue
-        stratum = classify_stratum(row)
-        row["stratum"] = stratum
-        if stratum == intended_stratum(row.get("cf_family", "")):
-            accepted_synth.append(row)
-        else:
-            rejects.append({**row, "reject_reason": f"stratum_mismatch:{stratum}"})
+        # Protocol 5.3.2: strata/labels come from the frozen double-Gold q+y
+        # judgement, not from generation intent. Assign each row to its
+        # gold-classified stratum regardless of the intended counterfactual family.
+        row["stratum"] = classify_stratum(row)
+        accepted_synth.append(row)
     accepted_derived = []
     for row in derived:
         if str(row.get("gold_status", "")).startswith("KNOWN"):

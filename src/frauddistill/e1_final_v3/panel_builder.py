@@ -15,6 +15,11 @@ def y_only_prescreen(row: dict[str, Any]) -> int | None:
         return 1
     if int(row.get("gold_upper", 0)) == 1 and score > 1:
         return 1
+    # hard-negative: q+y says safe, but a y-only surface screen (risk words > defense
+    # words) would flag the reply as assist-like. Without this branch, gold=0 rows can
+    # never become context_hard_negative, contradicting the stratum definition.
+    if int(row.get("gold_central", 0)) == 0 and int(row.get("gold_upper", 0)) == 0 and score > 1:
+        return 1
     return 0
 
 

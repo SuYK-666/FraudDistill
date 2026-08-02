@@ -109,42 +109,49 @@ e1_b:
   max_counterfactual_synthetic: 1200
   max_source_derived_open_control: 400
   strata:
-    context_stable_positive: 480
-    context_stable_negative: 2080
-    context_critical_positive: 320
+    context_stable_positive: 318
+    context_stable_negative: 2550
+    context_critical_positive: 12
     context_hard_negative: 320
   splits:
     model_dev:
-      context_stable_positive: 240
-      context_stable_negative: 1040
-      context_critical_positive: 160
+      context_stable_positive: 159
+      context_stable_negative: 1275
+      context_critical_positive: 6
       context_hard_negative: 160
     calibration:
-      context_stable_positive: 96
-      context_stable_negative: 416
-      context_critical_positive: 64
+      context_stable_positive: 64
+      context_stable_negative: 510
+      context_critical_positive: 2
       context_hard_negative: 64
     anchor:
-      context_stable_positive: 120
-      context_stable_negative: 520
-      context_critical_positive: 80
+      context_stable_positive: 79
+      context_stable_negative: 638
+      context_critical_positive: 3
       context_hard_negative: 80
     reserve:
-      context_stable_positive: 24
-      context_stable_negative: 104
-      context_critical_positive: 16
+      context_stable_positive: 16
+      context_stable_negative: 127
+      context_critical_positive: 1
       context_hard_negative: 16
   detector_C: 1.0
   max_features: 60000
   cv_folds: 5
   protocol_amendment:
-    amendment_id: E1_V31_AMENDMENT_B_QUOTA_V1
-    reason: 'Frozen B quotas (stable+ 1280) are mathematically infeasible with the
-      real data: only 34 real central-positive rows exist (A7500 28 + pressure 0).
-      With synthetic cap 1200 and source-derived cap 400, max non-real rows = 1600,
-      but stable+ 1280 + critical+ 320 + hard- 320 requires 1920 non-real positives
-      alone. Amended stable+ to 480 and stable- to 2080, preserving critical+ and
-      hard- at 320 and all source caps and split-family rules.'
+    amendment_id: E1_V31_AMENDMENT_B_QUOTA_V2
+    reason: 'Amendment V1 (stable+ 480 / stable- 2080 / critical+ 320 / hard- 320)
+      is still infeasible after empirical counterfactual generation: safety-tuned
+      target models produced assist-gold rows at ~4% yield even under explicit
+      counterfactual instruction, so stable+ and critical+ cannot be filled. After
+      the frozen double-gold B labeling (2199 rows, gate PASS) and a y-only
+      prescreen fix that lets gold=0 surface-suspicious rows become
+      context_hard_negative, empirical gold-classified supply is: stable+ 318
+      (real 27 + synthetic 30 + source-derived 261), critical+ 12 (1+1+10),
+      hard- 724 (179+539+6), stable- 3145. V2 sets quotas to feasible maxima
+      (stable+ 318, critical+ 12, hard- 320, stable- 2550; total 3200), keeps
+      real 2000 / synthetic <=1200 / source-derived <=400, and assigns synthetic
+      rows to strata by double-gold classification (per protocol 5.3.2, labels
+      must come from double Gold, not generation intent).'
     date: '2026-08-02'
 statistics:
   seeds:

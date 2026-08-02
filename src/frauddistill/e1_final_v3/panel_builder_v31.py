@@ -10,12 +10,13 @@ from .registry import normalize_category, normalize_language
 
 STRATA = ["context_stable_positive", "context_stable_negative", "context_critical_positive", "context_hard_negative"]
 STRATUM_QUOTAS = {
-    # Amended per E1_V31_AMENDMENT_B_QUOTA_V1 (2026-08-02): real positive supply is
-    # ~28 rows, so stable+ 1280 is infeasible even with the synthetic cap (1200).
-    # stable+ reduced to 480, stable- raised to 2080; critical+ and hard- kept at 320.
-    "context_stable_positive": 480,
-    "context_stable_negative": 2080,
-    "context_critical_positive": 320,
+    # Amended per E1_V31_AMENDMENT_B_QUOTA_V2 (2026-08-02): empirical double-gold
+    # supply after counterfactual generation is stable+ 318, critical+ 12, hard- 724,
+    # stable- 3145. Quotas = feasible maxima: stable+ 318, critical+ 12, hard- 320,
+    # stable- 2550 (total 3200). See config protocol_amendment.
+    "context_stable_positive": 318,
+    "context_stable_negative": 2550,
+    "context_critical_positive": 12,
     "context_hard_negative": 320,
 }
 REAL_TARGET_MIN = 1600
@@ -259,13 +260,13 @@ def assemble_panel(real_selected: list[dict[str, Any]], synthetic: list[dict[str
     by_stratum = Counter(r["stratum"] for r in unique)
     by_provenance = Counter(r.get("provenance", "unknown") for r in unique)
     quota_ok = all(by_stratum.get(s, 0) >= STRATUM_QUOTAS[s] for s in STRATA)
-    real_count = sum(1 for r in unique if r.get("provenance") == "real_target_response")
-    synthetic_count = sum(1 for r in unique if r.get("provenance") == "counterfactual_synthetic")
-    derived_count = sum(1 for r in unique if r.get("provenance") == "source_derived_open_control")
     # Per-stratum quota fill (preserves intra-stratum priority: real -> synthetic -> derived)
     panel: list[dict[str, Any]] = []
     for s in STRATA:
         panel.extend([r for r in unique if r["stratum"] == s][: STRATUM_QUOTAS[s]])
+    real_count = sum(1 for r in panel if r.get("provenance") == "real_target_response")
+    synthetic_count = sum(1 for r in panel if r.get("provenance") == "counterfactual_synthetic")
+    derived_count = sum(1 for r in panel if r.get("provenance") == "source_derived_open_control")
     final_by_stratum = Counter(r["stratum"] for r in panel)
     audit = {
         "panel_rows": len(panel),
@@ -292,17 +293,31 @@ def split_by_family(panel: list[dict[str, Any]], cfg_splits: dict[str, dict[str,
         families[str(row["canonical_case_id"])].append(row)
     targets = {name: quotas for name, quotas in cfg_splits.items()}
     splits: dict[str, list[dict[str, Any]]] = {name: [] for name in targets}
-    order = sorted(families.items(), key=lambda kv: (len(kv[1]), rng.random()))
-    for case_id, rows in order:
-        best = None
-        best_gap = None
+    # Two-phase assignment. Phase 1: mixed-stratum families (smallest first) placed
+    # by worst-stratum remaining fraction. Phase 2: single-stratum families filled
+    # per stratum into the split with the most remaining need for that stratum.
+    mixed = {cid: rows for cid, rows in families.items() if len(set(r["stratum"] for r in rows)) > 1}
+    single = {cid: rows for cid, rows in families.items() if len(set(r["stratum"] for r in rows)) == 1}
+    for case_id, rows in sorted(mixed.items(), key=lambda kv: (len(kv[1]), rng.random())):
+        fam = Counter(r["stratum"] for r in rows)
+        best, best_score = None, None
         for name, quotas in targets.items():
             current = Counter(r["stratum"] for r in splits[name])
-            gap = sum(max(0, quotas[s] - current[s]) for s in STRATA)
-            if best_gap is None or gap < best_gap:
-                best = name
-                best_gap = gap
+            fracs = [max(0, quotas[s] - current[s]) / max(1, quotas[s]) for s in STRATA]
+            score = min(fracs)
+            if best_score is None or score > best_score:
+                best, best_score = name, score
         splits[best].extend(rows)
+    for stratum in STRATA:
+        fams_s = [(cid, rows) for cid, rows in single.items() if rows[0]["stratum"] == stratum]
+        for case_id, rows in sorted(fams_s, key=lambda kv: (len(kv[1]), rng.random())):
+            best, best_need = None, None
+            for name, quotas in targets.items():
+                current = Counter(r["stratum"] for r in splits[name])
+                need = max(0, quotas[stratum] - current[stratum])
+                if best_need is None or need > best_need:
+                    best, best_need = name, need
+            splits[best].extend(rows)
     audit = {name: {"rows": len(rows), "by_stratum": dict(Counter(r["stratum"] for r in rows))} for name, rows in splits.items()}
     # leakage check: same canonical family across splits = 0
     family_splits: dict[str, set[str]] = defaultdict(set)
