@@ -114,22 +114,22 @@
     "n_discordant": 560
   },
   "aegis2_vs_teacher": {
-    "delta_acc": -0.091,
-    "delta_macro_f1": -0.0365,
-    "delta_fpr": -0.1408,
+    "delta_acc": 0.1054,
+    "delta_macro_f1": 0.1027,
+    "delta_fpr": -0.2166,
     "ci95_acc": [
-      -0.1255,
-      -0.0554
+      0.083,
+      0.1288
     ],
     "ci95_macro_f1": [
-      -0.071,
-      -0.0016
+      0.0709,
+      0.1352
     ],
     "ci95_fpr": [
-      -0.1785,
-      -0.1024
+      -0.2385,
+      -0.1951
     ],
     "mcnemar_p": 0.0,
-    "n_discordant": 234
+    "n_discordant": 515
   }
 }

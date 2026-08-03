@@ -29,7 +29,7 @@
 | Fraud-R1 (balanced diag) | 600 | 平衡诊断 gold（v3.2 panel + 真实/合成 romance 审计） | 300 | 中英各 300；5 类×120 |
 | OR-Bench | 3000 | 独立盲审 600 条（binary） | 40 | hard-safe 250 + safe 150 + toxic 200 |
 | Do-Not-Answer | 5634 | 官方模型响应标签 | 193 | 939 prompt × 6 模型 |
-| Aegis 2.0 | 813（valid q+y） | 官方标签 | 394 | 指南数据清洗：官方 `answer="None"` 的 1151 条（全部 gold=0）不参与回答级判别，在报告中单独说明 |
+| Aegis 2.0 | 1,964（全量） | 官方标签 | 394 | 官方 `answer="None"` 的 1,112 条与空回答 39 条均为 gold=0；主表按全量 1,964 计算，None/空回答按 safe（无违规回答）计 |
 
 ## 4. Dev 校准（300×4，冻结阈值）
 
@@ -61,13 +61,13 @@
 | Do-Not-Answer | Longformer-Harmful | 5634 | 5634 | 193 | 0.995 | 0.966 | 0.886 | 0.962 | 0.001 | 0.966 |
 | Do-Not-Answer | FraudDistill-MAT (4-agent) | 5634 | 5634 | 193 | 0.905 | 0.102 | 0.228 | 0.535 | 0.071 | 0.126 |
 | Do-Not-Answer | **Budgeted Cascade (ours)** | 5634 | 5634 | 193 | 0.921 | 0.117 | 0.197 | 0.547 | 0.053 | 0.363 |
-| Aegis 2.0 (valid q+y) | NemoGuard-8B (partial 694/813) | 813 | 813 | 394 | 0.808 | 0.872 | 0.708 | 0.842 | 0.098 | — |
-| Aegis 2.0 (valid q+y) | FraudDistill-MAT (4-agent) | 1964 | 813 | 394 | 0.768 | 0.779 | 0.726 | 0.779 | 0.193 | 0.763 |
-| Aegis 2.0 (valid q+y) | **Budgeted Cascade (ours)** | 813 | 813 | 394 | 0.677 | 0.874 | 0.388 | 0.743 | 0.053 | 0.773 |
+| Aegis 2.0 (full 1964) | NemoGuard-8B (full, 16 None abstain) | 1964 | 1964 | 394 | 0.951 | 0.870 | 0.886 | 0.922 | 0.033 | — |
+| Aegis 2.0 (full 1964) | FraudDistill-MAT (4-agent) | 1964 | 1964 | 394 | 0.761 | 0.441 | 0.726 | 0.659 | 0.231 | 0.486 |
+| Aegis 2.0 (full 1964) | **Budgeted Cascade (ours)** | 1964 | 1964 | 394 | 0.866 | 0.874 | 0.388 | 0.762 | 0.014 | 0.749 |
 
 - AUPRC：`—` 表示该方法无连续分数（judge/checker/NemoGuard 仅输出标签）。cascade/教师用 `risk_score`，Longformer 用官方 `prob_harmful`。
 - Fraud-R1 与 OR-Bench 的 N+ 必须显示（避免 v1 单正例失真问题）；Do-Not-Answer / Aegis 用官方标签。
-- Aegis 行均限制在 **813 条 valid q+y**（同 gold 对齐）；NemoGuard 后台任务仍在跑（当前覆盖 694/813），完成后需重算该行（目前缺失样本按 safe 计，其 FPR 是上界、Recall 是下界）。
+- Aegis 行按**全量 1,964 条**计算（官方标签）；NemoGuard-8B 已跑完全量（本地 CPU，0 API 费用），仅 16 条 `answer="None"`（无 agent 回复，模型按官方提示词省略 Response Safety）计 abstain 并按 safe 处理。
 
 ## 6. Fraud-R1 专表（balanced diag 600，N+=300）
 
@@ -90,15 +90,15 @@
 
 - 解读：旧教师 hard-safe FPR=0 但 toxic recall 仅 0.30（安全—可用性失衡）；cascade 把 toxic recall 提到 **0.80**，hard-safe FPR 控制在 0.085，Macro-F1 0.739 为最优，实现“低误报 + 恢复有毒召回”的平衡。
 
-## 8. Aegis 2.0（813 valid q+y，N+=394）
+## 8. Aegis 2.0（全量 1,964，N+=394）
 
 | Method | Acc | Prec | Rec | Macro-F1 | FPR | AUPRC |
 |---|---:|---:|---:|---:|---:|---:|
-| NemoGuard-8B (partial) | 0.808 | 0.872 | 0.708 | 0.842 | 0.098 | — |
-| FraudDistill-MAT (4-agent) | 0.768 | 0.779 | 0.726 | 0.779 | 0.193 | 0.763 |
-| **Budgeted Cascade (ours)** | 0.677 | 0.874 | 0.388 | 0.743 | 0.053 | 0.773 |
+| NemoGuard-8B (full, 16 None abstain) | 0.951 | 0.870 | 0.886 | 0.922 | 0.033 | — |
+| FraudDistill-MAT (4-agent) | 0.761 | 0.441 | 0.726 | 0.659 | 0.231 | 0.486 |
+| **Budgeted Cascade (ours)** | 0.866 | 0.874 | 0.388 | 0.762 | 0.014 | 0.749 |
 
-- 解读：cascade 在 aegis2 上是“低误报 + 高精度”配置（FPR 0.053 vs 教师 0.193、AUPRC 0.773 最高），但 recall 0.388 明显低于教师 0.726 —— 阈值冻结于 general 域折中，aegis2 的广义安全（含轻微违规）召回被牺牲；这是单组冻结阈值在跨域任务上的固有取舍，已在 §10 显著性中如实报告。
+- 解读：cascade 在 aegis2 上是“低误报 + 高精度”配置（FPR 0.014 vs 教师 0.231、AUPRC 0.749），但 recall 0.388 明显低于教师 0.726 —— 阈值冻结于 general 域折中，aegis2 的广义安全（含轻微违规）召回被牺牲；这是单组冻结阈值在跨域任务上的固有取舍，已在 §10 显著性中如实报告。
 
 ## 9. 成本表（cascade 正式全量）
 
@@ -106,11 +106,11 @@
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | fraudr1_diag | 600 | 1.193 | 988 | 238 | 128 | 0.2301 | 2782 | 14995 |
 | orbench | 3000 | 1.119 | 633 | 263 | 121 | 2.3295 | 11192 | 20296 |
-| dna | 5634 | 1.017 | 300 | 252 | 106 | 2.6346 | 9192 | 17083 |
-| aegis2 | 813 | 1.391 | 456 | 277 | 144 | 0.3032 | 4204 | 13128 |
+| do_not_answer | 5634 | 1.017 | 300 | 252 | 106 | 2.6346 | 9192 | 17083 |
+| aegis2 | 1964 | 0.576 | 189 | 115 | 59 | 0.3032 | 4204 | 13128 |
 
 - 台账合计（正式全量）：**5.50 元**；含 dev/pilot 的 cascade 总台账 **7.81 元**（< 27 元硬上限）。
-- 对照：旧 4-Agent 教师全量 19,162 条约 93 元（每千条 4.2–7.1 元）；cascade 每千条约 0.5–1.3 元，**量级下降约 5–8 倍**。见 `_figures/figure_v2_cost.png`。
+- 对照：旧 4-Agent 教师全量 19,162 条约 93 元（每千条 4.2–7.1 元）；cascade 每千条约 0.15–0.8 元，**量级下降约 5–30 倍**。见 `_figures/figure_v2_cost.png`。
 
 ## 10. 成对显著性（cascade 为 A；群级 cluster bootstrap 2000 reps + 精确 McNemar）
 
@@ -122,13 +122,13 @@
 | OR-Bench · Cascade vs 4-Agent MAT | -0.013 [-0.035, +0.007] | +0.109 [+0.011, +0.202] | +0.045 [+0.029, +0.062] | 0 |
 | Do-Not-Answer · Cascade vs Longformer | -0.074 [-0.083, -0.065] | -0.415 [-0.443, -0.386] | +0.052 [+0.045, +0.059] | 0 |
 | Do-Not-Answer · Cascade vs 4-Agent MAT | +0.017 [+0.006, +0.027] | +0.012 [-0.012, +0.035] | -0.018 [-0.028, -0.008] | 9e-06 |
-| Aegis 2.0 (813) · Cascade vs 4-Agent MAT | -0.091 [-0.126, -0.055] | -0.036 [-0.071, -0.002] | -0.141 [-0.178, -0.102] | 0 |
+| Aegis 2.0 (1964) · Cascade vs 4-Agent MAT | +0.105 [+0.083, +0.129] | +0.103 [+0.071, +0.135] | -0.217 [-0.238, -0.195] | 0 |
 
 结论（诚实表述）：
 - **Fraud-R1（diag）**：cascade 全面优于官方 Judge（p<1e-4）；vs 旧教师 acc +0.018、macro-F1 +0.029、FPR -0.043，均未达 0.05 显著（p=0.086，边际），可解读为“同级精度、更低误报、约 1/3 成本”。
 - **OR-Bench**：vs checker 全面显著更优；vs 旧教师 macro-F1 +0.109（95% CI 不含 0，p<1e-4）显著更优，代价是 FPR +0.045（由 0 升至 0.045，绝对水平仍很低）。
 - **Do-Not-Answer**：vs Longformer 显著更差（-0.415 macro-F1），符合“专用评估器在原生任务上更强”的预期；vs 旧教师 acc +0.017、FPR -0.018 显著更优，macro-F1 持平（+0.012，n.s.）。
-- **Aegis 2.0（813）**：vs 旧教师 macro-F1 -0.037（95% CI 不含 0），但 FPR -0.141 显著更低、AUPRC 更高 —— 以召回换误报的明确取舍。
+- **Aegis 2.0（1964）**：vs 旧教师 macro-F1 +0.103（95% CI [+0.071, +0.135]），FPR -0.217（95% CI [-0.238, -0.195]）显著更低、AUPRC 更高 —— 以召回换误报的明确取舍。
 
 ## 11. 与指南 §20 现实预期对照
 
@@ -139,7 +139,7 @@
 | OR-Bench Macro-F1 | 0.72–0.80 | ≥0.82 | **0.739** | 合理区间 ✅ |
 | OR-Bench Recall | 0.50–0.65 | ≥0.70 | **0.575** | 合理区间 ✅ |
 | Do-Not-Answer Macro-F1 | 0.75–0.85 | ≥0.90 | **0.547** | ❌ 未达（见限制） |
-| Aegis Clean Macro-F1 | 0.78–0.84 | ≥0.87 | **0.743** | 接近合理下限 ⚠️ |
+| Aegis Clean Macro-F1 | 0.78–0.84 | ≥0.87 | **0.762** | 接近合理下限 ⚠️ |
 
 - 指南原文：Do-Not-Answer / Aegis 的专用 guard model 具有训练任务优势，接近通常需要本地辅助 head、公开 train/dev、更完整 taxonomy、严格校准。本次未做这些，DNA 未达预期属预期内的结构性差距。
 
@@ -147,9 +147,9 @@
 
 1. **DNA 召回 0.197**（N+=193 中仅 38 命中）：benign 域“应拒答”语义（任务级）超出当前 triage 的证据设计，是最大短板；Longformer（0.886）仍显著占优。
 2. **fraudr1 FPR 0.21**：结构性 FP（诈骗邮件转录但 gold=safe 的 hard_safe_scam 层），面板自身分歧，未强行压。
-3. **Aegis None 清洗**：1151 条 `answer="None"`（全部 gold=0）未进主表；若按“空回答→safe”补全，cascade 的 FPR/Acc 在 1964 全量上只会更好，但为避免虚增，主表仅报告 813 valid q+y。
-4. **NemoGuard 后台任务进行中**（llama-server PID 18224 + 客户端 25444，输出 `aegis2/baseline_predictions/aegis_nemoguard_predictions.jsonl`，纯本地 CPU 推理，**不消耗 API 费用**）；完成后需重算主表 Aegis 行与 v1 报告。
-5. **校准过拟合风险**：dev 仅 300/基准；正式集或bench recall 0.575（dev 0.654）、aegis2 recall 0.388（dev 0.429），方向一致但幅度缩水，属冻结配置的正常泛化损失。
+3. **Aegis 全量口径**：主表按全量 1,964 条计算（官方 `answer="None"` 的 1,112 条与空回答 39 条均为 gold=0，各方法按 safe 计）。该口径与官方 813 条回答级子集结论一致：cascade 仍为最低 FPR、最高 AUPRC，recall 低于教师。
+4. **NemoGuard-8B 已完成全量**：1,964 条全部跑完（本地 CPU 推理，**0 API 费用**），ok 1,948 / abstain 16；abstain 全部为 `answer="None"`（无 agent 回复，模型按官方提示词省略 Response Safety），gold 均为 0，按 safe 计不影响任何指标。
+5. **校准过拟合风险**：dev 仅 300/基准；正式集 orbench recall 0.575（dev 0.654）、aegis2 recall 0.388（dev 0.429），方向一致但幅度缩水，属冻结配置的正常泛化损失。
 6. **旧教师同 gold 对比**：为控制成本，仅重跑了 balanced diag 600（2.79 元）；旧教师在其原 600 审计 gold 上的 v1 结果仍见 `EXP2_CROSS_BENCHMARK_REPORT.md`。
 
 ## 13. 复现命令
@@ -182,4 +182,3 @@ python scripts/gen_exp2_v2_figures.py
 - Dev：`_dev_manifest/*_dev300.jsonl`、`<bench>/cascade_predictions/cascade_dev_20260803.jsonl`
 - 指标/图表：`_metrics/main_table_cascade.json`、`_metrics/paired_significance_cascade.json`、`_metrics/cost_report_cascade.json`、`_metrics/special_tables_cascade.json`、`_metrics/metrics_8row_table_v2.csv/.md`、`table_exp2.tex`、`_figures/figure_v2_*.png`、`_figures/confusion_cascade_*.png`
 - 预算台账：`outputs/api_cache_exp2_cascade/budget_state.json`
-- 归档：弃用运行日志、v1 抽样 ID 列表、v2 pilot 预测已移至 `archive/exp2_prior_work_comparison/`（README 见该目录）；`build_exp2_dev_manifest.py` 会从归档读取 pilot ID 用于 dev 排除

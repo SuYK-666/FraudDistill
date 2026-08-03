@@ -1,4 +1,4 @@
-﻿# EXP2 Cross-Benchmark Report — FraudDistill Multi-Agent Teacher vs Official Baselines
+# EXP2 Cross-Benchmark Report — FraudDistill Multi-Agent Teacher vs Official Baselines
 
 > Generated 2026-08-03 · preregistration frozen before runs · all numbers from scripts (no manual entry).
 
@@ -12,8 +12,8 @@
 | OR-Bench | **FraudDistill-MAT (DeepSeek)** | 3000 | 600 | 0.943 | 1.000 | 0.150 | 0.630 | 0.000 | 0.268 |
 | Do-Not-Answer | Longformer-Harmful | 5634 | 5634 | 0.995 | 0.966 | 0.886 | 0.962 | 0.001 | 0.869 |
 | Do-Not-Answer | **FraudDistill-MAT (DeepSeek)** | 5634 | 5634 | 0.905 | 0.102 | 0.228 | 0.535 | 0.071 | 0.126 |
-| Aegis 2.0 | NemoGuard-8B | 1964 | 140 | 0.921 | 0.848 | 0.824 | 0.894 | 0.047 | 0.834 |
-| Aegis 2.0 | **FraudDistill-MAT (DeepSeek)** | 1964 | 140 | 0.771 | 0.522 | 0.706 | 0.696 | 0.208 | 0.538 |
+| Aegis 2.0 | NemoGuard-8B | 1964 | 1964 | 0.951 | 0.870 | 0.886 | 0.922 | 0.033 | 0.812 |
+| Aegis 2.0 | **FraudDistill-MAT (DeepSeek)** | 1964 | 1964 | 0.761 | 0.441 | 0.726 | 0.659 | 0.231 | 0.486 |
 
 All methods evaluated on identical q+y pairs within each benchmark. Fraud-R1/OR-Bench metrics on independently audited subsets; large pools used for subgroup/cost analyses. abstain samples mapped to safe for primary metrics; coverage reported.
 
@@ -21,10 +21,10 @@ All methods evaluated on identical q+y pairs within each benchmark. Fraud-R1/OR-
 
 | Benchmark | ΔAcc [95% CI] | ΔMacro-F1 [95% CI] | ΔFPR [95% CI] | McNemar p | AUPRC Δ [95% CI] |
 |---|---|---|---|---|---|
-| Fraud-R1 | +0.032 [+0.018, +0.047] | -0.027 [-0.123, +0.023] | -0.033 [-0.048, -0.020] | 0.0000 | -0.115 [-0.575, +0.000] |
-| OR-Bench | +0.285 [+0.243, +0.327] | +0.198 [+0.105, +0.298] | -0.341 [-0.380, -0.302] | 0.0000 | +0.117 [+0.000, +0.250] |
-| Do-Not-Answer | -0.090 [-0.101, -0.080] | -0.427 [-0.452, -0.400] | +0.070 [+0.062, +0.079] | 0.0000 | -0.739 [-0.809, -0.662] |
-| Aegis 2.0 | -0.150 [-0.221, -0.086] | -0.199 [-0.287, -0.113] | +0.161 [+0.088, +0.237] | 0.0001 | -0.236 [-0.418, -0.057] |
+| Fraud-R1 | +0.032 [+0.018, +0.047] | -0.027 [-0.123, +0.023] | -0.033 [-0.048, -0.020] | 0.0000 | -0.123 [-0.603, +0.000] |
+| OR-Bench | +0.285 [+0.243, +0.328] | +0.198 [+0.104, +0.295] | -0.341 [-0.381, -0.302] | 0.0000 | +0.116 [-0.002, +0.252] |
+| Do-Not-Answer | -0.090 [-0.101, -0.080] | -0.427 [-0.453, -0.399] | +0.070 [+0.062, +0.079] | 0.0000 | -0.739 [-0.809, -0.662] |
+| Aegis 2.0 | -0.190 [-0.209, -0.171] | -0.263 [-0.288, -0.238] | +0.197 [+0.176, +0.219] | 0.0000 | -0.367 [-0.422, -0.313] |
 
 Clustered paired bootstrap (10,000 reps by group_id; AUPRC 2,000 reps); McNemar exact two-sided; Holm correction applied across benchmarks (see paired_significance.json).
 
@@ -46,16 +46,16 @@ Clustered paired bootstrap (10,000 reps by group_id; AUPRC 2,000 reps); McNemar 
 | Do-Not-Answer | target_model | llama2-7b-chat | 939 | 0.00 | 0.785 | 0.438 | -0.347 |
 | OR-Bench | category | deception | 77 | 0.05 | 0.381 | 0.700 | +0.319 |
 | Do-Not-Answer | category | Human-Chatbot Interaction Harms | 702 | 0.03 | 0.860 | 0.548 | -0.311 |
+| Aegis 2.0 | language | English | 1964 | 0.20 | 0.922 | 0.659 | -0.263 |
+| Aegis 2.0 | category | general_safety | 1964 | 0.20 | 0.922 | 0.659 | -0.263 |
+| Aegis 2.0 | target_model | unknown | 1964 | 0.20 | 0.922 | 0.659 | -0.263 |
+| Aegis 2.0 | prompt_type | unknown | 1964 | 0.20 | 0.922 | 0.659 | -0.263 |
 | Do-Not-Answer | category | Malicious Uses | 1458 | 0.02 | 0.960 | 0.717 | -0.243 |
 | OR-Bench | prompt_type | toxic | 200 | 0.05 | 0.500 | 0.731 | +0.231 |
 | OR-Bench | category | illegal | 76 | 0.01 | 0.272 | 0.500 | +0.228 |
 | OR-Bench | category | harassment | 76 | 0.08 | 0.429 | 0.643 | +0.214 |
 | OR-Bench | language | English | 600 | 0.07 | 0.431 | 0.630 | +0.200 |
 | OR-Bench | target_model | qwen-plus | 600 | 0.07 | 0.431 | 0.630 | +0.200 |
-| Aegis 2.0 | language | English | 140 | 0.24 | 0.894 | 0.696 | -0.198 |
-| Aegis 2.0 | category | general_safety | 140 | 0.24 | 0.894 | 0.696 | -0.198 |
-| Aegis 2.0 | target_model | unknown | 140 | 0.24 | 0.894 | 0.696 | -0.198 |
-| Aegis 2.0 | prompt_type | unknown | 140 | 0.24 | 0.894 | 0.696 | -0.198 |
 | OR-Bench | category | privacy | 76 | 0.05 | 0.320 | 0.500 | +0.180 |
 | OR-Bench | category | sexual | 35 | 0.31 | 0.583 | 0.714 | +0.131 |
 | OR-Bench | category | hate | 77 | 0.10 | 0.490 | 0.611 | +0.121 |
@@ -77,10 +77,10 @@ Full subgroup table: `_metrics/subgroup_metrics.csv`.
 
 ## 4. Error analysis (paired)
 
-- baseline_correct_teacher_wrong: 568
-- baseline_wrong_teacher_correct: 228
-- both_correct: 6142
-- both_wrong: 36
+- baseline_correct_teacher_wrong: 956
+- baseline_wrong_teacher_correct: 264
+- both_correct: 7492
+- both_wrong: 86
 
 Redacted sample-level errors: `_metrics/error_analysis.jsonl` and `error_analysis_redacted.md`.
 
@@ -94,7 +94,7 @@ Redacted sample-level errors: `_metrics/error_analysis.jsonl` and `error_analysi
 | OR-Bench | teacher | 3000 | 9833421 | 1377750 | 12.5889 | 13593.1 |
 | Do-Not-Answer | baseline | 5634 | 0 | 0 | 0.0 | 529.5 |
 | Do-Not-Answer | teacher | 5634 | 11130528 | 2118060 | 15.3666 | 9489.9 |
-| Aegis 2.0 | baseline | 143 | 0 | 0 | 0.0 | 167606.4 |
+| Aegis 2.0 | baseline | 2014 | 0 | 0 | 0.0 | 150480.3 |
 | Aegis 2.0 | teacher | 1964 | 3597069 | 660339 | 4.9177 | 11513.2 |
 
 ## 6. Deliverables index

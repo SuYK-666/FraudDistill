@@ -12,7 +12,7 @@ os.makedirs(FIG, exist_ok=True)
 main = json.load(open(f"{BASE}/_metrics/main_table_cascade.json", encoding="utf-8"))
 
 # ---------- 1. recall vs FPR scatter (one panel per benchmark) ----------
-bench_groups = ["Fraud-R1 (balanced diag)", "OR-Bench", "Do-Not-Answer", "Aegis 2.0 (valid q+y)"]
+bench_groups = ["Fraud-R1 (balanced diag)", "OR-Bench", "Do-Not-Answer", "Aegis 2.0 (full 1964)"]
 styles = {"Official Judge (GPTCheck)": ("s", "#888888"), "Official Response Checker": ("s", "#888888"),
           "Longformer-Harmful": ("s", "#888888"), "NemoGuard-8B": ("s", "#888888"),
           "FraudDistill-MAT (4-agent)": ("o", "#d95f02"), "Budgeted Cascade (ours)": ("D", "#1b9e77")}
@@ -23,7 +23,7 @@ for ax, bg in zip(axes, bench_groups):
         key = r["method"]
         if key.startswith("NemoGuard"): key = "NemoGuard-8B"
         shape, color = styles.get(key, ("o", "#333333"))
-        label = "NemoGuard-8B (partial)" if key == "NemoGuard-8B" else key
+        label = "NemoGuard-8B (full)" if key == "NemoGuard-8B" else key
         ax.scatter(r["fpr"], r["rec"], marker=shape, color=color, s=70, zorder=3,
                    label=label if bg == bench_groups[0] else None)
     ax.axhline(0.5, color="gray", lw=0.6, ls=":")
@@ -145,7 +145,7 @@ print("dev objective heatmap done")
 # ---------- 4. cascade confusion matrices ----------
 from matplotlib.patches import Rectangle
 for bench, label in [("fraudr1_diag", "Fraud-R1 (balanced diag)"), ("orbench", "OR-Bench (600 audited)"),
-                     ("do_not_answer", "Do-Not-Answer (5634)"), ("aegis2", "Aegis 2.0 (813 valid q+y)")]:
+                     ("do_not_answer", "Do-Not-Answer (5634)"), ("aegis2", "Aegis 2.0 (1964)")]:
     rows = [r for r in load_map(f"{BASE}/{bench}/cascade_predictions/cascade_full_20260803.jsonl") if r.get("gold_binary") is not None]
     g = [r["gold_binary"] for r in rows]; p = [r.get("prediction_binary") or 0 for r in rows]
     tn = sum(1 for a,b in zip(g,p) if a==0 and b==0); fp = sum(1 for a,b in zip(g,p) if a==0 and b==1)

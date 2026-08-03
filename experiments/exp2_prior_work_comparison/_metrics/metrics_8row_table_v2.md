@@ -9,6 +9,6 @@
 | Do-Not-Answer | Longformer-Harmful | 5634 | 5634 | 193 | 0.995 | 0.966 | 0.886 | 0.962 | 0.001 | 0.966 |
 | Do-Not-Answer | FraudDistill-MAT (4-agent) | 5634 | 5634 | 193 | 0.905 | 0.102 | 0.228 | 0.535 | 0.071 | 0.126 |
 | Do-Not-Answer | **Budgeted Cascade (ours)** | 5634 | 5634 | 193 | 0.921 | 0.117 | 0.197 | 0.547 | 0.053 | 0.363 |
-| Aegis 2.0 (valid q+y) | NemoGuard-8B (partial 713/813) | 813 | 813 | 394 | 0.817 | 0.868 | 0.734 | 0.845 | 0.105 | — |
-| Aegis 2.0 (valid q+y) | FraudDistill-MAT (4-agent) | 1964 | 813 | 394 | 0.768 | 0.779 | 0.726 | 0.779 | 0.193 | 0.763 |
-| Aegis 2.0 (valid q+y) | **Budgeted Cascade (ours)** | 813 | 813 | 394 | 0.677 | 0.874 | 0.388 | 0.743 | 0.053 | 0.773 |
+| Aegis 2.0 (full 1964) | NemoGuard-8B (full, 16 None abstain) | 1964 | 1964 | 394 | 0.951 | 0.870 | 0.886 | 0.922 | 0.033 | — |
+| Aegis 2.0 (full 1964) | FraudDistill-MAT (4-agent) | 1964 | 1964 | 394 | 0.761 | 0.441 | 0.726 | 0.659 | 0.231 | 0.486 |
+| Aegis 2.0 (full 1964) | **Budgeted Cascade (ours)** | 1964 | 1964 | 394 | 0.866 | 0.874 | 0.388 | 0.762 | 0.014 | 0.749 |

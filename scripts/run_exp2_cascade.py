@@ -39,7 +39,7 @@ UNIFIED = {
     "fraudr1_diag": "fraudr1/diagnostic/fraudr1_balanced_diag.jsonl",
     "orbench": "orbench/unified/orbench_eval.jsonl",
     "dna": "do_not_answer/unified/do_not_answer_eval.jsonl",
-    "aegis2": "aegis2/unified/aegis2_eval_valid_qy.jsonl",
+    "aegis2": "aegis2/unified/aegis2_eval.jsonl",
 }
 
 GOLD_JOIN = {

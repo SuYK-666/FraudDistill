@@ -116,8 +116,8 @@ def gold_orbench():
 def gold_dna():
     rows = load(f"{BASE}/do_not_answer/unified/do_not_answer_eval.jsonl")
     return [r["id"] for r in rows], [r["gold_binary"] for r in rows], [r["group_id"] for r in rows]
-def gold_aegis2_valid():
-    rows = load(f"{BASE}/aegis2/unified/aegis2_eval_valid_qy.jsonl")
+def gold_aegis2_full():
+    rows = load(f"{BASE}/aegis2/unified/aegis2_eval.jsonl")
     return [r["id"] for r in rows], [r["gold_binary"] for r in rows], [r["group_id"] for r in rows]
 
 def preds(src, ids):
@@ -151,11 +151,13 @@ ids, g, grp = gold_dna()
 add_row("Do-Not-Answer", "Longformer-Harmful", ids, g, P["longformer"], 5634, score_key="prob_harmful", score_ok=True)
 add_row("Do-Not-Answer", "FraudDistill-MAT (4-agent)", ids, g, P["teacher"]["dna"], 5634)
 add_row("Do-Not-Answer", "Budgeted Cascade (ours)", ids, g, P["cascade"]["dna"], 5634)
-ids, g, grp = gold_aegis2_valid()
-nemo_cov = sum(1 for i in ids if i in P["nemoguard"])
-add_row("Aegis 2.0 (valid q+y)", f"NemoGuard-8B (partial {nemo_cov}/813)", ids, g, P["nemoguard"], 813, score_ok=False)
-add_row("Aegis 2.0 (valid q+y)", "FraudDistill-MAT (4-agent)", ids, g, P["teacher"]["aegis2"], 1964)
-add_row("Aegis 2.0 (valid q+y)", "Budgeted Cascade (ours)", ids, g, P["cascade"]["aegis2"], 813)
+ids, g, grp = gold_aegis2_full()
+nemo_cov = sum(1 for i in ids if i in P["nemoguard"] and P["nemoguard"][i].get("parse_status") == "ok")
+nemo_abstain = len(ids) - nemo_cov
+nemo_tag = "official, full" if nemo_abstain == 0 else f"full, {nemo_abstain} None abstain"
+add_row("Aegis 2.0 (full 1964)", f"NemoGuard-8B ({nemo_tag})", ids, g, P["nemoguard"], 1964, score_ok=False)
+add_row("Aegis 2.0 (full 1964)", "FraudDistill-MAT (4-agent)", ids, g, P["teacher"]["aegis2"], 1964)
+add_row("Aegis 2.0 (full 1964)", "Budgeted Cascade (ours)", ids, g, P["cascade"]["aegis2"], 1964)
 
 print("=== MAIN TABLE ===")
 for r in MAIN:
@@ -223,7 +225,7 @@ sig["orbench_vs_teacher"] = run_sig("o", ids, g, grp, P["cascade"]["orbench"], P
 ids, g, grp = gold_dna()
 sig["dna_vs_longformer"] = run_sig("d", ids, g, grp, P["cascade"]["dna"], P["longformer"])
 sig["dna_vs_teacher"] = run_sig("d", ids, g, grp, P["cascade"]["dna"], P["teacher"]["dna"])
-ids, g, grp = gold_aegis2_valid()
+ids, g, grp = gold_aegis2_full()
 sig["aegis2_vs_teacher"] = run_sig("a", ids, g, grp, P["cascade"]["aegis2"], P["teacher"]["aegis2"])
 for k, v in sig.items():
     print(k, json.dumps(v))
@@ -262,12 +264,12 @@ with open(f"{BASE}/_metrics/metrics_8row_table_v2.md", "w", encoding="utf-8", ne
 tex_rows = []
 for r in MAIN:
     au = fmt(r["auprc"])
-    b = r["benchmark"].replace("Fraud-R1 (balanced diag)", "Fraud-R1$^*$").replace(" (valid q+y)", "$^\\dagger$")
+    b = r["benchmark"].replace("Fraud-R1 (balanced diag)", "Fraud-R1$^*$").replace("Aegis 2.0 (full 1964)", "Aegis 2.0$^\\dagger$").replace(" (valid q+y)", "$^\\dagger$")
     m = r["method"]
     if m == "Budgeted Cascade (ours)":
         m = "\\textbf{Budgeted Cascade}"
     elif m.startswith("NemoGuard"):
-        m = "NemoGuard-8B (partial)"
+        m = "NemoGuard-8B"
     elif m == "FraudDistill-MAT (4-agent)":
         m = "FraudDistill-MAT"
     tex_rows.append(f"{b} & {m} & {r['n_pool']} & {r['n']} & {r['n_pos']} & {r['acc']:.3f} & {r['prec']:.3f} & {r['rec']:.3f} & {r['macro_f1']:.3f} & {r['fpr']:.3f} & {au} \\\\")
@@ -281,7 +283,7 @@ Dataset & Method & N\textsubscript{pool} & N\textsubscript{gold} & N+ & Acc. & P
 """ + "\n".join(tex_rows) + r"""
 \bottomrule
 \end{tabular}
-\caption{Budgeted-cascade behavior-error detection vs prior baselines and the four-agent MAT on identical (q, y) pairs. $^*$Fraud-R1 uses the new balanced diagnostic gold (300 positives). $\dagger$Aegis uses the 813 valid q+y rows (official ``None'' answers excluded by data cleaning). NemoGuard row is partial until the background run completes.}
+\caption{Budgeted-cascade behavior-error detection vs prior baselines and the four-agent MAT on identical (q, y) pairs. $^*$Fraud-R1 uses the new balanced diagnostic gold (300 positives). $\dagger$Aegis now covers all 1,964 official rows: the 1,151 ``None''/empty-answer rows are all safe negatives; NemoGuard-8B abstains on 16 of them (no agent response) and covers the remaining 1,948 rows.}
 \label{tab:exp2_v2}
 \end{table}"""
 with open(f"{BASE}/table_exp2.tex", "w", encoding="utf-8", newline="\n") as f:

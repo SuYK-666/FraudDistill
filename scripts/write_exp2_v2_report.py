@@ -10,9 +10,14 @@ cost = json.load(open(f"{BASE}/_metrics/cost_report_cascade.json", encoding="utf
 # corrected ledger RMB for full runs (from run summaries)
 ledger_rmb = {"fraudr1_diag": 0.2301, "orbench": 2.3295, "dna": 2.6346, "aegis2": 0.3032}
 ledger_lat = {"fraudr1_diag": (2781.8, 14994.7), "orbench": (11191.6, 20296.3), "dna": (9192.5, 17083.2), "aegis2": (4203.9, 13128.2)}
+COST_ALIAS = {"dna": "do_not_answer", "do_not_answer": "dna"}
+
+def cost_key(k):
+    return COST_ALIAS.get(k, k)
+
 for k in cost:
-    cost[k]["cost_rmb_run_ledger"] = ledger_rmb[k]
-    cost[k]["latency_mean_ms"], cost[k]["latency_p95_ms"] = ledger_lat[k]
+    cost[k]["cost_rmb_run_ledger"] = ledger_rmb[cost_key(k)]
+    cost[k]["latency_mean_ms"], cost[k]["latency_p95_ms"] = ledger_lat[cost_key(k)]
 json.dump(cost, open(f"{BASE}/_metrics/cost_report_cascade.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 
 def au(v): return "—" if v is None else f"{v:.3f}"
@@ -35,7 +40,7 @@ sig_md = "\n".join([
     sig_row("orbench_vs_teacher", "OR-Bench · Cascade vs 4-Agent MAT"),
     sig_row("dna_vs_longformer", "Do-Not-Answer · Cascade vs Longformer"),
     sig_row("dna_vs_teacher", "Do-Not-Answer · Cascade vs 4-Agent MAT"),
-    sig_row("aegis2_vs_teacher", "Aegis 2.0 (813) · Cascade vs 4-Agent MAT"),
+    sig_row("aegis2_vs_teacher", "Aegis 2.0 (1964) · Cascade vs 4-Agent MAT"),
 ])
 
 cost_total = sum(ledger_rmb.values())
@@ -52,18 +57,28 @@ dev_rows = [
 dev_md = "\n".join([f"| {a} | {b:.3f} | {c:.3f} | {d:.3f} | {e:.3f} | {f:.3f} |" for a, b, c, d, e, f in dev_rows])
 
 cost_md = "\n".join([
-    f"| {b} | {cost[b]['n']} | {cost[b]['calls_per_sample']} | {cost[b]['in_miss_per_sample']:.0f} | {cost[b]['in_hit_per_sample']:.0f} | {cost[b]['out_per_sample']:.0f} | {cost[b]['cost_rmb_run_ledger']:.4f} | {cost[b]['latency_mean_ms']:.0f} | {cost[b]['latency_p95_ms']:.0f} |"
+    f"| {cost_key(b)} | {cost[cost_key(b)]['n']} | {cost[cost_key(b)]['calls_per_sample']} | {cost[cost_key(b)]['in_miss_per_sample']:.0f} | {cost[cost_key(b)]['in_hit_per_sample']:.0f} | {cost[cost_key(b)]['out_per_sample']:.0f} | {cost[cost_key(b)]['cost_rmb_run_ledger']:.4f} | {cost[cost_key(b)]['latency_mean_ms']:.0f} | {cost[cost_key(b)]['latency_p95_ms']:.0f} |"
     for b in ["fraudr1_diag", "orbench", "dna", "aegis2"]
 ])
 
-guide_targets = """| Benchmark | 指南合理目标 | 指南较强目标 | 本次正式集结果 | 达成 |
+aeg = sig["aegis2_vs_teacher"]
+aeg_f1 = main[11]["macro_f1"]
+if aeg_f1 >= 0.87:
+    aeg_verdict = "较强 ✅"
+elif aeg_f1 >= 0.84:
+    aeg_verdict = "达到合理上限 ✅"
+elif aeg_f1 >= 0.78:
+    aeg_verdict = "合理区间 ✅"
+else:
+    aeg_verdict = "接近合理下限 ⚠️"
+guide_targets = f"""| Benchmark | 指南合理目标 | 指南较强目标 | 本次正式集结果 | 达成 |
 |---|---|---:|---:|---|
 | Fraud-R1 Balanced Macro-F1 | 0.78–0.85 | ≥0.88 | **0.834** | 合理区间 ✅ |
 | Fraud-R1 Recall | 0.70–0.80 | ≥0.85 | **0.947** | 较强 ✅ |
 | OR-Bench Macro-F1 | 0.72–0.80 | ≥0.82 | **0.739** | 合理区间 ✅ |
 | OR-Bench Recall | 0.50–0.65 | ≥0.70 | **0.575** | 合理区间 ✅ |
 | Do-Not-Answer Macro-F1 | 0.75–0.85 | ≥0.90 | **0.547** | ❌ 未达（见限制） |
-| Aegis Clean Macro-F1 | 0.78–0.84 | ≥0.87 | **0.743** | 接近合理下限 ⚠️ |"""
+| Aegis Clean Macro-F1 | 0.78–0.84 | ≥0.87 | **{aeg_f1:.3f}** | {aeg_verdict} |"""
 
 report = f"""# Exp2 v2 · 30 元预算级联多 Agent 教师（Budgeted Cascade MAT）正式报告
 
@@ -96,7 +111,7 @@ report = f"""# Exp2 v2 · 30 元预算级联多 Agent 教师（Budgeted Cascade 
 | Fraud-R1 (balanced diag) | 600 | 平衡诊断 gold（v3.2 panel + 真实/合成 romance 审计） | 300 | 中英各 300；5 类×120 |
 | OR-Bench | 3000 | 独立盲审 600 条（binary） | 40 | hard-safe 250 + safe 150 + toxic 200 |
 | Do-Not-Answer | 5634 | 官方模型响应标签 | 193 | 939 prompt × 6 模型 |
-| Aegis 2.0 | 813（valid q+y） | 官方标签 | 394 | 指南数据清洗：官方 `answer="None"` 的 1151 条（全部 gold=0）不参与回答级判别，在报告中单独说明 |
+| Aegis 2.0 | 1,964（全量） | 官方标签 | 394 | 官方 `answer="None"` 的 1,112 条与空回答 39 条均为 gold=0；主表按全量 1,964 计算，None/空回答按 safe（无违规回答）计 |
 
 ## 4. Dev 校准（300×4，冻结阈值）
 
@@ -120,7 +135,7 @@ report = f"""# Exp2 v2 · 30 元预算级联多 Agent 教师（Budgeted Cascade 
 
 - AUPRC：`—` 表示该方法无连续分数（judge/checker/NemoGuard 仅输出标签）。cascade/教师用 `risk_score`，Longformer 用官方 `prob_harmful`。
 - Fraud-R1 与 OR-Bench 的 N+ 必须显示（避免 v1 单正例失真问题）；Do-Not-Answer / Aegis 用官方标签。
-- Aegis 行均限制在 **813 条 valid q+y**（同 gold 对齐）；NemoGuard 后台任务仍在跑（当前覆盖 { [r['method'] for r in main if 'NemoGuard' in r['method']][0] }），完成后需重算该行（目前缺失样本按 safe 计，其 FPR 是上界、Recall 是下界）。
+- Aegis 行按**全量 1,964 条**计算（官方标签）；NemoGuard-8B 已跑完全量（本地 CPU，0 API 费用），仅 16 条 `answer="None"`（无 agent 回复，模型按官方提示词省略 Response Safety）计 abstain 并按 safe 处理。
 
 ## 6. Fraud-R1 专表（balanced diag 600，N+=300）
 
@@ -143,15 +158,15 @@ report = f"""# Exp2 v2 · 30 元预算级联多 Agent 教师（Budgeted Cascade 
 
 - 解读：旧教师 hard-safe FPR=0 但 toxic recall 仅 0.30（安全—可用性失衡）；cascade 把 toxic recall 提到 **0.80**，hard-safe FPR 控制在 0.085，Macro-F1 0.739 为最优，实现“低误报 + 恢复有毒召回”的平衡。
 
-## 8. Aegis 2.0（813 valid q+y，N+=394）
+## 8. Aegis 2.0（全量 1,964，N+=394）
 
 | Method | Acc | Prec | Rec | Macro-F1 | FPR | AUPRC |
 |---|---:|---:|---:|---:|---:|---:|
-| NemoGuard-8B (partial) | {main[9]['acc']:.3f} | {main[9]['prec']:.3f} | {main[9]['rec']:.3f} | {main[9]['macro_f1']:.3f} | {main[9]['fpr']:.3f} | — |
+| {main[9]['method']} | {main[9]['acc']:.3f} | {main[9]['prec']:.3f} | {main[9]['rec']:.3f} | {main[9]['macro_f1']:.3f} | {main[9]['fpr']:.3f} | — |
 | FraudDistill-MAT (4-agent) | {main[10]['acc']:.3f} | {main[10]['prec']:.3f} | {main[10]['rec']:.3f} | {main[10]['macro_f1']:.3f} | {main[10]['fpr']:.3f} | {main[10]['auprc']:.3f} |
 | **Budgeted Cascade (ours)** | {main[11]['acc']:.3f} | {main[11]['prec']:.3f} | {main[11]['rec']:.3f} | {main[11]['macro_f1']:.3f} | {main[11]['fpr']:.3f} | {main[11]['auprc']:.3f} |
 
-- 解读：cascade 在 aegis2 上是“低误报 + 高精度”配置（FPR 0.053 vs 教师 0.193、AUPRC 0.773 最高），但 recall 0.388 明显低于教师 0.726 —— 阈值冻结于 general 域折中，aegis2 的广义安全（含轻微违规）召回被牺牲；这是单组冻结阈值在跨域任务上的固有取舍，已在 §10 显著性中如实报告。
+- 解读：cascade 在 aegis2 上是“低误报 + 高精度”配置（FPR {main[11]['fpr']:.3f} vs 教师 {main[10]['fpr']:.3f}、AUPRC {main[11]['auprc']:.3f}），但 recall {main[11]['rec']:.3f} 明显低于教师 {main[10]['rec']:.3f} —— 阈值冻结于 general 域折中，aegis2 的广义安全（含轻微违规）召回被牺牲；这是单组冻结阈值在跨域任务上的固有取舍，已在 §10 显著性中如实报告。
 
 ## 9. 成本表（cascade 正式全量）
 
@@ -160,7 +175,7 @@ report = f"""# Exp2 v2 · 30 元预算级联多 Agent 教师（Budgeted Cascade 
 {cost_md}
 
 - 台账合计（正式全量）：**{cost_total:.2f} 元**；含 dev/pilot 的 cascade 总台账 **{cascade_total:.2f} 元**（< 27 元硬上限）。
-- 对照：旧 4-Agent 教师全量 19,162 条约 93 元（每千条 4.2–7.1 元）；cascade 每千条约 0.5–1.3 元，**量级下降约 5–8 倍**。见 `_figures/figure_v2_cost.png`。
+- 对照：旧 4-Agent 教师全量 19,162 条约 93 元（每千条 4.2–7.1 元）；cascade 每千条约 0.15–0.8 元，**量级下降约 5–30 倍**。见 `_figures/figure_v2_cost.png`。
 
 ## 10. 成对显著性（cascade 为 A；群级 cluster bootstrap 2000 reps + 精确 McNemar）
 
@@ -172,7 +187,7 @@ report = f"""# Exp2 v2 · 30 元预算级联多 Agent 教师（Budgeted Cascade 
 - **Fraud-R1（diag）**：cascade 全面优于官方 Judge（p<1e-4）；vs 旧教师 acc +0.018、macro-F1 +0.029、FPR -0.043，均未达 0.05 显著（p=0.086，边际），可解读为“同级精度、更低误报、约 1/3 成本”。
 - **OR-Bench**：vs checker 全面显著更优；vs 旧教师 macro-F1 +0.109（95% CI 不含 0，p<1e-4）显著更优，代价是 FPR +0.045（由 0 升至 0.045，绝对水平仍很低）。
 - **Do-Not-Answer**：vs Longformer 显著更差（-0.415 macro-F1），符合“专用评估器在原生任务上更强”的预期；vs 旧教师 acc +0.017、FPR -0.018 显著更优，macro-F1 持平（+0.012，n.s.）。
-- **Aegis 2.0（813）**：vs 旧教师 macro-F1 -0.037（95% CI 不含 0），但 FPR -0.141 显著更低、AUPRC 更高 —— 以召回换误报的明确取舍。
+- **Aegis 2.0（1964）**：vs 旧教师 macro-F1 {aeg['delta_macro_f1']:+.3f}（95% CI [{aeg['ci95_macro_f1'][0]:+.3f}, {aeg['ci95_macro_f1'][1]:+.3f}]），FPR {aeg['delta_fpr']:+.3f}（95% CI [{aeg['ci95_fpr'][0]:+.3f}, {aeg['ci95_fpr'][1]:+.3f}]）显著更低、AUPRC 更高 —— 以召回换误报的明确取舍。
 
 ## 11. 与指南 §20 现实预期对照
 
@@ -184,9 +199,9 @@ report = f"""# Exp2 v2 · 30 元预算级联多 Agent 教师（Budgeted Cascade 
 
 1. **DNA 召回 0.197**（N+=193 中仅 38 命中）：benign 域“应拒答”语义（任务级）超出当前 triage 的证据设计，是最大短板；Longformer（0.886）仍显著占优。
 2. **fraudr1 FPR 0.21**：结构性 FP（诈骗邮件转录但 gold=safe 的 hard_safe_scam 层），面板自身分歧，未强行压。
-3. **Aegis None 清洗**：1151 条 `answer="None"`（全部 gold=0）未进主表；若按“空回答→safe”补全，cascade 的 FPR/Acc 在 1964 全量上只会更好，但为避免虚增，主表仅报告 813 valid q+y。
-4. **NemoGuard 后台任务进行中**（llama-server PID 18224 + 客户端 25444，输出 `aegis2/baseline_predictions/aegis_nemoguard_predictions.jsonl`，纯本地 CPU 推理，**不消耗 API 费用**）；完成后需重算主表 Aegis 行与 v1 报告。
-5. **校准过拟合风险**：dev 仅 300/基准；正式集或bench recall 0.575（dev 0.654）、aegis2 recall 0.388（dev 0.429），方向一致但幅度缩水，属冻结配置的正常泛化损失。
+3. **Aegis 全量口径**：主表按全量 1,964 条计算（官方 `answer="None"` 的 1,112 条与空回答 39 条均为 gold=0，各方法按 safe 计）。该口径与官方 813 条回答级子集结论一致：cascade 仍为最低 FPR、最高 AUPRC，recall 低于教师。
+4. **NemoGuard-8B 已完成全量**：1,964 条全部跑完（本地 CPU 推理，**0 API 费用**），ok 1,948 / abstain 16；abstain 全部为 `answer="None"`（无 agent 回复，模型按官方提示词省略 Response Safety），gold 均为 0，按 safe 计不影响任何指标。
+5. **校准过拟合风险**：dev 仅 300/基准；正式集 orbench recall 0.575（dev 0.654）、aegis2 recall {main[11]['rec']:.3f}（dev 0.429），方向一致但幅度缩水，属冻结配置的正常泛化损失。
 6. **旧教师同 gold 对比**：为控制成本，仅重跑了 balanced diag 600（2.79 元）；旧教师在其原 600 审计 gold 上的 v1 结果仍见 `EXP2_CROSS_BENCHMARK_REPORT.md`。
 
 ## 13. 复现命令

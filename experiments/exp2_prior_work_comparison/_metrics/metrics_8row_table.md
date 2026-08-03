@@ -6,5 +6,5 @@
 | OR-Bench | **FraudDistill-MAT (DeepSeek)** | 3000 | 600 | 0.943 | 1.000 | 0.150 | 0.630 | 0.000 | 0.268 |
 | Do-Not-Answer | Longformer-Harmful | 5634 | 5634 | 0.995 | 0.966 | 0.886 | 0.962 | 0.001 | 0.869 |
 | Do-Not-Answer | **FraudDistill-MAT (DeepSeek)** | 5634 | 5634 | 0.905 | 0.102 | 0.228 | 0.535 | 0.071 | 0.126 |
-| Aegis 2.0 | NemoGuard-8B | 1964 | 140 | 0.921 | 0.848 | 0.824 | 0.894 | 0.047 | 0.834 |
-| Aegis 2.0 | **FraudDistill-MAT (DeepSeek)** | 1964 | 140 | 0.771 | 0.522 | 0.706 | 0.696 | 0.208 | 0.538 |
+| Aegis 2.0 | NemoGuard-8B | 1964 | 1964 | 0.951 | 0.870 | 0.886 | 0.922 | 0.033 | 0.812 |
+| Aegis 2.0 | **FraudDistill-MAT (DeepSeek)** | 1964 | 1964 | 0.761 | 0.441 | 0.726 | 0.659 | 0.231 | 0.486 |
