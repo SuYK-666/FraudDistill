@@ -1,4 +1,4 @@
-# EXP2 Cross-Benchmark Report — FraudDistill Multi-Agent Teacher vs Official Baselines
+﻿# EXP2 Cross-Benchmark Report — FraudDistill Multi-Agent Teacher vs Official Baselines
 
 > Generated 2026-08-03 · preregistration frozen before runs · all numbers from scripts (no manual entry).
 

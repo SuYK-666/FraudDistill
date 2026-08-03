@@ -1,4 +1,4 @@
-# E1 FINAL TRIAD v3.2 整体任务进度与收尾报告
+﻿# E1 FINAL TRIAD v3.2 整体任务进度与收尾报告
 
 > 协议：`E1-FINAL-TRIAD-v3.2-6000-BalancedV1Style`（B 重建：v1 预印本 hard-control 均衡风格）
 > 状态：B6000 重建 + 双 LLM Gold + CPU 训练 + Frozen Anchor + C 回放全部完成，报告已生成，代码已提交 GitHub。

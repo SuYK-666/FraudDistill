@@ -1,4 +1,4 @@
-# E1-FINAL-TRIAD v3.2 均衡面板（B 重建）执行报告
+﻿# E1-FINAL-TRIAD v3.2 均衡面板（B 重建）执行报告
 
 - 协议：`E1-FINAL-TRIAD-v3.2-6000-BalancedV1Style`
 - 运行提交：`d8558e430e6e99b0c307b4ad33e9860fff5cbff5`（worktree clean）

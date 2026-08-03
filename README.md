@@ -1,4 +1,4 @@
-# FraudDistill
+﻿# FraudDistill
 
 FraudDistill 是一个面向 **LLM 欺诈协助输出检测** 的研究与实验框架。项目关注的不是传统短信、邮件或网页诈骗文本分类，也不是只判断用户 prompt 是否危险，而是检测：
 

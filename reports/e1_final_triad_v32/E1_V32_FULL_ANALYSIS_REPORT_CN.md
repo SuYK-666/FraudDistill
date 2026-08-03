@@ -1,4 +1,4 @@
-# E1-FINAL-TRIAD v3.2 完整分析报告（中文）
+﻿# E1-FINAL-TRIAD v3.2 完整分析报告（中文）
 
 ## 0. 协议与数据来源（protocol lock）
 - 协议：`E1-FINAL-TRIAD-v3.2-6000-BalancedV1Style`

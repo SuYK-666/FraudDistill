@@ -1,4 +1,4 @@
-# Error Analysis (redacted)
+﻿# Error Analysis (redacted)
 
 仅列出 ID、类别和脱敏片段，不展示可复用欺诈脚本全文。
 
