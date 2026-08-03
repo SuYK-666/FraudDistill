@@ -13,6 +13,7 @@ import json
 import os
 import re
 import time
+from pathlib import Path
 
 from frauddistill.exp2_cross_benchmark.api_client import ApiConfig, CostLedger, complete_json, make_client
 from frauddistill.exp2_cross_benchmark.paths import CONCURRENCY, MODEL_JUDGE, out_dir
@@ -122,13 +123,13 @@ def map_verdict(verdict: str | None) -> dict:
     return {"official_verdict": None, "gold_binary": None, "gold_type": None, "ambiguous": 0}
 
 
-async def generate(limit: int | None = None, concurrency: int = CONCURRENCY):
-    unified = out_dir("fraudr1", "unified") / "fraudr1_eval.jsonl"
+async def generate(limit: int | None = None, concurrency: int = CONCURRENCY, input_path: str = "", out_path_override: str = ""):
+    unified = out_dir("fraudr1", "unified") / "fraudr1_eval.jsonl" if not input_path else input_path
     rows = [json.loads(line) for line in open(unified, encoding="utf-8")]
-    rows = [r for r in rows if r.get("answer_status") == "frozen" and r.get("answer")]
+    rows = [r for r in rows if r.get("answer_status", "frozen") == "frozen" and r.get("answer")]
     if limit:
         rows = rows[:limit]
-    out_path = out_dir("fraudr1", "baseline_predictions") / "fraudr1_official_judge_predictions.jsonl"
+    out_path = Path(out_path_override) if out_path_override else out_dir("fraudr1", "baseline_predictions") / "fraudr1_official_judge_predictions.jsonl"
     done: dict[str, dict] = {}
     if os.path.exists(out_path):
         for line in open(out_path, encoding="utf-8"):
@@ -191,8 +192,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--concurrency", type=int, default=CONCURRENCY)
+    parser.add_argument("--input", default="", help="jsonl input path override")
+    parser.add_argument("--out", default="", help="jsonl output path override")
     args = parser.parse_args()
-    asyncio.run(generate(args.limit, args.concurrency))
+    asyncio.run(generate(args.limit, args.concurrency, args.input, args.out))
 
 
 if __name__ == "__main__":

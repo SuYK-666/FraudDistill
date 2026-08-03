@@ -1,20 +1,24 @@
 \begin{table}[t]
 \centering
 \small
-\begin{tabular}{l l r r c c c c c c}
+\begin{tabular}{l l r r r c c c c c c}
 \toprule
-Dataset & Method & N\textsubscript{pool} & N\textsubscript{gold} & Acc. & Prec. & Rec. & M-F1 & FPR$\downarrow$ & AUPRC \\
+Dataset & Method & N\textsubscript{pool} & N\textsubscript{gold} & N+ & Acc. & Prec. & Rec. & M-F1 & FPR$\downarrow$ & AUPRC \\
 \midrule
-Fraud-R1 & Fraud-R1 Official Judge & 8564 & 600 & 0.967 & 0.048 & 1.000 & 0.529 & 0.033 & 0.062 \\
-Fraud-R1 & \textbf{FraudDistill-MAT} & 8564 & 600 & 0.998 & 0.000 & 0.000 & 0.500 & 0.000 & 0.003 \\
-OR-Bench & OR-Bench Official Checker & 3000 & 600 & 0.658 & 0.120 & 0.650 & 0.431 & 0.341 & 0.123 \\
-OR-Bench & \textbf{FraudDistill-MAT} & 3000 & 600 & 0.943 & 1.000 & 0.150 & 0.630 & 0.000 & 0.268 \\
-Do-Not-Answer & Longformer-Harmful & 5634 & 5634 & 0.995 & 0.966 & 0.886 & 0.962 & 0.001 & 0.869 \\
-Do-Not-Answer & \textbf{FraudDistill-MAT} & 5634 & 5634 & 0.905 & 0.102 & 0.228 & 0.535 & 0.071 & 0.126 \\
-Aegis 2.0 & NemoGuard-8B & 1964 & 140 & 0.921 & 0.848 & 0.824 & 0.894 & 0.047 & 0.834 \\
-Aegis 2.0 & \textbf{FraudDistill-MAT} & 1964 & 140 & 0.771 & 0.522 & 0.706 & 0.696 & 0.208 & 0.538 \\
+Fraud-R1$^*$ & Official Judge (GPTCheck) & 600 & 600 & 300 & 0.505 & 0.508 & 0.303 & 0.543 & 0.293 & — \\
+Fraud-R1$^*$ & FraudDistill-MAT & 600 & 600 & 300 & 0.850 & 0.790 & 0.953 & 0.805 & 0.253 & 0.847 \\
+Fraud-R1$^*$ & \textbf{Budgeted Cascade} & 600 & 600 & 300 & 0.868 & 0.818 & 0.947 & 0.834 & 0.210 & 0.888 \\
+OR-Bench & Official Response Checker & 3000 & 600 & 40 & 0.658 & 0.120 & 0.650 & 0.431 & 0.341 & — \\
+OR-Bench & FraudDistill-MAT & 3000 & 600 & 40 & 0.943 & 1.000 & 0.150 & 0.630 & 0.000 & 0.268 \\
+OR-Bench & \textbf{Budgeted Cascade} & 3000 & 600 & 40 & 0.930 & 0.479 & 0.575 & 0.739 & 0.045 & 0.065 \\
+Do-Not-Answer & Longformer-Harmful & 5634 & 5634 & 193 & 0.995 & 0.966 & 0.886 & 0.962 & 0.001 & 0.966 \\
+Do-Not-Answer & FraudDistill-MAT & 5634 & 5634 & 193 & 0.905 & 0.102 & 0.228 & 0.535 & 0.071 & 0.126 \\
+Do-Not-Answer & \textbf{Budgeted Cascade} & 5634 & 5634 & 193 & 0.921 & 0.117 & 0.197 & 0.547 & 0.053 & 0.363 \\
+Aegis 2.0$^\dagger$ & NemoGuard-8B (partial) & 813 & 813 & 394 & 0.808 & 0.872 & 0.708 & 0.842 & 0.098 & — \\
+Aegis 2.0$^\dagger$ & FraudDistill-MAT & 1964 & 813 & 394 & 0.768 & 0.779 & 0.726 & 0.779 & 0.193 & 0.763 \\
+Aegis 2.0$^\dagger$ & \textbf{Budgeted Cascade} & 813 & 813 & 394 & 0.677 & 0.874 & 0.388 & 0.743 & 0.053 & 0.773 \\
 \bottomrule
 \end{tabular}
-\caption{Exp2 cross-benchmark behavior-error detection on identical (q, y) pairs. Fraud-R1 and OR-Bench metrics use blinded audit gold; Do-Not-Answer and Aegis use official labels.}
-\label{tab:exp2}
+\caption{Budgeted-cascade behavior-error detection vs prior baselines and the four-agent MAT on identical (q, y) pairs. $^*$Fraud-R1 uses the new balanced diagnostic gold (300 positives). $\dagger$Aegis uses the 813 valid q+y rows (official ``None'' answers excluded by data cleaning). NemoGuard row is partial until the background run completes.}
+\label{tab:exp2_v2}
 \end{table}

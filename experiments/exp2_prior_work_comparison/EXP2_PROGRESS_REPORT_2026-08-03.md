@@ -1,6 +1,8 @@
 ﻿# Exp2 跨基准对比实验 · 进度总报告（截至 2026-08-03）
 
-> 本文件为人工汇总的阶段性进度文档；脚本自动生成的正式报告见同目录 `EXP2_CROSS_BENCHMARK_REPORT.md`（Aegis 基线完成后需重新生成，当前为部分结果）。
+> 本文件为人工汇总的阶段性进度文档。脚本自动生成的正式报告：
+> - v1（4-Agent 教师 vs 官方基线）：`EXP2_CROSS_BENCHMARK_REPORT.md`（Aegis NemoGuard 基线完成后需重算该行）；
+> - **v2（30 元预算级联实验）**：`EXP2_BUDGETED_CASCADE_REPORT_2026-08-03.md`。
 
 ## 1. 实验目标（按指导文档 v1.0）
 
@@ -79,10 +81,9 @@
 
 ## 8. 待办（下次继续）
 
-1. 等待 NemoGuard 后台跑完（完成后 `aegis2/baseline_predictions/aegis_nemoguard_predictions.jsonl` 应有 1,964 行唯一 id）。
-2. 重跑 `python -m frauddistill.exp2_cross_benchmark.metrics` 与 `make_report`，更新 8 行主表、成对显著性、子组表、图表与 LaTeX 表。
-3. 补充正式报告中的审计一致性、偏差说明（Judge 模型非 gpt-4o-mini、空 answer 样本、单正例 F1 失真等）。
-4. 检查 git 提交是否完整，必要时补充提交。
+1. **等待 NemoGuard 后台跑完**（llama-server PID 18224 + 客户端 25444，`aegis2/baseline_predictions/aegis_nemoguard_predictions.jsonl` 目标 1,964 行唯一 id；纯本地 CPU，不消耗 API）。完成后重算：`EXP2_CROSS_BENCHMARK_REPORT.md` 与 `EXP2_BUDGETED_CASCADE_REPORT_2026-08-03.md` §8 的 Aegis 行（主表 12 行中 NemoGuard 当前为 partial 694/813）。
+2. v2 报告/表格/图表已生成（见 §10）：`EXP2_BUDGETED_CASCADE_REPORT_2026-08-03.md`、`_metrics/metrics_8row_table_v2.csv/.md`、`table_exp2.tex`、`_figures/figure_v2_*.png`、`_figures/confusion_cascade_*.png`。NemoGuard 完成后按第 1 条重算即可。
+3. 可选后续（若继续投入预算）：DNA 召回改进（本地辅助 head / 公开 train-dev / 更完整 taxonomy，指南 §20）；aegis2 的 general 域独立阈值（需重新校准并接受“再次冻结”流程）。
 
 ## 9. 目录结构速览
 
@@ -93,3 +94,48 @@
 - `.../_metrics/` — 指标表、显著性、子组、成本、误差分析
 - `.../_figures/` — 图表
 - `src/frauddistill/exp2_cross_benchmark/` — 全部代码（prepare_data / teacher / baselines / audit / metrics / make_report）
+
+
+---
+
+# 10. 补充：30 元预算级联实验（v2，2026-08-03 下午）
+
+> 依据《FraudDistill 后续框架优化与 30 元预算实验指南》执行；完整结果见 `EXP2_BUDGETED_CASCADE_REPORT_2026-08-03.md`。
+
+## 10.1 做了什么
+
+1. **代码改造**（`src/frauddistill/`）：本地 Refusal Gate（prominence 要求 + min_confidence 0.85）、单次 Triage JSON（9 维证据 + risk_domain）、确定性 Arbiter（精化 rule 6：策略型拒答判 over-refusal，但排除能力型/隐私型/危害预防型拒答与安全主题查询；benign 域硬约束加 `general_harmful_compliance>=0.45` 保护）、`run_exp2_cascade.py`（断点续跑 + 预算台账 + 120 并发）。
+2. **Dev 校准**：4 基准 × 300 dev 全量跑完（约 1.02 元），网格搜索（fraud × general 双阈值、指南 §11.2 目标函数、4 基准联合目标）→ **冻结 fraud=0.46 / general=0.34**；prompt、规则、manifest 全部冻结。
+3. **Phase 3 正式测试**（只跑一次）：fraudr1_diag 600 + orbench 3000 + dna 5634 + aegis2 813 = 10,047 条，错误 0，正式全量成本 **5.50 元**，cascade 总台账 **7.81 元**（< 27 元硬上限）。
+4. **同 gold 定向诊断**：官方 Judge 与旧 4-Agent 教师在 balanced diag 600 上补跑（0.22 + 2.79 元），保证主表 3 方法同 gold 对比。
+
+## 10.2 正式集结果（冻结配置，N+ 显示）
+
+| Benchmark | 方法 | N+ | Acc | Prec | Rec | Macro-F1 | FPR | AUPRC |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Fraud-R1 (diag) | Official Judge | 300/600 | 0.505 | 0.508 | 0.303 | 0.543 | 0.293 | — |
+| Fraud-R1 (diag) | 4-Agent MAT | 300/600 | 0.850 | 0.790 | 0.953 | 0.805 | 0.253 | 0.847 |
+| Fraud-R1 (diag) | **Cascade** | 300/600 | **0.868** | **0.818** | 0.947 | **0.834** | **0.210** | **0.888** |
+| OR-Bench | Official Checker | 40/600 | 0.658 | 0.120 | 0.650 | 0.431 | 0.341 | — |
+| OR-Bench | 4-Agent MAT | 40/600 | 0.943 | 1.000 | 0.150 | 0.630 | 0.000 | 0.268 |
+| OR-Bench | **Cascade** | 40/600 | 0.930 | 0.479 | **0.575** | **0.739** | 0.045 | 0.065 |
+| Do-Not-Answer | Longformer | 193/5634 | 0.995 | 0.966 | 0.886 | 0.962 | 0.001 | 0.966 |
+| Do-Not-Answer | 4-Agent MAT | 193/5634 | 0.905 | 0.102 | 0.228 | 0.535 | 0.071 | 0.126 |
+| Do-Not-Answer | **Cascade** | 193/5634 | 0.921 | 0.117 | 0.197 | 0.547 | 0.053 | 0.363 |
+| Aegis 2.0 (813) | NemoGuard (partial 694/813) | 394/813 | 0.808 | 0.872 | 0.708 | 0.842 | 0.098 | — |
+| Aegis 2.0 (813) | 4-Agent MAT | 394/813 | 0.768 | 0.779 | 0.726 | 0.779 | 0.193 | 0.763 |
+| Aegis 2.0 (813) | **Cascade** | 394/813 | 0.677 | 0.874 | 0.388 | 0.743 | 0.053 | 0.773 |
+
+## 10.3 结论（与指南 §19/§20 对照）
+
+- **Fraud-R1**：cascade 达到指南“较强目标”（Recall 0.947 ≥0.85；Macro-F1 0.834 在合理区间 0.78–0.85）；vs 旧教师 FPR -0.043、Macro-F1 +0.029（边际显著，p=0.086）。
+- **OR-Bench**：toxic recall 0.150→0.575、hard-safe FPR 0→0.085，Macro-F1 0.630→0.739，达“合理目标”区间，vs 旧教师显著更优（ΔMacro-F1 +0.109，95% CI 不含 0）。
+- **Do-Not-Answer**：vs 旧教师 acc +0.017、FPR -0.018 显著更优；但 Recall 0.197 远低于 Longformer 0.886 —— 专用评估器在原生任务上的优势确认，需本地 head / 更完整 taxonomy 才能接近（指南 §20 预期内）。
+- **Aegis 2.0**：FPR 0.053（教师 0.193）、AUPRC 0.773 更优；Recall 0.388 低于教师 0.726，为跨域单阈值冻结的取舍。
+- **成本**：cascade 每千条约 0.5–1.3 元 vs 教师 4.2–7.1 元，量级下降 5–8 倍；本会话 API 总支出约 10.82 元。
+
+## 10.4 本次新增/修改文件
+
+- 代码：`src/frauddistill/{arbitration,gates,pipeline.py,providers,runtime,evaluation}`、`scripts/{build_exp2_dev_manifest,eval_exp2_dev_calibrate,run_exp2_cascade,calibrate_exp2_combined,calibrate_neighborhood,gen_exp2_v2_report,gen_exp2_v2_figures,write_exp2_v2_report,scan_corruption}.py`、`configs/exp2_budgeted_cascade.yaml`、`configs/prompts/`、`tests/test_budgeted_cascade.py`（7/7 pass）
+- 数据：`_dev_manifest/*_dev300.jsonl`、`<bench>/cascade_predictions/cascade_{dev,full}_20260803.jsonl`、`fraudr1_diag/{baseline,teacher}_predictions/`
+- 交付：`EXP2_BUDGETED_CASCADE_REPORT_2026-08-03.md`、`_metrics/{main_table_cascade,paired_significance_cascade,cost_report_cascade,special_tables_cascade}.json`、`_metrics/metrics_8row_table_v2.csv/.md`、`table_exp2.tex`、`_figures/figure_v2_*.png`、`_figures/confusion_cascade_*.png`

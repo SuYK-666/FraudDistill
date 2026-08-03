@@ -1,8 +1,14 @@
 ﻿import asyncio
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import api_keys  # noqa: E402  (local gitignored file, see api_keys.template.py)
+
 from openai import AsyncOpenAI
 
 async def main():
-    client = AsyncOpenAI(api_key="sk-e63265dc4b06402599822fd17203256f", base_url="https://api.deepseek.com", timeout=60)
+    client = AsyncOpenAI(api_key=api_keys.DEEPSEEK_API_KEY, base_url=api_keys.DEEPSEEK_BASE_URL, timeout=60)
     try:
         resp = await client.chat.completions.create(
             model="deepseek-v4-flash",

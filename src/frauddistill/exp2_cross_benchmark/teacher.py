@@ -13,6 +13,7 @@ import os
 import re
 import time
 from typing import Any
+from pathlib import Path
 
 from frauddistill.exp2_cross_benchmark.api_client import ApiConfig, CostLedger, complete_json, make_client
 from frauddistill.exp2_cross_benchmark.paths import CONCURRENCY, MODEL_TEACHER, out_dir
@@ -149,7 +150,7 @@ def make_record(row, user_prompt, trunc_meta, specialist, arb) -> dict:
     return {
         "id": row["id"],
         "benchmark": row["benchmark"],
-        "original_id": row["original_id"],
+        "original_id": row.get("original_id"),
         "group_id": row["group_id"],
         "query": row["query"],
         "answer": row["answer"],
@@ -179,13 +180,13 @@ def make_record(row, user_prompt, trunc_meta, specialist, arb) -> dict:
     }
 
 
-async def generate(benchmark: str, limit: int | None = None, concurrency: int = CONCURRENCY, skip_failed: bool = True):
-    unified = out_dir(benchmark, "unified") / f"{benchmark}_eval.jsonl"
+async def generate(benchmark: str, limit: int | None = None, concurrency: int = CONCURRENCY, skip_failed: bool = True, input_path: str = "", out_path_override: str = ""):
+    unified = out_dir(benchmark, "unified") / f"{benchmark}_eval.jsonl" if not input_path else input_path
     rows = [json.loads(line) for line in open(unified, encoding="utf-8")]
-    rows = [r for r in rows if r.get("answer_status") == "frozen"]  # allow empty official answers (e.g. aegis2)
+    rows = [r for r in rows if r.get("answer_status", "frozen") == "frozen"]  # allow empty official answers (e.g. aegis2)
     if limit:
         rows = rows[:limit]
-    out_path = out_dir(benchmark, "teacher_predictions") / f"{benchmark}_teacher_predictions.jsonl"
+    out_path = Path(out_path_override) if out_path_override else out_dir(benchmark, "teacher_predictions") / f"{benchmark}_teacher_predictions.jsonl"
     done: dict[str, dict] = {}
     if os.path.exists(out_path):
         for line in open(out_path, encoding="utf-8"):
@@ -229,8 +230,10 @@ def main():
     parser.add_argument("--benchmark", choices=["fraudr1", "orbench", "do_not_answer", "aegis2"], required=True)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--concurrency", type=int, default=CONCURRENCY)
+    parser.add_argument("--input", default="", help="jsonl input path override")
+    parser.add_argument("--out", default="", help="jsonl output path override")
     args = parser.parse_args()
-    asyncio.run(generate(args.benchmark, args.limit, args.concurrency))
+    asyncio.run(generate(args.benchmark, args.limit, args.concurrency, True, args.input, args.out))
 
 
 if __name__ == "__main__":

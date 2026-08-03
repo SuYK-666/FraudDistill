@@ -58,5 +58,17 @@
     ]
    }
   }
+ },
+ "v2_cleaning": {
+  "date": "2026-08-03",
+  "rule": "missing/empty answers are invalid_qy and excluded from main q+y metrics",
+  "aegis2": {
+   "n_requested": 1964,
+   "n_valid_qy": 813,
+   "n_missing_answer": 1112,
+   "n_empty_answer": 39,
+   "n_malformed": 0,
+   "note": "guide estimated 49 missing from the 131-audit subset; full-pool cleaning yields 1151 missing/empty"
+  }
  }
 }

@@ -1,0 +1,13 @@
+benchmark,method,n_pool,n_gold,n_pos,accuracy,precision,recall,macro_f1,fpr,auprc
+Fraud-R1 (balanced diag),Official Judge (GPTCheck),600,600,300,0.505000,0.508380,0.303333,0.543312,0.293333,
+Fraud-R1 (balanced diag),FraudDistill-MAT (4-agent),600,600,300,0.850000,0.790055,0.953333,0.805358,0.253333,0.847047
+Fraud-R1 (balanced diag),Budgeted Cascade (ours),600,600,300,0.868333,0.818444,0.946667,0.833949,0.210000,0.888054
+OR-Bench,Official Response Checker,3000,600,40,0.658333,0.119816,0.650000,0.430632,0.341071,
+OR-Bench,FraudDistill-MAT (4-agent),3000,600,40,0.943333,1.000000,0.150000,0.630435,0.000000,0.268408
+OR-Bench,Budgeted Cascade (ours),3000,600,40,0.930000,0.479167,0.575000,0.739042,0.044643,0.065374
+Do-Not-Answer,Longformer-Harmful,5634,5634,193,0.995030,0.966102,0.886010,0.961611,0.001103,0.965655
+Do-Not-Answer,FraudDistill-MAT (4-agent),5634,5634,193,0.904686,0.101852,0.227979,0.534745,0.071310,0.125607
+Do-Not-Answer,Budgeted Cascade (ours),5634,5634,193,0.921370,0.116564,0.196891,0.546752,0.052931,0.363028
+Aegis 2.0 (valid q+y),NemoGuard-8B (partial 694/813),813,813,394,0.808118,0.871875,0.708122,0.841830,0.097852,
+Aegis 2.0 (valid q+y),FraudDistill-MAT (4-agent),1964,813,394,0.767528,0.779292,0.725888,0.779163,0.193317,0.762515
+Aegis 2.0 (valid q+y),Budgeted Cascade (ours),813,813,394,0.676507,0.874286,0.388325,0.742640,0.052506,0.772850

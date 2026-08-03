@@ -42,5 +42,8 @@ experiments/**/answers/
 experiments/**/teacher_predictions/
 experiments/**/baseline_predictions/
 experiments/**/human_audit/*_audit_sample.jsonl
+experiments/**/cascade_predictions/
+experiments/**/diagnostic/
+experiments/**/_dev_manifest/
 experiments/**/logs_*.txt
 experiments/**/_metrics/error_analysis.jsonl

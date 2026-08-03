@@ -1,0 +1,135 @@
+{
+  "fraudr1_vs_judge": {
+    "delta_acc": 0.3633,
+    "delta_macro_f1": 0.2906,
+    "delta_fpr": -0.0833,
+    "ci95_acc": [
+      0.3099,
+      0.4119
+    ],
+    "ci95_macro_f1": [
+      0.2365,
+      0.3393
+    ],
+    "ci95_fpr": [
+      -0.1489,
+      -0.0172
+    ],
+    "mcnemar_p": 0.0,
+    "n_discordant": 308
+  },
+  "fraudr1_vs_teacher": {
+    "delta_acc": 0.0183,
+    "delta_macro_f1": 0.0286,
+    "delta_fpr": -0.0433,
+    "ci95_acc": [
+      -0.0099,
+      0.0461
+    ],
+    "ci95_macro_f1": [
+      -0.0048,
+      0.0605
+    ],
+    "ci95_fpr": [
+      -0.0879,
+      0.0033
+    ],
+    "mcnemar_p": 0.086437,
+    "n_discordant": 67
+  },
+  "orbench_vs_checker": {
+    "delta_acc": 0.2717,
+    "delta_macro_f1": 0.3084,
+    "delta_fpr": -0.2964,
+    "ci95_acc": [
+      0.2317,
+      0.3117
+    ],
+    "ci95_macro_f1": [
+      0.237,
+      0.3749
+    ],
+    "ci95_fpr": [
+      -0.3351,
+      -0.2587
+    ],
+    "mcnemar_p": 0.0,
+    "n_discordant": 199
+  },
+  "orbench_vs_teacher": {
+    "delta_acc": -0.0133,
+    "delta_macro_f1": 0.1086,
+    "delta_fpr": 0.0446,
+    "ci95_acc": [
+      -0.035,
+      0.0067
+    ],
+    "ci95_macro_f1": [
+      0.0108,
+      0.2021
+    ],
+    "ci95_fpr": [
+      0.0286,
+      0.0621
+    ],
+    "mcnemar_p": 0.0,
+    "n_discordant": 42
+  },
+  "dna_vs_longformer": {
+    "delta_acc": -0.0737,
+    "delta_macro_f1": -0.4149,
+    "delta_fpr": 0.0518,
+    "ci95_acc": [
+      -0.0834,
+      -0.0646
+    ],
+    "ci95_macro_f1": [
+      -0.4432,
+      -0.3856
+    ],
+    "ci95_fpr": [
+      0.0447,
+      0.0593
+    ],
+    "mcnemar_p": 0.0,
+    "n_discordant": 439
+  },
+  "dna_vs_teacher": {
+    "delta_acc": 0.0167,
+    "delta_macro_f1": 0.012,
+    "delta_fpr": -0.0184,
+    "ci95_acc": [
+      0.006,
+      0.0266
+    ],
+    "ci95_macro_f1": [
+      -0.0124,
+      0.0353
+    ],
+    "ci95_fpr": [
+      -0.0284,
+      -0.0078
+    ],
+    "mcnemar_p": 9e-06,
+    "n_discordant": 560
+  },
+  "aegis2_vs_teacher": {
+    "delta_acc": -0.091,
+    "delta_macro_f1": -0.0365,
+    "delta_fpr": -0.1408,
+    "ci95_acc": [
+      -0.1255,
+      -0.0554
+    ],
+    "ci95_macro_f1": [
+      -0.071,
+      -0.0016
+    ],
+    "ci95_fpr": [
+      -0.1785,
+      -0.1024
+    ],
+    "mcnemar_p": 0.0,
+    "n_discordant": 234
+  }
+}
