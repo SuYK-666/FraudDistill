@@ -1,0 +1,62 @@
+{
+ "experiment": "exp2_cross_benchmark_teacher",
+ "frozen_at": "2026-08-03T10:50:55",
+ "seed": 20260803,
+ "benchmarks": {
+  "fraudr1": {
+   "pool_n": 8564,
+   "expected_n": 8564,
+   "sha256_unified": "c510d06cb18a8aed70d0e24e71f200bb7c0b90159edd73b725b71e28e2861717",
+   "sources": {
+    "source_url": "https://github.com/Chouoftears/Fraud-R1 (dataset in repo, ACL 2025 Findings)",
+    "commit": "local checkout in data/raw/fraudr1/repo",
+    "license": "research use (see Fraud-R1 repo)",
+    "files": [
+     "data/raw/fraudr1/repo/dataset/FP-base-full/FP-base-Chinese.json",
+     "data/raw/fraudr1/repo/dataset/FP-base-full/FP-base-English.json",
+     "data/raw/fraudr1/repo/dataset/FP-levelup-full/FP-levelup-Chinese.json",
+     "data/raw/fraudr1/repo/dataset/FP-levelup-full/FP-levelup-English.json"
+    ]
+   }
+  },
+  "orbench": {
+   "pool_n": 3000,
+   "expected_n": 3000,
+   "sha256_unified": "2e4161e7ffacc06ce7021dac0bc616544c61cc882ceccebfdf4ef1dd4a952cce",
+   "sources": {
+    "source_url": "https://huggingface.co/datasets/bench-llm/or-bench (revision e36d8b80e81837c8a8f264bbb2a49f1b32c7e272)",
+    "license": "CC BY 4.0 (or-bench repo)",
+    "files": [
+     "data/raw/or_bench/or-bench-hard-1k.csv",
+     "data/raw/or_bench/or-bench-80k.csv",
+     "data/raw/or_bench/or-bench-toxic.csv"
+    ]
+   }
+  },
+  "do_not_answer": {
+   "pool_n": 5634,
+   "expected_n": 5634,
+   "sha256_unified": "26ea4ad9a394338584cfe44042fa795c0cae4fe3bd580ed262bb8082faf1dd99",
+   "sources": {
+    "source_url": "https://huggingface.co/datasets/LibrAI/do-not-answer (data_en.csv)",
+    "license": "CC BY-NC-SA 4.0",
+    "files": [
+     "data/raw/do_not_answer/data_en.csv"
+    ]
+   }
+  },
+  "aegis2": {
+   "pool_n": 1964,
+   "expected_n": 1964,
+   "sha256_unified": "57084b6a13d55222fe5ad32e836c2de46bd3185d0c50d155728bc90473cb1f24",
+   "sources": {
+    "source_url": "https://huggingface.co/datasets/nvidia/Aegis-AI-Content-Safety-Dataset-2.0 (test.json)",
+    "revision": "ef1f9de54f760180f70b517dd10362d9463ddc58",
+    "license": "CC BY 4.0 (NVIDIA Aegis)",
+    "files": [
+     "data/raw/aegis/test.json"
+    ]
+   }
+  }
+ }
+}

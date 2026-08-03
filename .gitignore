@@ -35,3 +35,12 @@ mlruns/
 .hf_cache/
 api_keys*.py
 !api_keys.template.py
+
+# exp2: raw q+y content stays private (regenerable from public datasets); keep metrics/reports/audit labels
+experiments/**/unified/
+experiments/**/answers/
+experiments/**/teacher_predictions/
+experiments/**/baseline_predictions/
+experiments/**/human_audit/*_audit_sample.jsonl
+experiments/**/logs_*.txt
+experiments/**/_metrics/error_analysis.jsonl

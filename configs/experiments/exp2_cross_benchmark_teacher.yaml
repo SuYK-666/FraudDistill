@@ -1,0 +1,112 @@
+﻿experiment:
+  name: exp2_cross_benchmark_teacher
+  seed: 20260803
+  task: behavior_error_detection
+  input_mode: q_plus_y
+  use_student: false
+  preregistration_required: true
+
+benchmarks:
+  fraudr1:
+    enabled: true
+    mode: full                 # full | budget
+    budget_n: 3200
+    human_gold_n: 600
+    group_key: group_id
+    ambiguous_policy: positive
+    sensitivity_exclude_ambiguous: true
+    pool: 8564
+
+  orbench:
+    enabled: true
+    hard_safe_n: 1000
+    regular_safe_n: 1400
+    toxic_n: 600
+    human_gold_n: 600
+    group_key: group_id
+    pool: 3000
+
+  do_not_answer:
+    enabled: true
+    flatten_all_six_responses: true
+    expected_n: 5634
+    group_key: group_id
+    pool: 5634
+
+  aegis2:
+    enabled: true
+    split: test
+    expected_n: 1964
+    revision: "ef1f9de54f760180f70b517dd10362d9463ddc58"
+    group_key: group_id
+    pool: 1964
+
+teacher:
+  provider: deepseek
+  model: deepseek-v4-flash
+  thinking: false
+  temperature: 0.0
+  top_p: 1.0
+  response_format: json_object
+  specialist_max_output_tokens: 160
+  arbiter_max_output_tokens: 220
+  retries: 2
+  timeout_seconds: 90
+  hide_benchmark_metadata: true
+  cache_by_content_hash: true
+  concurrency: 120
+
+target_model:
+  provider: qwen
+  model: qwen-plus
+  temperature: 0.2
+  max_tokens: 1024
+
+baselines:
+  fraudr1:
+    name: Fraud-R1 Official Judge (GPTCheck protocol)
+    protocol_model: deepseek-v4-flash
+    note: "official prompt reused; judge model is deepseek-v4-flash instead of gpt-4o-mini (no OpenAI key)"
+  orbench:
+    name: OR-Bench Official Response Checker
+    protocol_model: deepseek-v4-flash
+    note: "official response_checking_prompt reused; checker model is deepseek-v4-flash instead of gpt-4-turbo"
+  do_not_answer:
+    name: LibrAI/longformer-harmful-ro
+    model_revision: dc75af6212079ccbfbb06a1705f6c458e39834f3
+    input_format: "question + [SEP] + response"
+    max_length: 512
+  aegis2:
+    name: Llama-3.1-NemoGuard-8B-ContentSafety (merged LoRA, GGUF Q4_K_M, llama.cpp CPU)
+    adapter_revision: ef1f9de54f760180f70b517dd10362d9463ddc58
+    merged_revision: "oneonlee/llama-3.1-nemoguard-8b-content-safety-merged"
+
+thresholds:
+  primary: 0.5
+  low_fpr_target: 0.05
+  tune_on_test: false
+  benchmark_specific_primary: false
+
+metrics:
+  primary:
+    - accuracy
+    - precision
+    - recall
+    - macro_f1
+    - fpr
+    - auprc
+  secondary:
+    - balanced_accuracy
+    - mcc
+    - fnr
+    - auroc
+    - cost_per_1k
+  bootstrap_repetitions: 10000
+  confidence_level: 0.95
+  clustered: true
+  multiple_testing: holm
+
+safety:
+  redact_high_risk_text_in_reports: true
+  max_evidence_chars: 160
+  save_raw_outputs_private_only: true
