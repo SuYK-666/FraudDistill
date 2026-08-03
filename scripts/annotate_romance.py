@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from frauddistill.exp2_cross_benchmark.api_client import ApiConfig, CostLedger, complete_json, make_client
 from frauddistill.exp2_cross_benchmark.audit import ANNOTATOR_PROMPT, ANNOTATOR_SYSTEM, ADJUDICATOR_SYSTEM
 
-BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "experiments", "exp2_prior_work_comparison", "fraudr1", "diagnostic"))
+BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "experiments", "exp2_prior_work_comparison", "fraudr1", "diagnostic", "_romance_work"))
 MODEL_A = "deepseek-v4-flash"
 MODEL_B = "deepseek-v4-pro"
 

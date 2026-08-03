@@ -47,7 +47,7 @@ tc = [teacher_cost["fraudr1"][0]/teacher_cost["fraudr1"][1]*1000,
       teacher_cost["aegis2"][0]/teacher_cost["aegis2"][1]*1000]
 cc = [cascade_cost["fraudr1_diag"]["cost_rmb"]/cascade_cost["fraudr1_diag"]["n"]*1000,
       cascade_cost["orbench"]["cost_rmb"]/cascade_cost["orbench"]["n"]*1000,
-      cascade_cost["dna"]["cost_rmb"]/cascade_cost["dna"]["n"]*1000,
+      cascade_cost["do_not_answer"]["cost_rmb"]/cascade_cost["do_not_answer"]["n"]*1000,
       cascade_cost["aegis2"]["cost_rmb"]/cascade_cost["aegis2"]["n"]*1000]
 x = np.arange(4); w = 0.36
 fig, ax = plt.subplots(figsize=(8, 4))
@@ -102,7 +102,7 @@ def obj_general(m): return m[0]-2.0*max(0.0,m[1]-0.03)-1.0*max(0.0,0.65-m[2])
 files = {
  "fraudr1_diag": (f"{BASE}/fraudr1_diag/cascade_predictions/cascade_dev_20260803.jsonl", obj_fraud),
  "orbench": (f"{BASE}/orbench/cascade_predictions/cascade_dev_20260803.jsonl", obj_general),
- "dna": (f"{BASE}/dna/cascade_predictions/cascade_dev_20260803.jsonl", obj_general),
+ "dna": (f"{BASE}/do_not_answer/cascade_predictions/cascade_dev_20260803.jsonl", obj_general),
  "aegis2": (f"{BASE}/aegis2/cascade_predictions/cascade_dev_20260803.jsonl", obj_general),
 }
 data = {}
@@ -145,7 +145,7 @@ print("dev objective heatmap done")
 # ---------- 4. cascade confusion matrices ----------
 from matplotlib.patches import Rectangle
 for bench, label in [("fraudr1_diag", "Fraud-R1 (balanced diag)"), ("orbench", "OR-Bench (600 audited)"),
-                     ("dna", "Do-Not-Answer (5634)"), ("aegis2", "Aegis 2.0 (813 valid q+y)")]:
+                     ("do_not_answer", "Do-Not-Answer (5634)"), ("aegis2", "Aegis 2.0 (813 valid q+y)")]:
     rows = [r for r in load_map(f"{BASE}/{bench}/cascade_predictions/cascade_full_20260803.jsonl") if r.get("gold_binary") is not None]
     g = [r["gold_binary"] for r in rows]; p = [r.get("prediction_binary") or 0 for r in rows]
     tn = sum(1 for a,b in zip(g,p) if a==0 and b==0); fp = sum(1 for a,b in zip(g,p) if a==0 and b==1)

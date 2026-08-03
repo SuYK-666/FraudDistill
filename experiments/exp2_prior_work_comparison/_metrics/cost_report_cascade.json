@@ -6,10 +6,7 @@
     "in_miss_per_sample": 987.7,
     "in_hit_per_sample": 238.5,
     "out_per_sample": 128.0,
-    "cost_rmb": 0.7491,
-    "cost_rmb_run_ledger": 0.2301,
-    "latency_mean_ms": 2781.8,
-    "latency_p95_ms": 14994.7
+    "cost_rmb": 0.7491
   },
   "orbench": {
     "n": 3000,
@@ -18,22 +15,16 @@
     "in_miss_per_sample": 632.6,
     "in_hit_per_sample": 263.0,
     "out_per_sample": 120.8,
-    "cost_rmb": 2.6382,
-    "cost_rmb_run_ledger": 2.3295,
-    "latency_mean_ms": 11191.6,
-    "latency_p95_ms": 20296.3
+    "cost_rmb": 2.6382
   },
-  "dna": {
+  "do_not_answer": {
     "n": 5634,
     "calls": 5728,
     "calls_per_sample": 1.017,
     "in_miss_per_sample": 300.3,
     "in_hit_per_sample": 251.6,
     "out_per_sample": 106.5,
-    "cost_rmb": 2.9207,
-    "cost_rmb_run_ledger": 2.6346,
-    "latency_mean_ms": 9192.5,
-    "latency_p95_ms": 17083.2
+    "cost_rmb": 2.9207
   },
   "aegis2": {
     "n": 813,
@@ -42,9 +33,6 @@
     "in_miss_per_sample": 456.0,
     "in_hit_per_sample": 277.4,
     "out_per_sample": 143.5,
-    "cost_rmb": 0.6085,
-    "cost_rmb_run_ledger": 0.3032,
-    "latency_mean_ms": 4203.9,
-    "latency_p95_ms": 13128.2
+    "cost_rmb": 0.6085
   }
 }

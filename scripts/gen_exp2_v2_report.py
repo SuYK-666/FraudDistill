@@ -90,7 +90,7 @@ P = {}
 P["cascade"] = {
     "fraudr1_diag": load_map(f"{BASE}/fraudr1_diag/cascade_predictions/cascade_full_20260803.jsonl"),
     "orbench": load_map(f"{BASE}/orbench/cascade_predictions/cascade_full_20260803.jsonl"),
-    "dna": load_map(f"{BASE}/dna/cascade_predictions/cascade_full_20260803.jsonl"),
+    "dna": load_map(f"{BASE}/do_not_answer/cascade_predictions/cascade_full_20260803.jsonl"),
     "aegis2": load_map(f"{BASE}/aegis2/cascade_predictions/cascade_full_20260803.jsonl"),
 }
 P["judge"] = load_map(f"{BASE}/fraudr1_diag/baseline_predictions/fraudr1_official_judge_predictions.jsonl")
@@ -195,7 +195,7 @@ for name, src in [("judge", P["judge"]), ("teacher", P["teacher_diag"]), ("casca
 
 print("\n=== COST (cascade) ===")
 cost_rows = {}
-for bench in ["fraudr1_diag", "orbench", "dna", "aegis2"]:
+for bench in ["fraudr1_diag", "orbench", "do_not_answer", "aegis2"]:
     rows = load(f"{BASE}/{bench}/cascade_predictions/cascade_full_20260803.jsonl")
     calls = sum(r.get("usage", {}).get("calls", 0) for r in rows)
     out_t = sum(r.get("usage", {}).get("output", 0) for r in rows)

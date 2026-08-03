@@ -182,3 +182,4 @@ python scripts/gen_exp2_v2_figures.py
 - Dev：`_dev_manifest/*_dev300.jsonl`、`<bench>/cascade_predictions/cascade_dev_20260803.jsonl`
 - 指标/图表：`_metrics/main_table_cascade.json`、`_metrics/paired_significance_cascade.json`、`_metrics/cost_report_cascade.json`、`_metrics/special_tables_cascade.json`、`_metrics/metrics_8row_table_v2.csv/.md`、`table_exp2.tex`、`_figures/figure_v2_*.png`、`_figures/confusion_cascade_*.png`
 - 预算台账：`outputs/api_cache_exp2_cascade/budget_state.json`
+- 归档：弃用运行日志、v1 抽样 ID 列表、v2 pilot 预测已移至 `archive/exp2_prior_work_comparison/`（README 见该目录）；`build_exp2_dev_manifest.py` 会从归档读取 pilot ID 用于 dev 排除

@@ -11,11 +11,12 @@ import json
 import os
 
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "experiments", "exp2_prior_work_comparison", "fraudr1", "diagnostic"))
+WORK = os.path.join(BASE, "_romance_work")  # romance annotation/synthesis intermediates
 
 
-def load(path):
+def load(path, base=BASE):
     rows = []
-    with open(os.path.join(BASE, path), encoding="utf-8") as f:
+    with open(os.path.join(base, path), encoding="utf-8") as f:
         for line in f:
             rows.append(json.loads(line))
     return rows
@@ -28,14 +29,14 @@ def lang_of(row):
 
 def main():
     e1 = load("balanced_e1_selected.jsonl")
-    romance_real_ann = {r["id"]: r for r in load("romance_audit_adjudicated.jsonl")}
-    romance_syn_ann = {r["id"]: r for r in load("romance_audit_adjudicated_synth.jsonl")}
-    romance_syn2_ann = {r["id"]: r for r in load("romance_audit_adjudicated_2.jsonl")}
-    inp1 = {r["id"]: r for r in load("romance_annotation_input.jsonl")}
-    inp1.update({r["id"]: r for r in load("romance_synthetic_input.jsonl")})
-    inp2 = {r["id"]: r for r in load("romance_annotation_input2.jsonl")}
-    synth1 = {r["id"]: r for r in load("romance_synthetic_generated.jsonl")}
-    synth2 = {r["id"]: r for r in load("romance_synthetic_generated2.jsonl")}
+    romance_real_ann = {r["id"]: r for r in load("romance_audit_adjudicated.jsonl", WORK)}
+    romance_syn_ann = {r["id"]: r for r in load("romance_audit_adjudicated_synth.jsonl", WORK)}
+    romance_syn2_ann = {r["id"]: r for r in load("romance_audit_adjudicated_2.jsonl", WORK)}
+    inp1 = {r["id"]: r for r in load("romance_annotation_input.jsonl", WORK)}
+    inp1.update({r["id"]: r for r in load("romance_synthetic_input.jsonl", WORK)})
+    inp2 = {r["id"]: r for r in load("romance_annotation_input2.jsonl", WORK)}
+    synth1 = {r["id"]: r for r in load("romance_synthetic_generated.jsonl", WORK)}
+    synth2 = {r["id"]: r for r in load("romance_synthetic_generated2.jsonl", WORK)}
 
     out = []
 

@@ -122,7 +122,7 @@ def main():
     args = ap.parse_args()
 
     if args.benchmark == "all":
-        benches = ["fraudr1_diag", "orbench", "dna", "aegis2", "fraudr1"]
+        benches = ["fraudr1_diag", "orbench", "do_not_answer", "aegis2", "fraudr1"]
     else:
         benches = [args.benchmark]
     for b in benches:

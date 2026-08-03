@@ -41,7 +41,7 @@ def obj_fraud(m): return m["f1"]-1.0*max(0.0,m["fpr"]-0.08)-2.0*max(0.0,0.75-m["
 def obj_general(m): return m["f1"]-2.0*max(0.0,m["fpr"]-0.03)-1.0*max(0.0,0.65-m["rec"])
 BENCH={"fraudr1_diag":("fraudr1_diag/cascade_predictions/cascade_dev_20260803.jsonl",obj_fraud),
        "orbench":("orbench/cascade_predictions/cascade_dev_20260803.jsonl",obj_general),
-       "dna":("dna/cascade_predictions/cascade_dev_20260803.jsonl",obj_general),
+       "dna":("do_not_answer/cascade_predictions/cascade_dev_20260803.jsonl",obj_general),
        "aegis2":("aegis2/cascade_predictions/cascade_dev_20260803.jsonl",obj_general)}
 data={}
 for name,(rel,fn) in BENCH.items():

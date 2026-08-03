@@ -24,14 +24,15 @@ N = 300
 UNIFIED = {
     "fraudr1_diag": "fraudr1/diagnostic/fraudr1_balanced_diag.jsonl",
     "orbench": "orbench/unified/orbench_eval.jsonl",
-    "dna": "do_not_answer/unified/do_not_answer_eval.jsonl",
+    "do_not_answer": "do_not_answer/unified/do_not_answer_eval.jsonl",
     "aegis2": "aegis2/unified/aegis2_eval_valid_qy.jsonl",
 }
+ARCHIVE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "archive", "exp2_prior_work_comparison", "pilot_predictions"))
 PILOT_FILES = {
-    "fraudr1_diag": "fraudr1_diag/cascade_predictions/cascade_pilot_v2b_20260803.jsonl",
-    "orbench": "orbench/cascade_predictions/cascade_pilot_v2b_20260803.jsonl",
-    "dna": "dna/cascade_predictions/cascade_pilot_v2b_20260803.jsonl",
-    "aegis2": "aegis2/cascade_predictions/cascade_pilot_v2b_20260803.jsonl",
+    "fraudr1_diag": os.path.join(ARCHIVE, "fraudr1_diag", "cascade_pilot_v2b_20260803.jsonl"),
+    "orbench": os.path.join(ARCHIVE, "orbench", "cascade_pilot_v2b_20260803.jsonl"),
+    "do_not_answer": os.path.join(ARCHIVE, "dna", "cascade_pilot_v2b_20260803.jsonl"),
+    "aegis2": os.path.join(ARCHIVE, "aegis2", "cascade_pilot_v2b_20260803.jsonl"),
 }
 
 
@@ -69,7 +70,7 @@ def strata_key(benchmark, r, audit=None):
             a = audit.get(str(r.get("id", "")))
             g = str(a.get("binary", "?")) if a else "?"
         return "g" + g + "|" + prefix + "|" + str(r.get("category") or "?")
-    if benchmark == "dna":
+    if benchmark == "do_not_answer":
         return "g" + str(r.get("gold_binary") or "?") + "|" + str(r.get("category") or "?") + "|" + str(r.get("target_model") or "?")
     if benchmark == "aegis2":
         return "g" + str(r.get("gold_binary") or "?") + "|" + str(r.get("category") or "?") + "|" + str(r.get("sub_category") or "?")
@@ -92,7 +93,7 @@ def main():
             print(f"[{bench}] audited pool: {before} -> {len(pool)}")
         for r in pool:
             r["_strata"] = strata_key(bench, r, audit)
-        if bench in ("dna", "orbench"):
+        if bench in ("do_not_answer", "orbench"):
             # gold-balanced dev (pos/neg halves) so recall/FPR calibration is stable
             pos = [r for r in pool if r.get("gold_binary") == 1]
             neg = [r for r in pool if r.get("gold_binary") == 0]

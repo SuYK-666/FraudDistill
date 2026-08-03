@@ -28,6 +28,8 @@ from frauddistill.runtime.budget import BudgetState
 from frauddistill.runtime.cache import RequestCache
 
 BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "experiments", "exp2_prior_work_comparison"))
+# benchmark key -> canonical experiment folder (v2 "dna" lives under do_not_answer/)
+OUT_DIR_ALIAS = {"dna": "do_not_answer"}
 CONFIG = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "configs", "exp2_budgeted_cascade.yaml"))
 CACHE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "outputs", "api_cache_exp2_cascade"))
 BUDGET_FILE = os.path.join(CACHE_DIR, "budget_state.json")
@@ -284,10 +286,11 @@ async def main() -> None:
     )
     pipeline = BudgetedCascadePipeline(client, cfg, prompt_version="v2.0")
 
-    os.makedirs(os.path.join(BASE, args.benchmark, "cascade_predictions"), exist_ok=True)
+    out_bench = OUT_DIR_ALIAS.get(args.benchmark, args.benchmark)
+    os.makedirs(os.path.join(BASE, out_bench, "cascade_predictions"), exist_ok=True)
     tag = f"_{args.tag}" if args.tag else ""
     out_path = os.path.join(
-        BASE, args.benchmark, "cascade_predictions",
+        BASE, out_bench, "cascade_predictions",
         f"cascade_{args.mode}{tag}_{args.seed}.jsonl",
     )
     summary = await pipeline.process_batch(todo, out_path, checkpoint=True)
