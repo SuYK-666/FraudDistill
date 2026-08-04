@@ -316,7 +316,6 @@ def main_neural(args) -> None:
     from frauddistill.student.losses import FraudDistillLoss
     from frauddistill.student.collator import neural_collate
     from frauddistill.student.trainer import train_neural, evaluate_neural, save_checkpoint
-    from frauddistill.student.predict import predict_neural_batch
     from transformers import AutoTokenizer
 
     out_root = Path(args.out_root or (OUT_ROOT / "neural_student"))
@@ -385,8 +384,9 @@ def main_neural(args) -> None:
 
     def collate(batch): return neural_collate(batch, tokenizer, max_length=args.max_length, architecture=args.architecture)
 
-    dev_loader = DataLoader(SimpleDataset(dev_examples), batch_size=args.micro_batch, shuffle=False, collate_fn=collate)
-    test_loader = DataLoader(SimpleDataset(test_examples), batch_size=args.micro_batch, shuffle=False, collate_fn=collate)
+    eval_batch = max(args.micro_batch * 8, 16)
+    dev_loader = DataLoader(SimpleDataset(dev_examples), batch_size=eval_batch, shuffle=False, collate_fn=collate)
+    test_loader = DataLoader(SimpleDataset(test_examples), batch_size=eval_batch, shuffle=False, collate_fn=collate)
 
     if args.eval_only:
         model = build_neural_student(cfg, freeze_base=True, device=device)
@@ -403,6 +403,7 @@ def main_neural(args) -> None:
     model = build_neural_student(cfg, freeze_base=False, device=device)
     t0 = time.time()
     run_dir = out_root / f"{args.setting}_{args.architecture}_seed{args.seed}"
+    run_dir.mkdir(parents=True, exist_ok=True)
     best_state, history = train_neural(
         model, train_loader, dev_loader, loss_fn, tokenizer,
         epochs=args.epochs, lr_lora=args.lr_lora, lr_head=args.lr_head,
@@ -470,6 +471,7 @@ if __name__ == "__main__":
     ap.add_argument("--lr-lora", type=float, default=1e-4)
     ap.add_argument("--lr-head", type=float, default=5e-4)
     ap.add_argument("--lora-r", type=int, default=32)
+    ap.add_argument("--lora-alpha", type=int, default=64)
     ap.add_argument("--eval-steps", type=int, default=100)
     ap.add_argument("--patience", type=int, default=3)
     ap.add_argument("--temperature", type=float, default=1.5)

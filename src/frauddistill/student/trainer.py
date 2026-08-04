@@ -75,7 +75,7 @@ def train_neural(model, train_loader, dev_loader, loss_fn, tokenizer,
         best_metric = float(ck.get("best_metric", -1.0))
         best_epoch = int(ck.get("best_epoch", 0))
         history = ck.get("history", history)
-        print(f"resumed from {resume}: epoch={start_epoch} step={start_step} global={global_step}")
+        print(f"resumed from {resume}: epoch={start_epoch} step={start_step} global={global_step}", flush=True)
     for epoch in range(start_epoch, epochs):
         model.train()
         running = {"loss_total": 0.0, "loss_gold": 0.0, "loss_soft": 0.0, "loss_pair": 0.0}
@@ -100,39 +100,44 @@ def train_neural(model, train_loader, dev_loader, loss_fn, tokenizer,
                 scheduler.step()
                 optimizer.zero_grad()
                 global_step += 1
+                if max_steps is not None and global_step >= max_steps:
+                    print(f"max_steps reached ({max_steps}); stopping", flush=True)
+                    if best_state:
+                        model.load_state_dict(best_state)
+                    return best_state, history
                 if global_step % log_every == 0:
                     print(f"  epoch {epoch+1} step {global_step} " +
-                          " ".join(f"{k}={v/ (log_every * grad_accum / grad_accum):.4f}" for k, v in running.items()))
+                          " ".join(f"{k}={v / log_every:.4f}" for k, v in running.items()), flush=True)
                     running = {k: 0.0 for k in running}
-                if global_step % eval_steps == 0:
-                    dev_metric = evaluate_neural(model, dev_loader, loss_fn, device, architecture)
-                    history["dev"].append({"step": global_step, **dev_metric})
-                    print(f"  eval step {global_step}: macro_f1={dev_metric['macro_f1']:.4f} "
-                          f"recall={dev_metric['recall']:.4f} fpr={dev_metric['fpr']:.4f}")
-                    if dev_metric["macro_f1"] > best_metric:
-                        best_metric = dev_metric["macro_f1"]
-                        best_epoch = epoch + 1
-                        best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
-                        if out_dir:
-                            save_checkpoint(model, tokenizer, out_dir / f"best_step{global_step}", architecture)
-                    else:
-                        if epoch >= best_epoch + patience:
-                            print(f"early stop at epoch {epoch+1} step {global_step}")
-                            if best_state:
-                                model.load_state_dict(best_state)
-                            return best_state, history
+                if out_dir:
+                    # crash-safe periodic resume snapshot every log_every steps
+                    save_resume(model, optimizer, scheduler, out_dir / "resume.pt", epoch, step, global_step,
+                                best_metric, best_epoch, history)
+            # eval on the micro-batch cadence, independent of grad accumulation
+            if (step + 1) % eval_steps == 0:
+                dev_metric = evaluate_neural(model, dev_loader, loss_fn, device, architecture)
+                history["dev"].append({"step": global_step, "micro_step": step + 1, **dev_metric})
+                print(f"  eval step {global_step}: macro_f1={dev_metric['macro_f1']:.4f} "
+                      f"recall={dev_metric['recall']:.4f} fpr={dev_metric['fpr']:.4f}", flush=True)
+                if dev_metric["macro_f1"] > best_metric:
+                    best_metric = dev_metric["macro_f1"]
+                    best_epoch = epoch + 1
+                    best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
                     if out_dir:
-                        save_resume(model, optimizer, scheduler, out_dir / "resume.pt", epoch, step, global_step,
-                                    best_metric, best_epoch, history)
-                    if max_steps is not None and global_step >= max_steps:
-                        print(f"max_steps reached ({max_steps}); stopping")
+                        save_checkpoint(model, tokenizer, out_dir / f"best_step{global_step}", architecture)
+                else:
+                    if epoch >= best_epoch + patience:
+                        print(f"early stop at epoch {epoch+1} step {global_step}", flush=True)
                         if best_state:
                             model.load_state_dict(best_state)
                         return best_state, history
+                if out_dir:
+                    save_resume(model, optimizer, scheduler, out_dir / "resume.pt", epoch, step, global_step,
+                                best_metric, best_epoch, history)
         # end of epoch eval
         dev_metric = evaluate_neural(model, dev_loader, loss_fn, device, architecture)
         history["dev"].append({"step": global_step, "epoch": epoch + 1, **dev_metric})
-        print(f"epoch {epoch+1} dev: macro_f1={dev_metric['macro_f1']:.4f} recall={dev_metric['recall']:.4f} fpr={dev_metric['fpr']:.4f}")
+        print(f"epoch {epoch+1} dev: macro_f1={dev_metric['macro_f1']:.4f} recall={dev_metric['recall']:.4f} fpr={dev_metric['fpr']:.4f}", flush=True)
         if dev_metric["macro_f1"] > best_metric:
             best_metric = dev_metric["macro_f1"]
             best_epoch = epoch + 1
@@ -186,6 +191,7 @@ def evaluate_neural(model, loader, loss_fn, device, architecture="standard"):
 
 def save_resume(model, optimizer, scheduler, path, epoch, step_in_epoch, global_step,
                 best_metric, best_epoch, history):
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
     torch.save({"model": model.state_dict(), "optimizer": optimizer.state_dict(),
                 "scheduler": scheduler.state_dict(), "epoch": epoch, "step_in_epoch": step_in_epoch,
                 "global_step": global_step, "best_metric": best_metric, "best_epoch": best_epoch,

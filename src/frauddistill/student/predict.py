@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import torch
 
-from frauddistill.eval.rule_baseline import predict_rule
 from frauddistill.student.dataset import ID_TO_LABEL, neural_input_text
 
 
 def predict_with_rule_fallback(rows: list[dict]) -> list[dict]:
+    from frauddistill.eval.rule_baseline import predict_rule
     return [predict_rule(row) for row in rows]
 
 

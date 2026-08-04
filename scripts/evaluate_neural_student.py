@@ -32,6 +32,7 @@ from frauddistill.student.model import NeuralStudentConfig, build_neural_student
 
 REPO = Path(__file__).resolve().parents[1]
 OUT_ROOT = Path(os.environ.get("EXP3_OUT_ROOT") or REPO / "experiments" / "exp3_agent_distillation_ablation" / "outputs")
+BASE_MODEL = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
 
 
 def ece_score(p, y, bins=10):
@@ -125,9 +126,13 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    cfg = NeuralStudentConfig(model_name=args.checkpoint, architecture=args.architecture,
+    cfg = NeuralStudentConfig(model_name=BASE_MODEL, architecture=args.architecture,
                               max_length=args.max_length, lora_r=16)
     model = build_neural_student(cfg, freeze_base=True)
+    if (Path(args.checkpoint) / "adapter_config.json").exists():
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(model, str(args.checkpoint))
+        print(f"loaded LoRA adapters from {args.checkpoint}")
     device = torch.device("cpu")
     model.to(device)
     model.eval()
