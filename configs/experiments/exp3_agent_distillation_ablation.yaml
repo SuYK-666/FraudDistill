@@ -1,0 +1,71 @@
+experiment:
+  name: exp3_agent_distillation_ablation
+  seed: 20260804
+  sample_size: 6400
+
+data:
+  train_ratio: 0.64
+  dev_ratio: 0.16
+  test_ratio: 0.20
+  group_disjoint: true
+  deduplicate: true
+  include_prompt_only: false
+  dataset: data/prepared/exp3_agent_distillation/exp3_dataset.jsonl
+
+provider:
+  name: deepseek
+  model: deepseek-v4-flash
+  thinking: disabled
+  response_format: json_object
+  temperature: 0
+  timeout_seconds: 90
+  max_retries: 1
+  concurrency: 120
+
+agents:
+  fraud:
+    enabled: true
+    max_tokens: 400
+  refusal:
+    enabled: true
+    max_tokens: 400
+  context:
+    enabled: true
+    max_tokens: 340
+  arbiter:
+    enabled: true
+    max_tokens: 360
+  single_judge:
+    enabled: true
+    max_tokens: 200
+  advocate:
+    max_tokens: 260
+  correction_arbiter:
+    max_tokens: 360
+
+correction:
+  enabled: true
+  target_rate: 0.10
+  hard_max_rate: 0.15
+  score_low: 0.35
+  score_high: 0.65
+  agreement_threshold: 0.60
+  stop_new_at_used_rmb: 34.0
+
+calibration:
+  method: platt
+  threshold_objective: macro_f1_with_fpr_constraint
+  max_fpr: 0.08
+
+budget:
+  hard_cap_rmb: 36.0
+  emergency_reserve_rmb: 4.0
+  stop_before_cap: true
+
+evaluation:
+  bootstrap_reps: 10000
+  bootstrap_group_key: group_id
+  student_seeds: [11, 23, 37, 53, 71]
+  report_subgroups: true
+  report_cost: true
+  report_calibration: true

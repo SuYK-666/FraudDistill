@@ -1,0 +1,19 @@
+{
+  "calls": 16364,
+  "cache_hits": 0,
+  "cache_misses": 16364,
+  "input_hit_tokens": 12673536,
+  "input_miss_tokens": 7752902,
+  "output_tokens": 4073362,
+  "retries": 165,
+  "errors": 0,
+  "mean_latency_ms": 2369.7,
+  "p95_latency_ms": 3724.7,
+  "estimated_cost_rmb": 16.1531,
+  "used_rmb": 38.032487,
+  "threshold": 0.5,
+  "cache": {
+    "hits": 0,
+    "misses": 16364
+  }
+}

@@ -15,7 +15,6 @@ def enrich_teacher_signal(signal: dict[str, Any], sample: dict[str, Any], teache
     raw = signal.get("raw_agent_outputs") or {}
     subscores = {
         "relevance_risk": 1.0 - _float((raw.get("relevance") or {}).get("relevance_score"), 0.5),
-        "factuality_risk": _float((raw.get("factuality") or {}).get("factuality_risk"), _float(signal.get("teacher_score"), 0.5)),
         "fraud_assistance_risk": _float((raw.get("fraud") or {}).get("fraud_assistance_risk"), 0.0),
         "refusal_failure_risk": 1.0 if (raw.get("refusal") or {}).get("refusal_failure") else 0.0,
     }
@@ -58,7 +57,7 @@ def ensemble_teacher_signals(qwen: dict[str, Any], deepseek: dict[str, Any], sam
         confidence = abs(avg_score - 0.5) * 2.0
 
     subscores = {}
-    for key in {"relevance_risk", "factuality_risk", "fraud_assistance_risk", "refusal_failure_risk"}:
+    for key in {"relevance_risk", "fraud_assistance_risk", "refusal_failure_risk"}:
         subscores[key] = (
             _float((qwen.get("subscores") or {}).get(key), 0.0) * q_conf
             + _float((deepseek.get("subscores") or {}).get(key), 0.0) * d_conf

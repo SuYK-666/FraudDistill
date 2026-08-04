@@ -209,6 +209,32 @@ class DeepSeekClient:
                 out["ok"] = True
                 out["retry_count"] = 0
                 return out
+            if os.environ.get("EXP3_DRY_RUN") == "1":
+                # Cache-replay safety mode: never touch the API. Any cache miss is
+                # reported as a per-call failure so offline replays cost zero RMB.
+                await self.ledger.add(cache_miss=1, errors=1, latency_ms=0.0)
+                try:
+                    logp = os.environ.get("EXP3_DRY_RUN_LOG") or os.path.join(os.getcwd(), "_dryrun_misses.log")
+                    with open(logp, "a", encoding="utf-8") as _f:
+                        _f.write(json.dumps({
+                            "prompt_version": prompt_version,
+                            "system": system_prompt[:120],
+                            "user": user_prompt[:160],
+                        }, ensure_ascii=False) + "\n")
+                except Exception:
+                    pass
+                return {
+                    "ok": False,
+                    "parse_ok": False,
+                    "parsed": {},
+                    "raw": "dry_run_cache_miss",
+                    "route": "dry_run",
+                    "latency_ms": 0.0,
+                    "retry_count": 0,
+                    "usage": {"input_hit": 0, "input_miss": 0, "output": 0},
+                    "error": "dry_run_cache_miss",
+                    "prompt_version": prompt_version,
+                }
 
         self._check_budget(system_prompt, user_prompt, max_tokens)
         last_err = ""

@@ -9,9 +9,6 @@ teacher_model:
 agents:
   relevance_agent:
     max_new_tokens: 384
-  factuality_agent:
-    max_new_tokens: 768
-    require_context: true
   fraud_assistance_agent:
     max_new_tokens: 768
   refusal_quality_agent:

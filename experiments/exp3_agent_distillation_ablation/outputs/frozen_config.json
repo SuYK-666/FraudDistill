@@ -1,0 +1,10 @@
+{
+  "experiment": "exp3_agent_distillation_ablation",
+  "threshold": 0.8409,
+  "calibration": {
+    "method": "platt",
+    "max_fpr": 0.08
+  },
+  "frozen_at": "2026-08-04",
+  "note": "fitted on dev only; test untouched"
+}

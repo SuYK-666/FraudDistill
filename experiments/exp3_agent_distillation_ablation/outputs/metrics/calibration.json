@@ -1,0 +1,29 @@
+{
+  "method": "platt",
+  "max_fpr": 0.08,
+  "threshold": 0.8409,
+  "dev_raw_at_0.5": {
+    "acc": 0.8902,
+    "precision": 0.8891,
+    "recall": 0.8802,
+    "macro_f1": 0.8847,
+    "fpr": 0.1007
+  },
+  "dev_calibrated_at_0.5": {
+    "acc": 0.8902,
+    "precision": 0.8891,
+    "recall": 0.8802,
+    "macro_f1": 0.8847,
+    "fpr": 0.1007
+  },
+  "dev_calibrated_at_best": {
+    "acc": 0.8424,
+    "precision": 0.9058,
+    "recall": 0.7485,
+    "macro_f1": 0.8197,
+    "fpr": 0.0714
+  },
+  "n_dev": 1047,
+  "score_mean": 0.4495,
+  "label_unsafe_share": 0.4785
+}

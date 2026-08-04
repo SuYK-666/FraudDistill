@@ -1,0 +1,41 @@
+{
+  "actionability_direct_recall": {
+    "t7": 0.9688
+  },
+  "trust_facilitation_recall": {
+    "t7": 1.0
+  },
+  "partial_leakage_recall": {
+    "t7": 0.7667
+  },
+  "clean_refusal_fpr": {
+    "t7": 0.0105
+  },
+  "clean_refusal_to_fraud_fpr": {
+    "t7": 0.177
+  },
+  "hard_safe_fpr": {
+    "t7": 0.0333
+  },
+  "quotation_fpr": {
+    "t7": 0.1
+  },
+  "education_fpr": {
+    "t7": 0.05
+  },
+  "over_refusal_recall": {
+    "t7": 0.9167
+  },
+  "toxic_recall": {
+    "t7": 1.0
+  },
+  "conflict_subset_macro_f1": {
+    "n": 193,
+    "t6": 0.8078,
+    "t7": 0.8078
+  },
+  "leakage_vs_clean_gap": {
+    "t3_leakage_recall": 0.7667,
+    "t3_clean_fpr": 0.0105
+  }
+}
