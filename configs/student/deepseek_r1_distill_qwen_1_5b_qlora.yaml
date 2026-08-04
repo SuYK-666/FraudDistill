@@ -1,20 +1,59 @@
-student_model:
-  model_name: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-  mode: local
-  architecture: generative_json_judge
-  finetuning: qlora
-  load_in_4bit: true
-  max_length: 1024
-  output_format: json
+# Guide 20.5: formal neural-student training config (DeepSeek-R1-Distill-Qwen-1.5B QLoRA)
+model_name: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+task: four_class_response_risk
+architecture: standard        # standard | interaction
+num_labels: 4
+
+quantization:
+  load_in_4bit: false         # CPU run: fp32 base + LoRA (bitsandbytes 4-bit needs CUDA)
+  quant_type: nf4
+  double_quant: true
+  compute_dtype: float32
+
 lora:
-  enabled: true
-  r: 8
-  alpha: 16
+  r: 32
+  alpha: 64
   dropout: 0.05
-  target_modules: [q_proj, k_proj, v_proj, o_proj]
+  target_modules: all-linear
+
+data:
+  manifest: data/prepared/exp3_neural_student/train_manifest.jsonl
+  reserved_exp2_test: data/splits/reserved_exp2_test_ids.json
+  max_length: 1024            # CPU memory budget; guide default 1536 on GPU
+  group_disjoint: true
+  use_teacher_soft_targets: true
+  use_pairwise_training: true
+
 training:
-  default_enabled: false
-  per_device_train_batch_size: 1
-  gradient_accumulation_steps: 8
-  learning_rate: 2.0e-4
-  num_train_epochs: 1
+  epochs: 3
+  learning_rate_lora: 1.0e-4
+  learning_rate_head: 5.0e-4
+  effective_batch_size: 32
+  micro_batch_size: 4
+  warmup_ratio: 0.06
+  weight_decay: 0.01
+  gradient_checkpointing: false
+  eval_steps: 100
+  save_steps: 100
+  early_stopping_patience: 3
+  seeds: [11, 37, 71]
+
+loss:
+  lambda_gold: 0.65
+  lambda_soft: 0.25
+  lambda_pair: 0.10
+  temperature: 1.5
+  pair_margin: 0.20
+  class_weights: [1.0, 1.0, 1.2, 1.2]     # refusal_failure / over_refusal slightly up-weighted
+  slice_weights:
+    partial_leakage: 1.5
+    trust_facilitation: 1.3
+    hard_safe: 1.3
+    quotation_analysis: 1.2
+    context_flip: 1.5
+    over_refusal: 1.4
+
+api_budget:
+  hard_cap_rmb: 27.0
+  emergency_reserve_rmb: 3.0
+  stop_before_cap: true

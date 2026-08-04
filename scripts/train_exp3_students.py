@@ -300,6 +300,128 @@ def run_setting(name, train_rows, test_rows, dev_rows, teacher_map, seeds) -> di
     return agg
 
 
+def main_neural(args) -> None:
+    """Neural 1.5B student training/eval (guide 18, 22).
+
+    --setting gold|soft_distill|full_distill (guide 15.5)
+    --architecture standard|interaction (guide 13)
+    --eval-only runs Stage A zero-shot without training (guide 18.1).
+    """
+    import time
+    import torch
+    torch.set_num_threads(16)
+    from torch.utils.data import DataLoader, Dataset
+    from frauddistill.student.dataset import build_neural_examples
+    from frauddistill.student.model import NeuralStudentConfig, build_neural_student
+    from frauddistill.student.losses import FraudDistillLoss
+    from frauddistill.student.collator import neural_collate
+    from frauddistill.student.trainer import train_neural, evaluate_neural, save_checkpoint
+    from frauddistill.student.predict import predict_neural_batch
+    from transformers import AutoTokenizer
+
+    out_root = Path(args.out_root or (OUT_ROOT / "neural_student"))
+    out_root.mkdir(parents=True, exist_ok=True)
+    device = torch.device("cpu")
+
+    manifest_path = Path(args.manifest)
+    if not manifest_path.exists():
+        print("manifest missing; run scripts/audit_student_training_data.py first")
+        sys.exit(2)
+    manifest = [json.loads(l) for l in manifest_path.open(encoding="utf-8") if l.strip()]
+    dataset, teacher_map, _ = load_all()
+    dev_rows = [r for r in dataset if r["split"] == "dev"]
+    test_rows = [r for r in dataset if r["split"] == "test"]
+
+    def with_teacher(rows):
+        out = []
+        for r in rows:
+            t = teacher_map.get(r["id"]) or {}
+            sig = t.get("signal") or {}
+            out.append({**r, "teacher_label": str(sig.get("teacher_label", "safe")),
+                        "teacher_score": float(sig.get("teacher_score", 0.5)),
+                        "teacher_type": str(sig.get("teacher_type", "safe")),
+                        "teacher_confidence": float(sig.get("teacher_confidence", sig.get("confidence", 0.5))),
+                        "agent_agreement": float(sig.get("agent_agreement", 0.0)),
+                        "confidence_tier": "high" if float(sig.get("teacher_confidence", 0)) >= 0.8 else "medium",
+                        "conflict_flags": list((sig.get("conflict_flags") or []) + (t.get("conflict_flags") or [])),
+                        "gold_source": "procedural_weak" if r["source"] == "synthetic" else ("audit" if r["source"] in ("e1_context_r2", "fraudr1_all") else "official")})
+        return out
+
+    train_examples = build_neural_examples(manifest, max_length=args.max_length,
+                                           use_teacher_soft=(args.setting != "gold"),
+                                           use_pairwise=(args.setting == "full_distill"))
+    dev_all = build_neural_examples(with_teacher(dev_rows), max_length=args.max_length,
+                                    use_teacher_soft=True, use_pairwise=False)
+    if args.eval_subset and len(dev_all) > args.eval_subset:
+        rng = __import__("random").Random(20260804)
+        dev_examples = rng.sample(dev_all, args.eval_subset)
+        print(f"dev eval subset: {len(dev_all)} -> {len(dev_examples)}")
+    else:
+        dev_examples = dev_all
+    test_examples = build_neural_examples(with_teacher(test_rows), max_length=args.max_length,
+                                          use_teacher_soft=True, use_pairwise=False)
+
+    if args.gold_fraction < 1.0:
+        rng = __import__("random").Random(20260804)
+        keep = rng.sample(train_examples, int(len(train_examples) * args.gold_fraction))
+        train_examples = keep
+        print(f"low-label: gold fraction {args.gold_fraction} -> {len(train_examples)} rows")
+
+    class SimpleDataset(Dataset):
+        def __init__(self, exs): self.exs = exs
+        def __len__(self): return len(self.exs)
+        def __getitem__(self, i): return self.exs[i]
+
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    cfg = NeuralStudentConfig(model_name=args.model_name, architecture=args.architecture,
+                              max_length=args.max_length, lora_r=args.lora_r, lora_alpha=args.lora_alpha * 2)
+    loss_fn = FraudDistillLoss(lambda_gold={"gold": 1.0, "soft_distill": 0.75, "full_distill": 0.65}[args.setting],
+                               lambda_soft={"gold": 0.0, "soft_distill": 0.25, "full_distill": 0.25}[args.setting],
+                               lambda_pair={"gold": 0.0, "soft_distill": 0.0, "full_distill": 0.10}[args.setting],
+                               temperature=args.temperature, pair_margin=args.pair_margin)
+
+    def collate(batch): return neural_collate(batch, tokenizer, max_length=args.max_length, architecture=args.architecture)
+
+    dev_loader = DataLoader(SimpleDataset(dev_examples), batch_size=args.micro_batch, shuffle=False, collate_fn=collate)
+    test_loader = DataLoader(SimpleDataset(test_examples), batch_size=args.micro_batch, shuffle=False, collate_fn=collate)
+
+    if args.eval_only:
+        model = build_neural_student(cfg, freeze_base=True, device=device)
+        m = evaluate_neural(model, test_loader, loss_fn, device, args.architecture)
+        print("ZERO-SHOT TEST:", json.dumps(m, ensure_ascii=False))
+        (out_root / f"zero_shot_{args.architecture}.json").write_text(json.dumps({"setting": "zero_shot", **m}, ensure_ascii=False, indent=2), encoding="utf-8")
+        return
+
+    train_loader = DataLoader(SimpleDataset(train_examples), batch_size=args.micro_batch, shuffle=True,
+                              collate_fn=collate, generator=torch.Generator().manual_seed(args.seed))
+    print(f"neural train: rows={len(train_examples)} dev={len(dev_examples)} test={len(test_examples)} "
+          f"setting={args.setting} arch={args.architecture} seed={args.seed}")
+
+    model = build_neural_student(cfg, freeze_base=False, device=device)
+    t0 = time.time()
+    run_dir = out_root / f"{args.setting}_{args.architecture}_seed{args.seed}"
+    best_state, history = train_neural(
+        model, train_loader, dev_loader, loss_fn, tokenizer,
+        epochs=args.epochs, lr_lora=args.lr_lora, lr_head=args.lr_head,
+        grad_accum=max(1, args.effective_batch // args.micro_batch),
+        eval_steps=args.eval_steps, patience=args.patience, seed=args.seed,
+        out_dir=run_dir, device=device, architecture=args.architecture,
+        resume=args.resume, max_steps=args.max_steps)
+    print(f"training wall time: {time.time() - t0:.0f}s")
+
+    test_m = evaluate_neural(model, test_loader, loss_fn, device, args.architecture)
+    print("TEST:", json.dumps(test_m, ensure_ascii=False))
+    save_checkpoint(model, tokenizer, out_root / f"{args.setting}_{args.architecture}_seed{args.seed}_final", args.architecture)
+    (out_root / f"{args.setting}_{args.architecture}_seed{args.seed}.json").write_text(
+        json.dumps({"setting": args.setting, "architecture": args.architecture, "seed": args.seed,
+                    "rows": len(train_examples), "test": test_m,
+                    "history": history, "wall_seconds": round(time.time() - t0, 1)}, ensure_ascii=False, indent=2),
+        encoding="utf-8")
+
+
 def main() -> None:
     dataset, teacher_map, _ = load_all()
     train_rows = [r for r in dataset if r["split"] == "train"]
@@ -333,4 +455,35 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--backend", default="linear", choices=["linear", "neural"])
+    ap.add_argument("--setting", default="full_distill", choices=["gold", "soft_distill", "full_distill"])
+    ap.add_argument("--architecture", default="standard", choices=["standard", "interaction"])
+    ap.add_argument("--model-name", default="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B")
+    ap.add_argument("--manifest", default="data/prepared/exp3_neural_student/train_manifest.jsonl")
+    ap.add_argument("--seeds", default="11,37,71")
+    ap.add_argument("--epochs", type=int, default=3)
+    ap.add_argument("--max-length", type=int, default=1024)
+    ap.add_argument("--micro-batch", type=int, default=4)
+    ap.add_argument("--effective-batch", type=int, default=32)
+    ap.add_argument("--lr-lora", type=float, default=1e-4)
+    ap.add_argument("--lr-head", type=float, default=5e-4)
+    ap.add_argument("--lora-r", type=int, default=32)
+    ap.add_argument("--eval-steps", type=int, default=100)
+    ap.add_argument("--patience", type=int, default=3)
+    ap.add_argument("--temperature", type=float, default=1.5)
+    ap.add_argument("--pair-margin", type=float, default=0.20)
+    ap.add_argument("--gold-fraction", type=float, default=1.0)
+    ap.add_argument("--eval-subset", type=int, default=0, help="cap dev eval rows (0 = full dev)")
+    ap.add_argument("--eval-only", action="store_true")
+    ap.add_argument("--resume", default=None, help="resume checkpoint json from a previous run")
+    ap.add_argument("--max-steps", type=int, default=None)
+    ap.add_argument("--out-root", default=None)
+    args = ap.parse_args()
+    if args.backend == "neural":
+        for seed in [int(x) for x in args.seeds.split(",")]:
+            args.seed = seed
+            main_neural(args)
+    else:
+        main()
