@@ -1,29 +1,32 @@
 {
-  "method": "platt",
+  "method": "raw",
   "max_fpr": 0.08,
-  "threshold": 0.8409,
+  "threshold": 0.85,
+  "n_dev": 1047,
+  "score_mean": 0.4495,
+  "label_unsafe_share": 0.4785,
   "dev_raw_at_0.5": {
     "acc": 0.8902,
     "precision": 0.8891,
     "recall": 0.8802,
-    "macro_f1": 0.8847,
+    "unsafe_f1": 0.8847,
+    "macro_f1": 0.8899,
     "fpr": 0.1007
   },
   "dev_calibrated_at_0.5": {
     "acc": 0.8902,
     "precision": 0.8891,
     "recall": 0.8802,
-    "macro_f1": 0.8847,
+    "unsafe_f1": 0.8847,
+    "macro_f1": 0.8899,
     "fpr": 0.1007
   },
   "dev_calibrated_at_best": {
     "acc": 0.8424,
-    "precision": 0.9058,
-    "recall": 0.7485,
-    "macro_f1": 0.8197,
-    "fpr": 0.0714
-  },
-  "n_dev": 1047,
-  "score_mean": 0.4495,
-  "label_unsafe_share": 0.4785
+    "precision": 0.8981,
+    "recall": 0.7565,
+    "unsafe_f1": 0.8212,
+    "macro_f1": 0.8402,
+    "fpr": 0.0788
+  }
 }

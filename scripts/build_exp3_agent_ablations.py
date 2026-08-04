@@ -92,9 +92,17 @@ def metrics(recs: list[dict], get_label, get_score=None, subtypes=None) -> dict:
     acc = (tp + tn) / max(n, 1)
     mcc_den = np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
     mcc = ((tp * tn - fp * fn) / mcc_den) if mcc_den > 0 else 0.0
+    # True macro-F1 (guide 3.1): mean of per-class F1, reported together with
+    # unsafe/safe class F1. The old "macro_f1 = harmonic mean of P/R" was the
+    # positive-class F1 only.
+    from sklearn.metrics import f1_score as _skf1
+    unsafe_f1 = float(_skf1(y, pred, pos_label=1, zero_division=0))
+    safe_f1 = float(_skf1(y, pred, pos_label=0, zero_division=0))
+    macro_f1 = float(_skf1(y, pred, average="macro", zero_division=0))
     out = {
         "n": n, "acc": round(acc, 4), "precision": round(prec, 4), "recall": round(rec, 4),
-        "macro_f1": round(f1, 4), "fpr": round(fpr, 4), "mcc": round(float(mcc), 4),
+        "unsafe_f1": round(unsafe_f1, 4), "safe_f1": round(safe_f1, 4),
+        "macro_f1": round(macro_f1, 4), "fpr": round(fpr, 4), "mcc": round(float(mcc), 4),
     }
     if get_score is not None:
         try:
@@ -134,7 +142,13 @@ def label_from_score(score: float, threshold: float) -> str:
 
 
 def settings_from_records(recs: list[dict], threshold: float, default_threshold: float = 0.5) -> dict[str, dict]:
-    """Compute per-setting (label_fn, score_fn) closures for dev/test records."""
+    """Return score-only settings; labels are derived via score >= operating threshold.
+
+    Guide 3.5: every method is evaluated under the SAME threshold protocol
+    (per-method dev threshold in table A, matched-FPR in table B, matched-Recall
+    in table C). T6/T7 reuse the stored API teacher_score (frozen pipeline output);
+    T5 uses the offline rule arbiter at the fixed default threshold.
+    """
     arbiter = ArbiterAgent(client=None)
 
     def t0(r):
@@ -152,35 +166,28 @@ def settings_from_records(recs: list[dict], threshold: float, default_threshold:
         table = build_evidence_table(r.get("fraud"), r.get("refusal"), r.get("context"))
         return risk_score_proposal(table)
 
-    def t5(r):
-        # Uncalibrated rule arbiter: deterministic risk_score_proposal scale,
-        # evaluated at the default 0.5 operating point (guide 21.1 ranges).
+    def t5_score(r):
         table = build_evidence_table(r.get("fraud"), r.get("refusal"), r.get("context"))
         sig = arbiter.run(r["sample"], evidence_table=table, threshold=default_threshold)
-        return sig.get("teacher_score", 0.5), sig.get("teacher_label", "safe")
+        return float(sig.get("teacher_score", 0.5))
 
-    def t6(r):
+    def t6_score(r):
         pre = r.get("arbiter_pre_correction") or {}
-        table = r.get("evidence_table") or {}
-        parsed = {k: pre.get(k) for k in ("teacher_label", "teacher_score", "teacher_type")}
-        constrained, _ = ArbiterAgent.apply_hard_constraints(parsed, table, threshold)
-        return float(constrained.get("teacher_score", 0.5)), str(constrained.get("teacher_label", "safe"))
+        return float(pre.get("teacher_score", 0.5))
 
-    def t7(r):
+    def t7_score(r):
         sig = r.get("signal") or {}
-        table = r.get("evidence_table") or {}
-        parsed = {k: sig.get(k) for k in ("teacher_label", "teacher_score", "teacher_type")}
-        constrained, _ = ArbiterAgent.apply_hard_constraints(parsed, table, threshold)
-        return float(constrained.get("teacher_score", 0.5)), str(constrained.get("teacher_label", "safe"))
+        return float(sig.get("teacher_score", 0.5))
 
-    settings: dict[str, dict] = {}
-    settings["T0_rule"] = {"score": t0, "label": lambda r: label_from_score(t0(r), default_threshold)}
-    settings["T2_fraud_only"] = {"score": t2_score, "label": lambda r: label_from_score(t2_score(r), default_threshold)}
-    settings["T3_fraud_refusal"] = {"score": t3_score, "label": lambda r: label_from_score(t3_score(r), default_threshold)}
-    settings["T4_fraud_refusal_context"] = {"score": t4_score, "label": lambda r: label_from_score(t4_score(r), default_threshold)}
-    settings["T5_rule_arbiter"] = {"score": lambda r: t5(r)[0], "label": lambda r: t5(r)[1]}
-    settings["T6_evidence_arbiter"] = {"score": lambda r: t6(r)[0], "label": lambda r: t6(r)[1]}
-    settings["T7_full_correction"] = {"score": lambda r: t7(r)[0], "label": lambda r: t7(r)[1]}
+    settings: dict[str, dict] = {
+        "T0_rule": {"score": t0},
+        "T2_fraud_only": {"score": t2_score},
+        "T3_fraud_refusal": {"score": t3_score},
+        "T4_fraud_refusal_context": {"score": t4_score},
+        "T5_rule_arbiter": {"score": t5_score},
+        "T6_evidence_arbiter": {"score": t6_score},
+        "T7_full_correction": {"score": t7_score},
+    }
     return settings
 
 
@@ -189,13 +196,51 @@ def settings_with_judge(settings: dict[str, dict], judge_map: dict[str, dict], t
         j = judge_map.get(r["id"]) or {}
         return float((j.get("parsed") or {}).get("score", 0.5))
 
-    def judge_label(r):
-        j = judge_map.get(r["id"]) or {}
-        return str((j.get("parsed") or {}).get("label", "safe"))
-
     out = dict(settings)
-    out["T1_single_judge"] = {"score": judge_score, "label": judge_label}
+    out["T1_single_judge"] = {"score": judge_score}
     return out
+
+
+def labels_at(recs: list[dict], settings: dict[str, dict], threshold: float) -> dict[str, list[str]]:
+    return {name: [label_from_score(s["score"](r), threshold) for r in recs] for name, s in settings.items()}
+
+
+def select_threshold_on_dev(
+    dev_recs: list[dict],
+    score_fn,
+    objective: str = "macro_f1",
+    max_fpr: float | None = None,
+    min_recall: float | None = None,
+) -> float:
+    """Choose a dev threshold per guide 3.5 (objective default: true macro-F1)."""
+    from sklearn.metrics import f1_score as _skf1
+    y = np.array([1 if r["sample"]["gold_label"] == "unsafe" else 0 for r in dev_recs], dtype=int)
+    scores = np.array([float(score_fn(r)) for r in dev_recs], dtype=float)
+    candidates = np.unique(np.round(np.clip(scores, 0.0, 1.0), 4))
+    if len(candidates) < 2:
+        candidates = np.linspace(0.05, 0.95, 19)
+    best_t, best_obj = 0.5, -1.0
+    for t in candidates:
+        pred = (scores >= t).astype(int)
+        tn = float(((pred == 0) & (y == 0)).sum())
+        fp = float(((pred == 1) & (y == 0)).sum())
+        fn = float(((pred == 0) & (y == 1)).sum())
+        tp = float(((pred == 1) & (y == 1)).sum())
+        fpr = fp / max(tn + fp, 1.0)
+        rec = tp / max(tp + fn, 1.0)
+        if max_fpr is not None and fpr > max_fpr:
+            continue
+        if min_recall is not None and rec < min_recall:
+            continue
+        if objective == "recall":
+            obj = rec
+        elif objective == "fpr":
+            obj = -fpr
+        else:
+            obj = float(_skf1(y, pred, average="macro", zero_division=0))
+        if obj > best_obj:
+            best_obj, best_t = obj, t
+    return float(best_t)
 
 
 def leave_one_out(recs: list[dict], threshold: float, default_threshold: float = 0.5) -> dict[str, dict]:
@@ -340,34 +385,67 @@ def main() -> None:
     data = load_records()
     dev, test = data["dev"], data["test"]
     frozen = json.loads((OUT_ROOT / "frozen_config.json").read_text(encoding="utf-8")) if (OUT_ROOT / "frozen_config.json").exists() else {}
-    threshold = float(frozen.get("threshold", 0.5))
-    print(f"records: dev={len(dev)} test={len(test)} threshold={threshold}")
+    frozen_threshold = float(frozen.get("threshold", 0.5))
+    print(f"records: dev={len(dev)} test={len(test)} frozen_threshold={frozen_threshold}")
 
     if not dev or not test:
         print("missing records; run teacher pipeline first")
         sys.exit(2)
 
-    dev_settings = settings_with_judge(settings_from_records(dev, threshold), data["judge_dev"], threshold)
-    test_settings = settings_with_judge(settings_from_records(test, threshold), data["judge_test"], threshold)
-    loo = leave_one_out(test, threshold)
+    dev_settings = settings_with_judge(settings_from_records(dev, frozen_threshold), data["judge_dev"], frozen_threshold)
+    test_settings = settings_with_judge(settings_from_records(test, frozen_threshold), data["judge_test"], frozen_threshold)
+    loo = leave_one_out(test, frozen_threshold)
 
     METRICS.mkdir(parents=True, exist_ok=True)
+    order = ["T0_rule", "T1_single_judge", "T2_fraud_only", "T3_fraud_refusal",
+             "T4_fraud_refusal_context", "T5_rule_arbiter", "T6_evidence_arbiter", "T7_full_correction"]
 
-    # ---------------- nested ablation table (test)
-    rows = []
-    for name, s in test_settings.items():
-        m = metrics(test, s["label"], s["score"])
-        row = {"setting": name, "split": "test", **m}
-        rows.append(row)
-    (METRICS / "nested_ablation.csv").write_text(
-        "\n".join([",".join(rows[0].keys())] + [",".join(str(r[k]) for k in rows[0].keys()) for r in rows]),
-        encoding="utf-8",
-    )
+    # ---- Table A: per-method dev threshold, then evaluate on test (guide 3.5)
+    thresholds_a = {}
+    for name in order:
+        thresholds_a[name] = select_threshold_on_dev(dev, dev_settings[name]["score"], objective="macro_f1")
+    # direct label list evaluation
+    def eval_rows(settings_map, recs, thresholds, split="test"):
+        labels = {name: [label_from_score(settings_map[name]["score"](r), thresholds[name]) for r in recs]
+                  for name in order}
+        out_rows = []
+        for name in order:
+            get_label = None
+            # metrics() needs a callable; use a closure over the precomputed list
+            m = metrics(recs, _make_label_fn(recs, labels[name]), settings_map[name]["score"])
+            out_rows.append({"setting": name, "split": split, "threshold_dev": round(thresholds[name], 4), **m})
+        return out_rows
 
-    # ---------------- component metrics (test)
+    rows_a = eval_rows(test_settings, test, thresholds_a)
+    write_csv(METRICS / "nested_ablation.csv", rows_a)
+    (METRICS / "thresholds_table_a.json").write_text(json.dumps(thresholds_a, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # ---- Table B: matched-FPR (all methods match T6 dev FPR; compare test Recall)
+    t6_name = "T6_evidence_arbiter"
+    labels_dev_t6 = [label_from_score(dev_settings[t6_name]["score"](r), frozen_threshold) for r in dev]
+    t6_dev_fpr = _fpr_of(labels_dev_t6, dev)
+    thresholds_b = {}
+    for name in order:
+        thresholds_b[name] = select_threshold_on_dev(dev, dev_settings[name]["score"], objective="recall", max_fpr=t6_dev_fpr + 1e-6)
+    rows_b = eval_rows(test_settings, test, thresholds_b, split="test_matched_fpr")
+    write_csv(METRICS / "nested_ablation_matched_fpr.csv", rows_b)
+    (METRICS / "thresholds_table_b.json").write_text(json.dumps({"target_dev_fpr": t6_dev_fpr, "thresholds": thresholds_b}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # ---- Table C: matched-Recall (all methods match T6 dev Recall; compare test FPR)
+    labels_dev_t6 = [label_from_score(dev_settings[t6_name]["score"](r), frozen_threshold) for r in dev]
+    t6_dev_recall = _recall_of(labels_dev_t6, dev)
+    thresholds_c = {}
+    for name in order:
+        thresholds_c[name] = select_threshold_on_dev(dev, dev_settings[name]["score"], objective="fpr", min_recall=t6_dev_recall - 1e-6)
+    rows_c = eval_rows(test_settings, test, thresholds_c, split="test_matched_recall")
+    write_csv(METRICS / "nested_ablation_matched_recall.csv", rows_c)
+    (METRICS / "thresholds_table_c.json").write_text(json.dumps({"target_dev_recall": t6_dev_recall, "thresholds": thresholds_c}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # ---- component metrics (test, table-A labels) ----
     comp_rows = []
-    for name, s in test_settings.items():
-        ct = component_table(test, s["label"])
+    labels_a = {name: [label_from_score(test_settings[name]["score"](r), thresholds_a[name]) for r in test] for name in order}
+    for name in order:
+        ct = component_table(test, _make_label_fn(test, labels_a[name]))
         row = {"setting": name}
         for key in ("direct", "trust", "leakage", "clean_refusal", "hard_safe", "over_refusal", "quotation", "education", "toxic"):
             d = ct.get(key, {})
@@ -375,12 +453,9 @@ def main() -> None:
             row[f"{key}_fpr"] = d.get("fpr", 0.0)
         row["context_flip_pair_acc"] = ct.get("context_flip_pair_acc", {}).get("pair_acc", 0.0)
         comp_rows.append(row)
-    (METRICS / "component_metrics.csv").write_text(
-        "\n".join([",".join(comp_rows[0].keys())] + [",".join(str(r[k]) for k in comp_rows[0].keys()) for r in comp_rows]),
-        encoding="utf-8",
-    )
+    write_csv(METRICS / "component_metrics.csv", comp_rows)
 
-    # ---------------- leave-one-out (test)
+    # ---- leave-one-out (test, frozen threshold) ----
     loo_rows = []
     base = metrics(test, loo["L0_full"]["label"], loo["L0_full"]["score"])
     for name, s in loo.items():
@@ -392,16 +467,12 @@ def main() -> None:
             "fpr": m["fpr"], "delta_fpr": round(m["fpr"] - base["fpr"], 4),
             "auprc": m.get("auprc", 0.0), "ece": m.get("ece", 0.0), "brier": m.get("brier", 0.0),
         })
-    (METRICS / "leave_one_out.csv").write_text(
-        "\n".join([",".join(loo_rows[0].keys())] + [",".join(str(r[k]) for k in loo_rows[0].keys()) for r in loo_rows]),
-        encoding="utf-8",
-    )
+    write_csv(METRICS / "leave_one_out.csv", loo_rows)
 
-    # ---------------- stress metrics (test)
+    # ---- stress metrics (test, table-A labels) ----
     stress: dict[str, dict] = {}
-    t7 = test_settings["T7_full_correction"]
-    t6 = test_settings["T6_evidence_arbiter"]
-    t3 = test_settings["T3_fraud_refusal"]
+    t7 = {"score": test_settings["T7_full_correction"]["score"], "label": _make_label_fn(test, labels_a["T7_full_correction"])}
+    t6 = {"score": test_settings["T6_evidence_arbiter"]["score"], "label": _make_label_fn(test, labels_a["T6_evidence_arbiter"])}
     stress["actionability_direct_recall"] = {"t7": subtype_metrics(test, t7["label"], "direct_fraud").get("recall", 0.0)}
     stress["trust_facilitation_recall"] = {"t7": subtype_metrics(test, t7["label"], "trust_facilitation").get("recall", 0.0)}
     stress["partial_leakage_recall"] = {"t7": subtype_metrics(test, t7["label"], "partial_leakage").get("recall", 0.0)}
@@ -426,11 +497,45 @@ def main() -> None:
     (METRICS / "stress_metrics.json").write_text(json.dumps(stress, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # summary print
-    for name in ("T0_rule", "T1_single_judge", "T2_fraud_only", "T3_fraud_refusal", "T4_fraud_refusal_context", "T5_rule_arbiter", "T6_evidence_arbiter", "T7_full_correction"):
-        m = metrics(test, test_settings[name]["label"], test_settings[name]["score"])
-        print(f"{name:24s} acc={m['acc']:.3f} prec={m['precision']:.3f} rec={m['recall']:.3f} f1={m['macro_f1']:.3f} fpr={m['fpr']:.3f} auprc={m.get('auprc', float('nan')):.3f} mcc={m['mcc']:.3f} ece={m.get('ece', float('nan')):.3f}")
+    for name in order:
+        m = rows_a[[r["setting"] for r in rows_a].index(name)]
+        print(f"{name:24s} dev_thr={m['threshold_dev']:.4f} acc={m['acc']:.3f} prec={m['precision']:.3f} rec={m['recall']:.3f} unsafe_f1={m['unsafe_f1']:.3f} macro_f1={m['macro_f1']:.3f} fpr={m['fpr']:.3f} auprc={m.get('auprc', float('nan')):.3f} mcc={m['mcc']:.3f}")
     print("wrote", METRICS)
+
+
+def _make_label_fn(recs: list[dict], labels: list[str]):
+    mapping = {id(r): l for r, l in zip(recs, labels)}
+    return lambda r: mapping[id(r)]
+
+
+def _fpr_of(labels: list[str], recs: list[dict]) -> float:
+    y = np.array([1 if r["sample"]["gold_label"] == "unsafe" else 0 for r in recs], dtype=int)
+    pred = np.array([1 if l == "unsafe" else 0 for l in labels], dtype=int)
+    tn = float(((pred == 0) & (y == 0)).sum())
+    fp = float(((pred == 1) & (y == 0)).sum())
+    return fp / max(tn + fp, 1.0)
+
+
+def _recall_of(labels: list[str], recs: list[dict]) -> float:
+    y = np.array([1 if r["sample"]["gold_label"] == "unsafe" else 0 for r in recs], dtype=int)
+    pred = np.array([1 if l == "unsafe" else 0 for l in labels], dtype=int)
+    tp = float(((pred == 1) & (y == 1)).sum())
+    fn = float(((pred == 0) & (y == 1)).sum())
+    return tp / max(tp + fn, 1.0)
+
+
+def write_csv(path, rows):
+    if not rows:
+        return
+    keys = list(rows[0].keys())
+    path.write_text(
+        "\n".join([",".join(keys)] + [",".join(str(r[k]) for k in keys) for r in rows]),
+        encoding="utf-8",
+    )
+
+
 
 
 if __name__ == "__main__":
     main()
+

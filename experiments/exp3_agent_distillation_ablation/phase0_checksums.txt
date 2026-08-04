@@ -1,0 +1,21 @@
+Phase 0 freeze record
+commit: 8e76b8b (main)
+date: 2026-08-04
+report: EXP3_ENHANCED_AGENT_DISTILLATION_REPORT.md (22161 bytes, UTF-8 BOM)
+budget: outputs/api_cache_exp3/budget_state.json used=38.835786 cap=40.0
+
+Metric file checksums (SHA256, first 16 hex chars):
+
+4CB6528AAF4C05BA  experiments\exp3_agent_distillation_ablation\outputs\metrics\final_metrics.json
+7246ACD6392BFA00  experiments\exp3_agent_distillation_ablation\outputs\metrics\calibration.json
+2FF8EF5449E379E3  experiments\exp3_agent_distillation_ablation\outputs\metrics\calibrator_comparison.json
+B9AFAAEA56E461BA  experiments\exp3_agent_distillation_ablation\outputs\metrics\calibrator.json
+12A0F63E1D90D1AF  experiments\exp3_agent_distillation_ablation\outputs\metrics\nested_ablation.csv
+1E09A287E33C4166  experiments\exp3_agent_distillation_ablation\outputs\metrics\nested_ablation_matched_fpr.csv
+8B62DB88F1DD185C  experiments\exp3_agent_distillation_ablation\outputs\metrics\nested_ablation_matched_recall.csv
+CED17628C9BCD1B6  experiments\exp3_agent_distillation_ablation\outputs\metrics\component_metrics.csv
+22EB6B6EB1FD0A35  experiments\exp3_agent_distillation_ablation\outputs\metrics\leave_one_out.csv
+C44B48DD2CE428E9  experiments\exp3_agent_distillation_ablation\outputs\metrics\paired_significance.json
+4240CEC96F1F9075  experiments\exp3_agent_distillation_ablation\outputs\metrics\student_gradient.csv
+A5EACBADF9EB31DC  experiments\exp3_agent_distillation_ablation\outputs\metrics\stress_metrics.json
+C05904251202A705  experiments\exp3_agent_distillation_ablation\outputs\frozen_config.json

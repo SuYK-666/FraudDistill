@@ -1,0 +1,5 @@
+﻿Phase 0 freeze record
+commit: 8e76b8b (main)
+date: 2026-08-04
+report: EXP3_ENHANCED_AGENT_DISTILLATION_REPORT.md (22161 bytes, UTF-8 BOM)
+budget: outputs/api_cache_exp3/budget_state.json used=38.835786 cap=40.0

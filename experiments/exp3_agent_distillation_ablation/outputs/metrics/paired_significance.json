@@ -1,89 +1,115 @@
 {
   "n_test": 1262,
-  "threshold": 0.8409,
-  "auprc_pooled": {
-    "T0_rule": 0.5114,
-    "T2_fraud_only": 0.8408,
-    "T3_fraud_refusal": 0.8976,
-    "T4_fraud_refusal_context": 0.9024,
-    "T5_rule_arbiter": 0.9078,
-    "T6_evidence_arbiter": 0.9236,
-    "T7_full_correction": 0.9236,
-    "T1_single_judge": 0.5158
-  },
+  "threshold": 0.85,
   "comparisons": {
-    "T1_single_judge->T7_full_correction": {
+    "T1_single_judge->T6_evidence_arbiter": {
+      "delta_direction": "metric(T6_evidence_arbiter) - metric(T1_single_judge); positive = T6_evidence_arbiter better",
       "bootstrap": {
         "macro_f1": {
-          "delta": 0.166,
+          "observed_delta": 0.3146,
+          "bootstrap_mean_delta": 0.3145,
           "ci95": [
-            0.1449,
-            0.1878
+            0.2822,
+            0.3462
           ],
           "ci_excludes_zero": true
         },
         "recall": {
-          "delta": 0.1673,
+          "observed_delta": 0.2617,
+          "bootstrap_mean_delta": 0.2615,
           "ci95": [
-            0.146,
-            0.1891
+            0.2233,
+            0.2997
           ],
           "ci_excludes_zero": true
         },
         "fpr": {
-          "delta": 0.0221,
+          "observed_delta": -0.3624,
+          "bootstrap_mean_delta": -0.3621,
           "ci95": [
-            0.0096,
-            0.035
+            -0.4121,
+            -0.3115
+          ],
+          "ci_excludes_zero": true
+        },
+        "auprc": {
+          "observed_delta": 0.4078,
+          "bootstrap_mean_delta": 0.4074,
+          "ci95": [
+            0.3766,
+            0.4384
           ],
           "ci_excludes_zero": true
         }
       },
       "mcnemar": {
-        "b_only": 46,
-        "c_only": 230,
+        "b_only_a_wrong_b_right": 462,
+        "c_only_a_right_b_wrong": 67,
         "p_exact": 0.0
       },
-      "mcnemar_p_holm": 1.0
+      "holm": {
+        "raw_p": 0.0,
+        "holm_p": 0.0,
+        "reject_h0": true
+      }
     },
     "T5_rule_arbiter->T6_evidence_arbiter": {
+      "delta_direction": "metric(T6_evidence_arbiter) - metric(T5_rule_arbiter); positive = T6_evidence_arbiter better",
       "bootstrap": {
         "macro_f1": {
-          "delta": 0.0064,
+          "observed_delta": -0.0087,
+          "bootstrap_mean_delta": -0.0087,
           "ci95": [
-            0.0024,
-            0.0111
+            -0.0183,
+            0.0006
           ],
-          "ci_excludes_zero": true
+          "ci_excludes_zero": false
         },
         "recall": {
-          "delta": 0.0064,
+          "observed_delta": 0.021,
+          "bootstrap_mean_delta": 0.0211,
           "ci95": [
-            0.0024,
-            0.0111
+            0.0101,
+            0.0331
           ],
           "ci_excludes_zero": true
         },
         "fpr": {
-          "delta": 0.0,
+          "observed_delta": 0.0373,
+          "bootstrap_mean_delta": 0.0374,
           "ci95": [
-            0.0,
-            0.0
+            0.0235,
+            0.0525
           ],
-          "ci_excludes_zero": false
+          "ci_excludes_zero": true
+        },
+        "auprc": {
+          "observed_delta": 0.0158,
+          "bootstrap_mean_delta": 0.0157,
+          "ci95": [
+            0.0062,
+            0.0265
+          ],
+          "ci_excludes_zero": true
         }
       },
       "mcnemar": {
-        "b_only": 0,
-        "c_only": 8,
-        "p_exact": 0.007812
+        "b_only_a_wrong_b_right": 13,
+        "c_only_a_right_b_wrong": 24,
+        "p_exact": 0.098872
       },
-      "mcnemar_p_holm": 1.0
+      "holm": {
+        "raw_p": 0.098872,
+        "holm_p": 0.211455,
+        "reject_h0": false
+      }
     },
     "T6_evidence_arbiter->T7_full_correction": {
+      "delta_direction": "metric(T7_full_correction) - metric(T6_evidence_arbiter); positive = T7_full_correction better",
       "bootstrap": {
         "macro_f1": {
-          "delta": 0.0,
+          "observed_delta": 0.0,
+          "bootstrap_mean_delta": 0.0,
           "ci95": [
             0.0,
             0.0
@@ -91,7 +117,8 @@
           "ci_excludes_zero": false
         },
         "recall": {
-          "delta": 0.0,
+          "observed_delta": 0.0,
+          "bootstrap_mean_delta": 0.0,
           "ci95": [
             0.0,
             0.0
@@ -99,7 +126,17 @@
           "ci_excludes_zero": false
         },
         "fpr": {
-          "delta": 0.0,
+          "observed_delta": 0.0,
+          "bootstrap_mean_delta": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "ci_excludes_zero": false
+        },
+        "auprc": {
+          "observed_delta": 0.0,
+          "bootstrap_mean_delta": 0.0,
           "ci95": [
             0.0,
             0.0
@@ -108,79 +145,117 @@
         }
       },
       "mcnemar": {
-        "b_only": 0,
-        "c_only": 0,
+        "b_only_a_wrong_b_right": 0,
+        "c_only_a_right_b_wrong": 0,
         "p_exact": 1.0
       },
-      "mcnemar_p_holm": 1.0
+      "holm": {
+        "raw_p": 1.0,
+        "holm_p": 1.0,
+        "reject_h0": false
+      }
     },
     "T2_fraud_only->T3_fraud_refusal": {
+      "delta_direction": "metric(T3_fraud_refusal) - metric(T2_fraud_only); positive = T3_fraud_refusal better",
       "bootstrap": {
         "macro_f1": {
-          "delta": -0.0356,
+          "observed_delta": 0.0243,
+          "bootstrap_mean_delta": 0.0244,
           "ci95": [
-            -0.0461,
-            -0.0256
+            0.0021,
+            0.0469
           ],
           "ci_excludes_zero": true
         },
         "recall": {
-          "delta": -0.0356,
+          "observed_delta": 0.1874,
+          "bootstrap_mean_delta": 0.1876,
           "ci95": [
-            -0.0461,
-            -0.0256
+            0.1566,
+            0.2195
           ],
           "ci_excludes_zero": true
         },
         "fpr": {
-          "delta": -0.0135,
+          "observed_delta": 0.1384,
+          "bootstrap_mean_delta": 0.1385,
           "ci95": [
-            -0.02,
-            -0.0072
+            0.1122,
+            0.1662
+          ],
+          "ci_excludes_zero": true
+        },
+        "auprc": {
+          "observed_delta": 0.0568,
+          "bootstrap_mean_delta": 0.0569,
+          "ci95": [
+            0.0434,
+            0.071
           ],
           "ci_excludes_zero": true
         }
       },
       "mcnemar": {
-        "b_only": 45,
-        "c_only": 17,
-        "p_exact": 0.000497
+        "b_only_a_wrong_b_right": 117,
+        "c_only_a_right_b_wrong": 90,
+        "p_exact": 0.070485
       },
-      "mcnemar_p_holm": 1.0
+      "holm": {
+        "raw_p": 0.070485,
+        "holm_p": 0.211455,
+        "reject_h0": false
+      }
     },
     "T3_fraud_refusal->T4_fraud_refusal_context": {
+      "delta_direction": "metric(T4_fraud_refusal_context) - metric(T3_fraud_refusal); positive = T4_fraud_refusal_context better",
       "bootstrap": {
         "macro_f1": {
-          "delta": -0.0013,
+          "observed_delta": 0.0152,
+          "bootstrap_mean_delta": 0.0152,
           "ci95": [
-            -0.0034,
-            0.0
+            0.0086,
+            0.0226
           ],
-          "ci_excludes_zero": false
+          "ci_excludes_zero": true
         },
         "recall": {
-          "delta": -0.0016,
+          "observed_delta": -0.0016,
+          "bootstrap_mean_delta": -0.0016,
           "ci95": [
-            -0.004,
+            -0.005,
             0.0
           ],
           "ci_excludes_zero": false
         },
         "fpr": {
-          "delta": -0.0008,
+          "observed_delta": -0.0311,
+          "bootstrap_mean_delta": -0.0312,
           "ci95": [
-            -0.0024,
-            0.0
+            -0.0452,
+            -0.0185
           ],
-          "ci_excludes_zero": false
+          "ci_excludes_zero": true
+        },
+        "auprc": {
+          "observed_delta": 0.0048,
+          "bootstrap_mean_delta": 0.0048,
+          "ci95": [
+            0.003,
+            0.007
+          ],
+          "ci_excludes_zero": true
         }
       },
       "mcnemar": {
-        "b_only": 2,
-        "c_only": 1,
-        "p_exact": 1.0
+        "b_only_a_wrong_b_right": 20,
+        "c_only_a_right_b_wrong": 1,
+        "p_exact": 2.1e-05
       },
-      "mcnemar_p_holm": 1.0
+      "holm": {
+        "raw_p": 2.1e-05,
+        "holm_p": 8.4e-05,
+        "reject_h0": true
+      }
     }
   }
 }

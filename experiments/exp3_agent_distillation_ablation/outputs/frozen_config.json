@@ -1,8 +1,8 @@
 {
   "experiment": "exp3_agent_distillation_ablation",
-  "threshold": 0.8409,
+  "threshold": 0.85,
   "calibration": {
-    "method": "platt",
+    "method": "raw",
     "max_fpr": 0.08
   },
   "frozen_at": "2026-08-04",

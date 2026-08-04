@@ -204,6 +204,8 @@ def type_proba(vec, heads, rows) -> dict[str, np.ndarray]:
 
 
 def metrics_binary(labels, scores, threshold=0.5) -> dict:
+    """Guide 3.1: report unsafe_f1 / safe_f1 and the TRUE macro-F1 separately."""
+    from sklearn.metrics import f1_score as _skf1
     y = np.array([1 if l == "unsafe" else 0 for l in labels], dtype=int)
     pred = (np.asarray(scores) >= threshold).astype(int)
     tp = int(((pred == 1) & (y == 1)).sum())
@@ -212,12 +214,14 @@ def metrics_binary(labels, scores, threshold=0.5) -> dict:
     tn = int(((pred == 0) & (y == 0)).sum())
     prec = tp / max(tp + fp, 1)
     rec = tp / max(tp + fn, 1)
-    f1 = 2 * prec * rec / max(prec + rec, 1e-9)
     fpr = fp / max(tn + fp, 1)
     acc = (tp + tn) / max(len(y), 1)
     auprc = float(average_precision_score(y, scores)) if len(set(scores)) > 1 else float("nan")
     return {"acc": round(acc, 4), "precision": round(prec, 4), "recall": round(rec, 4),
-            "macro_f1": round(f1, 4), "fpr": round(fpr, 4), "auprc": round(auprc, 4)}
+            "unsafe_f1": round(float(_skf1(y, pred, pos_label=1, zero_division=0)), 4),
+            "safe_f1": round(float(_skf1(y, pred, pos_label=0, zero_division=0)), 4),
+            "macro_f1": round(float(_skf1(y, pred, average="macro", zero_division=0)), 4),
+            "fpr": round(fpr, 4), "auprc": round(auprc, 4)}
 
 
 def type_macro_f1(labels, proba: dict[str, np.ndarray]) -> float:
@@ -265,12 +269,17 @@ def run_setting(name, train_rows, test_rows, dev_rows, teacher_map, seeds) -> di
             scores = model.predict_proba(test_rows)
             m = metrics_binary([r["gold_label"] for r in test_rows], scores)
         elif name == "S3_type_distill":
+            # Guide 9.2/28.3: type distillation must affect the binary risk score.
+            # Risk score = 0.5 * binary LR proba + 0.5 * (1 - P(safe)) from the
+            # four one-vs-rest type heads, so type signal is no longer inert.
             rows, labels, weights = build_teacher_rows(train_rows, teacher_map)
             model = QyTfidf(seed=seed).fit(rows, labels, weights)
-            scores = model.predict_proba(test_rows)
-            m = metrics_binary([r["gold_label"] for r in test_rows], scores)
+            bin_scores = model.predict_proba(test_rows)
             vec, heads = type_head_fit(train_rows, teacher_map, seed)
             proba = type_proba(vec, heads, test_rows)
+            type_unsafe = 1.0 - proba["safe"]
+            scores = 0.5 * np.asarray(bin_scores) + 0.5 * np.asarray(type_unsafe)
+            m = metrics_binary([r["gold_label"] for r in test_rows], scores)
             m["type_macro_f1"] = type_macro_f1([r.get("gold_type") or (r["gold_label"] if r["gold_label"] == "safe" else "fraud_assistance") for r in test_rows], proba)
         elif name == "S4_evidence_distill":
             rows, labels, weights = full_distill_rows(train_rows, teacher_map)
