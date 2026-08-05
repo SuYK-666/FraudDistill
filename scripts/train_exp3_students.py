@@ -402,7 +402,8 @@ def main_neural(args) -> None:
 
     model = build_neural_student(cfg, freeze_base=False, device=device)
     t0 = time.time()
-    run_dir = out_root / f"{args.setting}_{args.architecture}_seed{args.seed}"
+    gf_tag = f"_gf{args.gold_fraction}" if args.gold_fraction < 1.0 else ""
+    run_dir = out_root / f"{args.setting}_{args.architecture}_seed{args.seed}{gf_tag}"
     run_dir.mkdir(parents=True, exist_ok=True)
     best_state, history = train_neural(
         model, train_loader, dev_loader, loss_fn, tokenizer,
@@ -415,9 +416,10 @@ def main_neural(args) -> None:
 
     test_m = evaluate_neural(model, test_loader, loss_fn, device, args.architecture)
     print("TEST:", json.dumps(test_m, ensure_ascii=False))
-    save_checkpoint(model, tokenizer, out_root / f"{args.setting}_{args.architecture}_seed{args.seed}_final", args.architecture)
-    (out_root / f"{args.setting}_{args.architecture}_seed{args.seed}.json").write_text(
+    save_checkpoint(model, tokenizer, out_root / f"{args.setting}_{args.architecture}_seed{args.seed}{gf_tag}_final", args.architecture)
+    (out_root / f"{args.setting}_{args.architecture}_seed{args.seed}{gf_tag}.json").write_text(
         json.dumps({"setting": args.setting, "architecture": args.architecture, "seed": args.seed,
+                    "gold_fraction": args.gold_fraction,
                     "rows": len(train_examples), "test": test_m,
                     "history": history, "wall_seconds": round(time.time() - t0, 1)}, ensure_ascii=False, indent=2),
         encoding="utf-8")

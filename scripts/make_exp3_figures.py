@@ -212,6 +212,78 @@ ax.grid(axis='x', alpha=0.3)
 fig.tight_layout(); fig.savefig(FIG / 'fig6_conflict_correction.png', dpi=150)
 plt.close(fig)
 
+# ---------- Figure 7: neural student comparison (test) ----------
+import json as _json
+NEURAL = OUT / 'neural_student'
+
+def _load_json(path):
+    if path.exists():
+        try:
+            return _json.loads(path.read_text(encoding='utf-8'))
+        except Exception:
+            return None
+    return None
+
+fig, ax = plt.subplots(figsize=(9.5, 5.2))
+neural_rows = []
+zero = _load_json(NEURAL / 'zero_shot_standard.json')
+if not zero:
+    z = _load_json(NEURAL / 'eval_zero_shot' / 'neural_student_metrics.json')
+    if z:
+        zero = {'test': z}
+if zero:
+    neural_rows.append(('ZeroShot', zero))
+for name, fname in [('Gold', 'gold_standard_seed11.json'),
+                    ('SoftDistill', 'soft_distill_standard_seed11.json'),
+                    ('FullDistill', 'full_distill_standard_seed11.json')]:
+    d = _load_json(NEURAL / fname)
+    if d and d.get('test'):
+        neural_rows.append((name, d['test']))
+if neural_rows:
+    names = [r[0] for r in neural_rows]
+    mf1 = [float(r[1].get('macro_f1', 0)) for r in neural_rows]
+    rec = [float(r[1].get('recall', 0)) for r in neural_rows]
+    fpr = [float(r[1].get('fpr', 0)) for r in neural_rows]
+    x = np.arange(len(names)); w = 0.26
+    b1 = ax.bar(x - w, mf1, w, label='Macro-F1', color='#4C72B0')
+    b2 = ax.bar(x, rec, w, label='Recall', color='#55A868')
+    b3 = ax.bar(x + w, fpr, w, label='FPR', color='#C44E52')
+    for bars in (b1, b2, b3):
+        for b in bars:
+            ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.008,
+                    f'{b.get_height():.3f}', ha='center', fontsize=7.5)
+    ax.set_xticks(x); ax.set_xticklabels(names)
+    ax.set_ylim(0, 1.02)
+    ax.set_ylabel('Score'); ax.set_title('Neural student (1.5B LoRA, test n=1262)')
+    ax.legend(loc='upper left', fontsize=8); ax.grid(axis='y', alpha=0.3)
+    fig.tight_layout(); fig.savefig(FIG / 'fig7_neural_student.png', dpi=150)
+    plt.close(fig)
+
+# ---------- Figure 8: low-label curve ----------
+fig, ax = plt.subplots(figsize=(8.5, 5))
+fracs = [0.1, 0.25, 0.5, 1.0]
+gold_pts, soft_pts = [], []
+for gf in fracs:
+    tag = '' if gf == 1.0 else f'_gf{gf}'
+    sub = NEURAL if gf == 1.0 else NEURAL / 'lowlabel'
+    gd = _load_json(sub / f'gold_standard_seed11{tag}.json')
+    sd = _load_json(sub / f'soft_distill_standard_seed11{tag}.json')
+    if gd and gd.get('test'):
+        gold_pts.append((gf, float(gd['test'].get('macro_f1', 0))))
+    if sd and sd.get('test'):
+        soft_pts.append((gf, float(sd['test'].get('macro_f1', 0))))
+if gold_pts and soft_pts:
+    ax.plot([p[0] for p in gold_pts], [p[1] for p in gold_pts], 'o-', label='Neural-Gold', color='#4C72B0')
+    ax.plot([p[0] for p in soft_pts], [p[1] for p in soft_pts], 's--', label='SoftDistill', color='#55A868')
+    for p in gold_pts + soft_pts:
+        ax.annotate(f'{p[1]:.3f}', (p[0], p[1]), textcoords='offset points', xytext=(4, 4), fontsize=8)
+    ax.set_xscale('log'); ax.set_xticks(fracs); ax.get_xaxis().set_major_formatter(plt.FuncFormatter(lambda v, _: f'{v:.0%}'))
+    ax.set_xlabel('Gold fraction (log scale)'); ax.set_ylabel('Macro-F1 (test)')
+    ax.set_title('Low-label curve: gold vs teacher soft distill')
+    ax.legend(fontsize=9); ax.grid(alpha=0.3)
+    fig.tight_layout(); fig.savefig(FIG / 'fig8_lowlabel_curve.png', dpi=150)
+    plt.close(fig)
+
 print('figures written to', FIG)
 for f in sorted(FIG.glob('*.png')):
     print(' ', f.name)

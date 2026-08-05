@@ -33,23 +33,27 @@ COMMON = [
 ]
 
 STAGES = {
-    # name -> (extra args, out-root)
+    # name -> (extra args, out-root, manifest override)
     # fairness (guide 18.6): full/semi stages use the same step budget;
     # low-label stages scale epochs up so step counts stay comparable.
-    "gold": (["--setting", "gold", "--epochs", "2"], None),
-    "soft_distill": (["--setting", "soft_distill", "--epochs", "2"], None),
+    "gold": (["--setting", "gold", "--epochs", "2"], None, None),
+    "soft_distill": (["--setting", "soft_distill", "--epochs", "2"], None, None),
     # max_steps counts optimizer steps: 2236 micro-batches / 16 accum = 140
-    "full_distill": (["--setting", "full_distill", "--epochs", "1", "--max-steps", "140"], None),
-    "gold10": (["--setting", "gold", "--gold-fraction", "0.1", "--epochs", "12"], "lowlabel"),
-    "gold25": (["--setting", "gold", "--gold-fraction", "0.25", "--epochs", "6"], "lowlabel"),
-    "gold50": (["--setting", "gold", "--gold-fraction", "0.5", "--epochs", "4"], "lowlabel"),
-    "soft10": (["--setting", "soft_distill", "--gold-fraction", "0.1", "--epochs", "12"], "lowlabel"),
-    "soft25": (["--setting", "soft_distill", "--gold-fraction", "0.25", "--epochs", "6"], "lowlabel"),
-    "soft50": (["--setting", "soft_distill", "--gold-fraction", "0.5", "--epochs", "4"], "lowlabel"),
+    "full_distill": (["--setting", "full_distill", "--epochs", "1", "--max-steps", "140"], None,
+                     "data/prepared/exp3_neural_student/train_manifest_expanded.jsonl"),
+    "gold10": (["--setting", "gold", "--gold-fraction", "0.1", "--epochs", "8"], "lowlabel", None),
+    "gold25": (["--setting", "gold", "--gold-fraction", "0.25", "--epochs", "4"], "lowlabel", None),
+    "gold50": (["--setting", "gold", "--gold-fraction", "0.5", "--epochs", "2"], "lowlabel", None),
+    "soft10": (["--setting", "soft_distill", "--gold-fraction", "0.1", "--epochs", "8"], "lowlabel", None),
+    "soft25": (["--setting", "soft_distill", "--gold-fraction", "0.25", "--epochs", "4"], "lowlabel", None),
+    "soft50": (["--setting", "soft_distill", "--gold-fraction", "0.5", "--epochs", "2"], "lowlabel", None),
 }
 
 
-def run_stage(name: str, manifest: str, extra: list[str], out_root: str | None = None) -> bool:
+def run_stage(name: str, manifest: str, extra: list[str], out_root: str | None = None,
+              manifest_override: str | None = None) -> bool:
+    if manifest_override:
+        manifest = manifest_override
     log = (OUT / f"train_stage_{name}.log").open("a", encoding="utf-8")
     err = (OUT / f"train_stage_{name}.err").open("a", encoding="utf-8")
     base = [sys.executable, str(SCRIPT), "--manifest", manifest] + COMMON + extra
@@ -68,10 +72,13 @@ def run_stage(name: str, manifest: str, extra: list[str], out_root: str | None =
             return True
         print(f"[stage {name}] FAIL rc={rc}; will retry with --resume", flush=True)
         setting = extra[1]  # value after --setting
+        gf_tag = ""
+        if "--gold-fraction" in extra:
+            gf_tag = f"_gf{extra[extra.index('--gold-fraction') + 1]}"
         resume_dir = REPO / "experiments/exp3_agent_distillation_ablation/outputs/neural_student"
         if out_root:
             resume_dir = resume_dir / out_root
-        resume = resume_dir / f"{setting}_standard_seed11" / "resume.pt"
+        resume = resume_dir / f"{setting}_standard_seed11{gf_tag}" / "resume.pt"
         if not resume.exists():
             print(f"[stage {name}] no resume.pt at {resume}", flush=True)
             continue
@@ -95,12 +102,12 @@ def main() -> None:
         plan.append((name, *STAGES[name]))
     if args.settings_json:
         extra = json.loads(Path(args.settings_json).read_text(encoding="utf-8"))
-        plan.extend((e["name"], e["args"], e.get("out_root")) for e in extra)
+        plan.extend((e["name"], e["args"], e.get("out_root"), e.get("manifest")) for e in extra)
 
     OUT.mkdir(parents=True, exist_ok=True)
     results = {}
-    for name, extra, out_root in plan:
-        ok = run_stage(name, args.manifest, extra, out_root)
+    for name, extra, out_root, manifest_override in plan:
+        ok = run_stage(name, args.manifest, extra, out_root, manifest_override)
         results[name] = "ok" if ok else "failed"
         print(f"[stage {name}] -> {results[name]}", flush=True)
     (OUT / "neural_stage_results.json").write_text(

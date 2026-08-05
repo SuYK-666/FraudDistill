@@ -66,7 +66,7 @@ def train_neural(model, train_loader, dev_loader, loss_fn, tokenizer,
     start_step = 0
     if resume and Path(resume).exists():
         ck = torch.load(resume, map_location="cpu", weights_only=False)
-        model.load_state_dict(ck["model"])
+        model.load_state_dict(ck["model"], strict=False)
         optimizer.load_state_dict(ck["optimizer"])
         scheduler.load_state_dict(ck["scheduler"])
         start_epoch = int(ck["epoch"])
@@ -192,7 +192,11 @@ def evaluate_neural(model, loader, loss_fn, device, architecture="standard"):
 def save_resume(model, optimizer, scheduler, path, epoch, step_in_epoch, global_step,
                 best_metric, best_epoch, history):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    torch.save({"model": model.state_dict(), "optimizer": optimizer.state_dict(),
+    # lean snapshot: trainable (LoRA/head) params only; base weights come from
+    # the frozen checkpoint on resume. Old full-state snapshots still load via strict=False.
+    trainable = {k: v for k, v in model.state_dict().items()
+                 if any(tag in k for tag in ("lora_", "score", "head"))}
+    torch.save({"model": trainable, "optimizer": optimizer.state_dict(),
                 "scheduler": scheduler.state_dict(), "epoch": epoch, "step_in_epoch": step_in_epoch,
                 "global_step": global_step, "best_metric": best_metric, "best_epoch": best_epoch,
                 "history": history}, path)
@@ -213,3 +217,10 @@ def load_checkpoint(model, path):
     else:
         model.load_state_dict(torch.load(str(path / "model.pt"), map_location="cpu"))
     return model
+    # LoRA adapters only: save the (non-LoRA) classification head explicitly so
+    # eval can reproduce training-time metrics (guide 28.1: classifier head must
+    # be persisted; PeftModel.save_pretrained skips non-adapter modules).
+    head_state = {k: v for k, v in model.state_dict().items()
+                  if any(tag in k for tag in ("score", "head")) and "lora_" not in k}
+    if head_state:
+        torch.save(head_state, path / "classifier_head.pt")

@@ -331,6 +331,21 @@ configs/student/deepseek_r1_distill_qwen_1_5b_qlora.yaml
 
 本项目最多只建议部署一个本地小模型。第一阶段可先跑 Student-ZeroShot，再进行 LoRA/QLoRA 小样本微调。
 
+实验三神经学生（DeepSeek-R1-Distill-Qwen-1.5B + LoRA，4 类统一 softmax）复现命令：
+
+```powershell
+# 0) 训练数据审计（保留 Exp2 测试集，group/template-family disjoint）
+python scripts/audit_student_training_data.py
+# 1) 训练/微调（CPU；GPU 可改用 configs/student/deepseek_r1_distill_qwen_1_5b_qlora.yaml）
+python scripts/train_exp3_students.py --manifest data/prepared/exp3_neural_student/train_manifest.jsonl `
+  --backend neural --architecture standard --seeds 11 --max-length 384 `
+  --micro-batch 2 --effective-batch 32 --setting gold --epochs 2
+# 2) 完整评估（AUPRC/MCC/ECE/4类/切片/泛化/部署）
+python scripts/evaluate_neural_student.py --checkpoint experiments/exp3_agent_distillation_ablation/outputs/neural_student/gold_standard_seed11_final `
+  --architecture standard --max-length 384 --out-dir experiments/exp3_agent_distillation_ablation/outputs/neural_student/eval_gold
+```
+
+
 ## 测试
 
 ```powershell

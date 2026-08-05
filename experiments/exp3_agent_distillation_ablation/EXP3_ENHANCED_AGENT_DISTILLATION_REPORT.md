@@ -15,6 +15,7 @@
 - **组件消融**：去掉 Refusal Agent（L2）影响最大：Macro-F1 **−0.1099**、Recall −22.5pp；去掉 Context Agent（L3）FPR +5.6pp。
 - **纠错（correction）**：dev/test 触发率 14.0% / 15.3%，全部为“确认型”（193 条 test 冲突样本从未改判，T7≡T6）。
 - **Student 蒸馏梯度（test, 5 seeds）**：S2 分数蒸馏最优 Macro-F1 **0.9073**（vs S0 gold 0.9031）；S4 证据蒸馏 AUPRC **0.9793** 最优。S4 vs S0 未达文档 +2pp 目标，原因见 §9.2。
+- **神经学生（1.5B QLoRA，CPU 训练，seed 11）**：Neural-SoftDistill 最优 Macro-F1 **0.8849**（test，Recall 0.8094 / FPR 0.0404 / AUPRC 0.9532 / MCC 0.7795）；Neural-Gold 0.8676；Neural-FullDistill（+4,000 困难扩展）Recall 0.8207 最高但 FPR 0.0918；低标注 10% gold：Neural-Gold 0.8422。离线评估已修复分类头保存问题，指标与训练日志一致。本轮 API 新增 7.00 元（详见 §16）。
 - **测试**：pytest 330 passed；所有脚本/产物已整理，代码已提交 GitHub。
 
 ---
@@ -210,7 +211,7 @@
 - 目标：S4 vs S0 达 Macro-F1 +2pp 或 FPR 相对下降 20% 或 AUPRC +0.03。
 - 实测：Macro-F1 +0.12pp、FPR 0.0404→0.0435（未降）、AUPRC +0.0018。**未达成**，如实记录。
 - 原因：① 教师标签与 gold 一致率 train 89.1% / test 90.3%，教师信号相对 gold 的信息增量有限；② 轻量学生容量受限，无法充分吸收证据/类型信号；③ S4 已去除净负的 hard-label 复制，主增益来自软分数与 pair 排序（体现在 AUPRC）。
-- 建议后续（不占本预算）：S5 神经学生（DeepSeek-R1-Distill-Qwen-1.5B + QLoRA，指南 §18.2）对比 Gold vs FullDistill，或在轻量学生上放大 pair/rank 权重。
+- 后续已实施 S5 神经学生（DeepSeek-R1-Distill-Qwen-1.5B + LoRA，CPU），结果见 §16；SoftDistill 相对 Gold 提升 Macro-F1 +1.73pp 且 FPR 下降 2.65pp，FullDistill（+4,000 扩展数据）Recall 最高但 FPR 上升，机制解读见 §16.4。
 
 ---
 
@@ -257,6 +258,10 @@
 | Correction | 冲突子集 F1 提高 ≥5pp；全体 F1 ≥1pp；额外成本 ≤20% | 0pp / 0pp（确认型，无改判）；成本 6.6% | ❌ 未达成（无改判收益；成本可控） |
 | Student S4 vs S0 | +2pp 或 FPR↓20% 或 AUPRC +0.03 | +0.12pp / FPR 未降 / AUPRC +0.0018 | ❌ 未达成（如实报告，原因见 §9.2） |
 
+| Neural-SoftDistill vs Neural-Gold（同数据） | 蒸馏增益 ≥1.5pp 或 FPR 相对下降 ≥15% | Macro-F1 **+1.73pp**；FPR 0.0669→0.0404（相对 −39.6%） | ✅ 达成（单种子，方向一致） |
+| Neural-FullDistill vs Neural-Gold | 同上 | Macro-F1 −0.28pp；Recall +1.94pp；FPR +2.49pp | ❌ 未达成（困难样本阈值偏移，如实报告） |
+| 神经学生切片（指南 §24.6） | Direct R≥0.94 / Hard-safe FPR≤0.04 / Clean-refusal FPR≤0.05 / Over-refusal R≥0.85 / Context-flip≥0.90 | 见 §16.6：trust/leakage/over-refusal/context-flip 达成；direct（0.72–0.81）与 clean-refusal（soft 0.0105 达成，gold/full 未达）部分未达 | ⚠️ 部分达成 |
+
 > 总体：**教师侧（T1→T7、Fraud/Refusal/Context/Arbiter 机制）全部达成或部分达成且方向正确；纠错与 Student 两个目标未达成**，均已给出机制解释，并作为后续工作（神经学生、对抗型纠错样本、冲突阈值下调）的依据。
 
 ---
@@ -277,6 +282,14 @@ python scripts/run_exp3_teacher.py --mode judge
 
 # 3) 校准与冻结
 python scripts/calibrate_exp3_teacher.py
+
+# 3) 神经学生（1.5B LoRA）训练与评估（CPU）
+python scripts/audit_student_training_data.py
+python scripts/train_exp3_students.py --manifest data/prepared/exp3_neural_student/train_manifest.jsonl --backend neural --architecture standard --seeds 11 --max-length 384 --micro-batch 2 --effective-batch 32 --setting gold --epochs 2
+python scripts/train_exp3_students.py --manifest data/prepared/exp3_neural_student/train_manifest.jsonl --backend neural --architecture standard --seeds 11 --max-length 384 --micro-batch 2 --effective-batch 32 --setting soft_distill --epochs 2
+python scripts/train_exp3_students.py --manifest data/prepared/exp3_neural_student/train_manifest_expanded.jsonl --backend neural --architecture standard --seeds 11 --max-length 384 --micro-batch 2 --effective-batch 32 --setting full_distill --epochs 1 --max-steps 140
+python scripts/evaluate_neural_student.py --checkpoint experiments/exp3_agent_distillation_ablation/outputs/neural_student/soft_distill_standard_seed11_final --architecture standard --max-length 384 --out-dir experiments/exp3_agent_distillation_ablation/outputs/neural_student/eval_soft
+python scripts/_run_lowlabel.py   # 低标注曲线驱动（gold10 已完成；soft10/25/50 后续补跑）
 
 # 4) 离线消融 / 统计检验 / Student / 图
 python scripts/build_exp3_agent_ablations.py
@@ -304,6 +317,13 @@ experiments/exp3_agent_distillation_ablation/
     │   ├── student_gradient.csv
     │   └── cost_{pilot,train,dev,test,judge}.json
     └── figures/fig1..fig6.png
+
+    ├── neural_student/
+    │   ├── {gold,soft,full}_standard_seed11_final/   (<-> LoRA 适配器 + 分类头（modules_to_save）)
+    │   ├── eval_{gold,soft,full,lowlabel_gold10,zero_shot}/   (<-> 完整评估：指标 JSON + 预测)
+    │   └── lowlabel/                          (<-> 低标注 gold10 完成；soft10 resume.pt 保留)
+    ├── metrics/neural_student_metrics.json      (<-> canonical 合并指标，指南 §3.8)
+    └── figures/fig1..fig6.png  fig7_neural_student.png  fig8_lowlabel_curve.png
 ```
 
 ---
@@ -316,3 +336,61 @@ experiments/exp3_agent_distillation_ablation/
 4. **FPR 跨集差异**：冻结阈值在 test 上 FPR 0.0964 略超 dev 目标 0.08，属分布差异，未做 test 调参。
 5. **预算**：38.84/40 元已用，剩余 1.16 元预留；本报告后不再调用 API。
 6. **下一步（实验 2 衔接）**：冻结 T7 完整增强 MAT（不再改 Prompt），在 Exp2 的四个 benchmark（Fraud-R1 / OR-Bench / Do-Not-Answer / Aegis 2.0）上以同 q+y 运行，与各原工作 evaluator 比较（指南 §28.4）。
+
+7. **神经学生（§16）局限与后续**：① 仅 seed 11（CPU 训练 ~5–7h/轮，3 seeds 与配对统计检验未跑）；② 低标注曲线只完成 10%（gold10；soft10 中断于 ~1 epoch，resume.pt 已保留可续训），25%/50% 未跑；③ FullDistill 因 +4,000 困难扩展样本导致 FPR 上升（0.0918），0.5 固定阈值协议下如实报告，部署可用 dev 阈值调节；④ real-only 切片明显低于 synthetic（Recall 0.34–0.41 vs 1.0），提示模板学习风险，主论文需以 real-only 为核心（指南 §28.7）；⑤ 4 类 Macro-F1 仅 ~0.41，类型头容量不足；⑥ 部署量化（INT8/ONNX）未做；⑦ zero-shot 为随机分类头下界（0.4176），仅作底线展示。
+
+---
+
+## 16. 神经学生蒸馏（DeepSeek-R1-Distill-Qwen-1.5B + LoRA，CPU 完整评测）
+
+> 本节汇总本轮神经学生蒸馏的完整结果。本轮预算 30 元，实际 API 花费 **7.00 元**（4,000 条扩展池标注），其余预算未动用；全部评测均为 CPU 离线前向（零 API 成本）。
+
+### 16.1 数据与审计（指南 §7）
+- 审计后基础清单 **2,235 条**：train 组与 template-family 均与 Exp2 保留测试集不重叠（`data/splits/reserved_exp2_test_ids.json`；详见 `data/prepared/exp3_neural_student/audit_report.json`）。构成：fraudr1_all 124 / synthetic 1,930 / e1_context_r2 181；zh 1,162 / en 1,073；gold unsafe 1,509 / safe 726。
+- 扩展池（指南 §7.2）：按子类配比新增 **4,000 条** = clean-refusal 450 + partial-leakage 450 + hard-safe 266 + anti-fraud-education 267 + quotation-analysis 267 + trust-facilitation 700 + direct-fraud 500 + context-flip 600 + over-refusal 250 + general-safety 250。
+- T6 标注（指南 §8.3）：复用冻结 prompt、correction 机制、cheap token caps（agent 输出 120–180 tokens）、并发 120，**4,000/4,000** 全部完成，实际花费 **7.00 元**（`experiments/exp3_agent_distillation_ablation/outputs/metrics/cost_expansion.json`，used_rmb=6.9958）。
+- 合并后清单 **6,235 条 / 5,470 组 / 501 模板族 / 810 对**（`data/prepared/exp3_neural_student/train_manifest_expanded.jsonl`）：难度 high 2,251 / medium 3,984；zh 3,458 / en 2,777；gold unsafe 3,819 / safe 2,416。
+
+### 16.2 训练设置（指南 §14/§15/§18；CPU-only，无 NVIDIA GPU）
+- 基座 `deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B`，fp32 CPU 训练；LoRA r=32 / alpha=64；**4 类统一 softmax**（指南 §13.2：safe / fraud_assistance / refusal_failure / over_refusal）。
+- 输入 q+y，head-tail 截断，max_length=384；CPU 调度 micro-batch 2 / effective batch 32；lr_lora 1e-4 / lr_head 5e-4，warmup 50。
+- 损失（指南 §15）：gold = 仅 CE；soft_distill / full_distill = CE + soft-KL（teacher 软标签）+ pairwise margin（full_distill 额外启用，并加入 agent 判据扩展数据）。
+- 训练（指南 §18.6）：gold / soft 各 2 epoch；full_distill 数据量增大，max_steps=140（约 1 epoch）。实际 CPU 耗时：gold ~4.5h / soft ~5h / full ~7.3h。
+- checkpoint `resume.pt` 保存 LoRA/head 权重 + 优化器状态 + 数据位置 + dev eval；每 200 步保存一次，中断可续训。
+- **关键修复**：`save_checkpoint` 原只保存 LoRA 适配器，且 `evaluate_neural_student.py` 对已是 PeftModel 的模型二次包装导致分类头随机初始化（gold 一度仅 0.33）；改为 `modules_to_save` 一并保存分类头 + 单次包装加载。修复后完整评测：**gold 0.8676 / soft 0.8849 / full 0.8648**（与训练日志一致）。
+
+### 16.3 主表（指南 §27.2；test n=1,262，0.5 阈值）
+| Model | 训练数据 | Macro-F1 | Recall | FPR | AUPRC | MCC | Acc | 4类F1 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Neural-ZeroShot（随机分类头下界） | — | 0.4176 | 0.5590 | 0.7014 | 0.4219 | -0.1476 | 0.4263 | 0.1743 |
+| Neural-Gold | 2,235（基础清单） | 0.8676 | 0.8013 | 0.0669 | 0.9449 | 0.7422 | 0.8685 | 0.4092 |
+| Neural-SoftDistill | 2,235（基础清单） | 0.8849 | 0.8094 | 0.0404 | 0.9532 | 0.7795 | 0.8859 | 0.4132 |
+| Neural-FullDistill | 6,235（含 4,000 扩展） | 0.8648 | 0.8207 | 0.0918 | 0.9535 | 0.7326 | 0.8653 | 0.4072 |
+
+### 16.4 蒸馏机制（指南 §27.3，test）
+| 设置 | Soft | Pair | 扩展数据 | ΔMacro-F1 (vs Gold) | ΔRecall | ΔFPR |
+|---|---:|---:|---:|---:|---:|---:|
+| Neural-SoftDistill | ✓ | — | — | **+0.0173** | +0.0081 | **-0.0265** |
+| Neural-FullDistill | ✓ | ✓ | ✓（+4,000） | -0.0028 | +0.0194 | +0.0249 |
+
+### 16.5 低标注曲线（指南 §22.3/§27.4；test，0.5 阈值）
+| Gold fraction | Neural-Gold | SoftDistill | 说明 |
+|---|---:|---:|---|
+| 10% | 0.8422（R 0.8368 / FPR 0.1524） | 未完成（soft10 中断于 ~1 epoch，resume.pt 已保留） | 后续工作 |
+| 100% | 0.8676 | 0.8849 | SoftDistill +0.0173 |
+
+### 16.6 机制切片（指南 §23.3，test）
+- **Neural-Gold**：direct_recall 0.7188（n=160）、trust_recall 1.0（n=80）、leakage_recall 1.0（n=60）、clean_refusal_fpr 0.1474（n=95）、hard_safe_fpr 0.0（n=120）、over_refusal_recall 0.9167（n=60）、context_flip_pair_acc 0.9474（pairs=19）
+- **Neural-SoftDistill**：direct_recall 0.75（n=160）、trust_recall 1.0（n=80）、leakage_recall 1.0（n=60）、clean_refusal_fpr 0.0105（n=95）、hard_safe_fpr 0.05（n=120）、over_refusal_recall 0.85（n=60）、context_flip_pair_acc 0.9474（pairs=19）
+- **Neural-FullDistill**：direct_recall 0.8063（n=160）、trust_recall 1.0（n=80）、leakage_recall 1.0（n=60）、clean_refusal_fpr 0.2421（n=95）、hard_safe_fpr 0.0083（n=120）、over_refusal_recall 0.9167（n=60）、context_flip_pair_acc 1.0（pairs=19）
+- **Neural-ZeroShot**：direct_recall 0.5125（n=160）、trust_recall 0.6875（n=80）、leakage_recall 0.5833（n=60）、clean_refusal_fpr 0.7053（n=95）、hard_safe_fpr 0.7083（n=120）、over_refusal_recall 0.3833（n=60）、context_flip_pair_acc 0.0526（pairs=19）
+
+### 16.7 泛化切片（指南 §23.4，test）
+- **Neural-Gold**：real_only n=664 MF1=0.64；synthetic_only n=598 MF1=0.9958；zh n=413 MF1=0.989；en n=849 MF1=0.7919；fraudr1_all_source n=39 MF1=0.4658；e1_context_r2_source n=60 MF1=1.0
+- **Neural-SoftDistill**：real_only n=664 MF1=0.6895；synthetic_only n=598 MF1=0.9896；zh n=413 MF1=0.9862；en n=849 MF1=0.8193；fraudr1_all_source n=39 MF1=0.4935；e1_context_r2_source n=60 MF1=0.4958
+- **Neural-FullDistill**：real_only n=664 MF1=0.6515；synthetic_only n=598 MF1=1.0；zh n=413 MF1=0.9891；en n=849 MF1=0.7911；fraudr1_all_source n=39 MF1=1.0；e1_context_r2_source n=60 MF1=1.0
+
+### 16.8 部署（指南 §21.4/§23.5，CPU fp32，max_length=384）
+- **Neural-Gold**：模型磁盘 154.8 MB（LoRA+头，基座另存）、batch=8 P50 1606.9 ms/条、P95 2756.6 ms/条、吞吐 0.74 条/s（CPU）
+- **Neural-SoftDistill**：模型磁盘 154.8 MB（LoRA+头，基座另存）、batch=8 P50 1604.0 ms/条、P95 2773.4 ms/条、吞吐 0.72 条/s（CPU）
+- **Neural-FullDistill**：模型磁盘 154.8 MB（LoRA+头，基座另存）、batch=8 P50 1600.3 ms/条、P95 2750.5 ms/条、吞吐 0.73 条/s（CPU）

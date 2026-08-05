@@ -126,8 +126,11 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    # Build the plain base model (no LoRA pre-attached) so that
+    # PeftModel.from_pretrained wraps it exactly once; double-wrapping a
+    # PeftModel shifts state-dict keys and silently fails to load the head.
     cfg = NeuralStudentConfig(model_name=BASE_MODEL, architecture=args.architecture,
-                              max_length=args.max_length, lora_r=16)
+                              max_length=args.max_length, lora_r=32, use_lora=False)
     model = build_neural_student(cfg, freeze_base=True)
     if (Path(args.checkpoint) / "adapter_config.json").exists():
         from peft import PeftModel
