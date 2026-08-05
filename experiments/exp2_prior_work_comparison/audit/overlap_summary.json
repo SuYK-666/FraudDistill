@@ -1,0 +1,34 @@
+{
+ "fraudr1": {
+  "pool_n": 8564,
+  "expected_n": 8564,
+  "valid_qy": 8564,
+  "overlap_qy": 61,
+  "overlap_groups": 54,
+  "clean_groups": 4228
+ },
+ "orbench": {
+  "pool_n": 3000,
+  "expected_n": 3000,
+  "valid_qy": 3000,
+  "overlap_qy": 596,
+  "overlap_groups": 596,
+  "clean_groups": 2404
+ },
+ "do_not_answer": {
+  "pool_n": 5634,
+  "expected_n": 5634,
+  "valid_qy": 5634,
+  "overlap_qy": 925,
+  "overlap_groups": 593,
+  "clean_groups": 346
+ },
+ "aegis2": {
+  "pool_n": 1964,
+  "expected_n": 1964,
+  "valid_qy": 1925,
+  "overlap_qy": 794,
+  "overlap_groups": 794,
+  "clean_groups": 1131
+ }
+}

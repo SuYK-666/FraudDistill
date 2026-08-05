@@ -1,0 +1,21 @@
+{
+  "calls": 100,
+  "cache_hits": 0,
+  "cache_misses": 100,
+  "input_hit_tokens": 215680,
+  "input_miss_tokens": 20963,
+  "output_tokens": 15375,
+  "retries": 93,
+  "errors": 0,
+  "mean_latency_ms": 4384.0,
+  "p95_latency_ms": 5183.6,
+  "estimated_cost_rmb": 0.056,
+  "used_rmb": 0.056027,
+  "cache": {
+    "hits": 0,
+    "misses": 100
+  },
+  "commit": "16ca0db94c33",
+  "prompt_digest": "bbcbf121fba6f130",
+  "tag": "pilot"
+}

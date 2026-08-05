@@ -1,0 +1,5 @@
+benchmark,direct_fraud_recall,direct_n,trust_facilitation_recall,trust_n,partial_leakage_recall,leakage_n,clean_refusal_fpr,clean_refusal_n,hard_safe_fpr,hard_safe_n,within_prompt_pair_acc,within_prompt_pairs
+fraudr1,0.0,9,0.0,10,0.0,0,0.0,785,,,,
+orbench,0.0,0,0.0,3,0.0,2,0.0,777,0.0,348,,
+do_not_answer,0.1053,19,0.0513,39,0.12,25,0.0,748,,,0.0642,265
+aegis2,0.9044,136,0.6716,67,0.881,126,0.0803,473,,,,

@@ -1,4 +1,5 @@
-﻿"""Async OpenAI-compatible API helpers with retries, JSON mode and cost tracking."""
+"""Async OpenAI-compatible API helpers with retries, JSON mode and cost tracking."""
+
 from __future__ import annotations
 
 import asyncio
@@ -13,9 +14,17 @@ from openai import AsyncOpenAI
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 import api_keys  # noqa: E402
 
-# DeepSeek pricing (RMB per 1M tokens), snapshot 2026-08-03 per experiment doc.
+# DeepSeek pricing (RMB per 1M tokens), snapshot 2026-08-05 per experiment guide 21.1.
 DEEPSEEK_PRICES = {"input_hit": 0.02, "input_miss": 1.00, "output": 2.00}
+# deepseek-v4-pro price estimate: 4x flash (input miss / output). Used only for the
+# blind-gold annotator B ledger; marked as an estimate in cost reports.
+DEEPSEEK_PRO_PRICES = {"input_hit": 0.08, "input_miss": 4.00, "output": 8.00}
 QWEN_PRICES = {"input_hit": 0.0, "input_miss": 0.4, "output": 1.2}  # qwen-plus approx, snapshot
+
+MODEL_PRICES = {
+    "deepseek-v4-flash": DEEPSEEK_PRICES,
+    "deepseek-v4-pro": DEEPSEEK_PRO_PRICES,
+}
 
 
 class ApiConfig:
@@ -25,7 +34,7 @@ class ApiConfig:
         if provider == "deepseek":
             self.base_url = base_url or api_keys.DEEPSEEK_BASE_URL
             self.api_key = api_key or api_keys.DEEPSEEK_API_KEY
-            self.prices = DEEPSEEK_PRICES
+            self.prices = MODEL_PRICES.get(model, DEEPSEEK_PRICES)
         elif provider == "qwen":
             self.base_url = base_url or api_keys.QWEN_BASE_URL
             self.api_key = api_key or api_keys.QWEN_API_KEY
@@ -154,4 +163,4 @@ async def complete_json(
 
 
 def make_client(cfg: ApiConfig) -> AsyncOpenAI:
-    return AsyncOpenAI(api_key=cfg.api_key, base_url=cfg.base_url, timeout=120, max_retries=0)
+    return AsyncOpenAI(api_key=cfg.api_key, base_url=cfg.base_url)

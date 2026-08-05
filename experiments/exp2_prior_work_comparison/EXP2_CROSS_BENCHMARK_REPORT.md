@@ -1,117 +1,84 @@
-# EXP2 Cross-Benchmark Report — FraudDistill Multi-Agent Teacher vs Official Baselines
+# EXP2 跨工作对比实验报告（2026-08-05 指南版）
 
-> Generated 2026-08-03 · preregistration frozen before runs · all numbers from scripts (no manual entry).
+> 自动生成：`scripts/make_exp2_report.py`；数据源：`metrics/canonical_metrics.json`、`metrics/paired_significance.json`、`metrics/native_appendix.json`。无手工复制数字。
 
-## 1. Main 8-row table
+## 1. 实验设计概要
 
-| Benchmark | Method | N_pool | N_gold | Accuracy | Precision | Recall | Macro-F1 | FPR | AUPRC |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Fraud-R1 | Fraud-R1 Official Judge | 8564 | 600 | 0.967 | 0.048 | 1.000 | 0.529 | 0.033 | 0.062 |
-| Fraud-R1 | **FraudDistill-MAT (DeepSeek)** | 8564 | 600 | 0.998 | 0.000 | 0.000 | 0.500 | 0.000 | 0.003 |
-| OR-Bench | OR-Bench Official Checker | 3000 | 600 | 0.658 | 0.120 | 0.650 | 0.431 | 0.341 | 0.123 |
-| OR-Bench | **FraudDistill-MAT (DeepSeek)** | 3000 | 600 | 0.943 | 1.000 | 0.150 | 0.630 | 0.000 | 0.268 |
-| Do-Not-Answer | Longformer-Harmful | 5634 | 5634 | 0.995 | 0.966 | 0.886 | 0.962 | 0.001 | 0.869 |
-| Do-Not-Answer | **FraudDistill-MAT (DeepSeek)** | 5634 | 5634 | 0.905 | 0.102 | 0.228 | 0.535 | 0.071 | 0.126 |
-| Aegis 2.0 | NemoGuard-8B | 1964 | 1964 | 0.951 | 0.870 | 0.886 | 0.922 | 0.033 | 0.812 |
-| Aegis 2.0 | **FraudDistill-MAT (DeepSeek)** | 1964 | 1964 | 0.761 | 0.441 | 0.726 | 0.659 | 0.231 | 0.486 |
+- 任务对齐轨道：4 个公开安全基准的同一 `q+y` 样本，统一 Gold 标注为回答行为（fraud_assistance / refusal_failure / over_refusal / safe）。
+- 教师：冻结 Exp3 T6 Evidence MAT（Fraud + Refusal + Context specialist + Evidence Arbiter，conflict correction OFF，deepseek-v4-flash）。
+- Gold：双盲 LLM 标注（A=deepseek-v4-flash，B=deepseek-v4-pro）+ 第三人仲裁；标注者不可见基准名/基线/教师输出。
+- 基线：官方协议复用（Fraud-R1 GPTCheck judge / OR-Bench response checker / Longformer-Harmful / NemoGuard-8B），全部零新增 API。
+- 统计：10k 组级 bootstrap、exact McNemar、Holm 校正（4 个 primary 比较）。
 
-All methods evaluated on identical q+y pairs within each benchmark. Fraud-R1/OR-Bench metrics on independently audited subsets; large pools used for subgroup/cost analyses. abstain samples mapped to safe for primary metrics; coverage reported.
+## 2. 八行主表（任务对齐轨道）
 
-## 2. Paired significance
+| Benchmark | Method | N | N+ | Acc | P | Unsafe R | Unsafe F1 | Safe F1 | **Macro-F1** | FPR | AUPRC | MCC |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Fraud-R1 | Fraud-R1 Official Judge | 800 | 11 | 0.8425 | 0.0741 | 0.9091 | 0.1370 | 0.9133 | **0.4893** | 0.1584 | - | 0.2334 |
+| Fraud-R1 | FraudDistill MAT (T6) | 800 | 11 | 0.9862 | 0.0000 | 0.0000 | 0.0000 | 0.9931 | **0.5000** | 0.0000 | 0.0102 | 0.0000 |
+| OR-Bench | OR-Bench Response Checker | 800 | 2 | 0.6425 | 0.0000 | 0.0000 | 0.0000 | 0.7823 | **0.3221** | 0.3559 | - | -0.0371 |
+| OR-Bench | FraudDistill MAT (T6) | 800 | 2 | 0.9975 | 0.0000 | 0.0000 | 0.0000 | 0.9987 | **0.5000** | 0.0000 | 0.0205 | 0.0000 |
+| Do-Not-Answer | Longformer-Harmful | 900 | 59 | 0.8033 | 0.1609 | 0.4746 | 0.2403 | 0.8870 | **0.5334** | 0.1736 | 0.1733 | 0.1886 |
+| Do-Not-Answer | FraudDistill MAT (T6) | 900 | 59 | 0.9389 | 1.0000 | 0.0678 | 0.1270 | 0.9683 | **0.5635** | 0.0000 | 0.1997 | 0.2523 |
+| Aegis 2.0 | NemoGuard-8B | 813 | 263 | 0.7798 | 0.6050 | 0.9202 | 0.7300 | 0.8141 | **0.7214** | 0.2873 | - | 0.5922 |
+| Aegis 2.0 | FraudDistill MAT (T6) | 813 | 263 | 0.8770 | 0.8075 | 0.8137 | 0.8106 | 0.9089 | **0.8589** | 0.0927 | 0.8497 | 0.7195 |
 
-| Benchmark | ΔAcc [95% CI] | ΔMacro-F1 [95% CI] | ΔFPR [95% CI] | McNemar p | AUPRC Δ [95% CI] |
-|---|---|---|---|---|---|
-| Fraud-R1 | +0.032 [+0.018, +0.047] | -0.027 [-0.123, +0.023] | -0.033 [-0.048, -0.020] | 0.0000 | -0.123 [-0.603, +0.000] |
-| OR-Bench | +0.285 [+0.243, +0.328] | +0.198 [+0.104, +0.295] | -0.341 [-0.381, -0.302] | 0.0000 | +0.116 [-0.002, +0.252] |
-| Do-Not-Answer | -0.090 [-0.101, -0.080] | -0.427 [-0.453, -0.399] | +0.070 [+0.062, +0.079] | 0.0000 | -0.739 [-0.809, -0.662] |
-| Aegis 2.0 | -0.190 [-0.209, -0.171] | -0.263 [-0.288, -0.238] | +0.197 [+0.176, +0.219] | 0.0000 | -0.367 [-0.422, -0.313] |
+## 3. 成对显著性与 bootstrap
 
-Clustered paired bootstrap (10,000 reps by group_id; AUPRC 2,000 reps); McNemar exact two-sided; Holm correction applied across benchmarks (see paired_significance.json).
+| Benchmark | ΔMacro-F1 | 95% CI | McNemar p | Holm p | b-wrong/t-right | b-right/t-wrong |
+|---|---:|---|---:|---:|---:|---:|
+| Fraud-R1 | +0.0719 | [+0.0587, +0.0856] | 0.00000 | 0.00000 | 0 | 135 |
+| OR-Bench | +0.1775 | [+0.1606, +0.1944] | 0.00000 | 0.00000 | 0 | 284 |
+| Do-Not-Answer | +0.0230 | [-0.0111, +0.0560] | 0.00000 | 0.00000 | 1 | 171 |
+| Aegis 2.0 | +0.0486 | [+0.0320, +0.0652] | 0.00000 | 0.00000 | 28 | 163 |
 
-## 3. Subgroup highlights
+## 4. 机制指标（T6 MAT，任务对齐 Gold）
 
-| Benchmark | Group | Subgroup | N | Gold rate | Baseline M-F1 | Teacher M-F1 | ΔM-F1 |
-|---|---|---|---|---:|---:|---:|---:|
-| Do-Not-Answer | category | Information Hazards | 1488 | 0.04 | 0.991 | 0.458 | -0.533 |
-| Do-Not-Answer | category | Discrimination, Exclusion, Toxicity, Hat | 1056 | 0.04 | 0.983 | 0.505 | -0.479 |
-| Do-Not-Answer | target_model | GPT4 | 939 | 0.02 | 0.989 | 0.524 | -0.465 |
-| Do-Not-Answer | target_model | Claude | 939 | 0.02 | 0.907 | 0.453 | -0.454 |
-| Do-Not-Answer | target_model | ChatGPT | 939 | 0.01 | 0.964 | 0.523 | -0.441 |
-| Do-Not-Answer | language | English | 5634 | 0.03 | 0.962 | 0.535 | -0.427 |
-| Do-Not-Answer | prompt_type | unknown | 5634 | 0.03 | 0.962 | 0.535 | -0.427 |
-| OR-Bench | prompt_type | hard_safe | 250 | 0.10 | 0.209 | 0.603 | +0.394 |
-| Do-Not-Answer | category | Misinformation Harms | 930 | 0.04 | 0.935 | 0.544 | -0.391 |
-| Do-Not-Answer | target_model | vicuna-7b | 939 | 0.06 | 0.980 | 0.593 | -0.387 |
-| Do-Not-Answer | target_model | ChatGLM2 | 939 | 0.09 | 0.958 | 0.607 | -0.351 |
-| Do-Not-Answer | target_model | llama2-7b-chat | 939 | 0.00 | 0.785 | 0.438 | -0.347 |
-| OR-Bench | category | deception | 77 | 0.05 | 0.381 | 0.700 | +0.319 |
-| Do-Not-Answer | category | Human-Chatbot Interaction Harms | 702 | 0.03 | 0.860 | 0.548 | -0.311 |
-| Aegis 2.0 | language | English | 1964 | 0.20 | 0.922 | 0.659 | -0.263 |
-| Aegis 2.0 | category | general_safety | 1964 | 0.20 | 0.922 | 0.659 | -0.263 |
-| Aegis 2.0 | target_model | unknown | 1964 | 0.20 | 0.922 | 0.659 | -0.263 |
-| Aegis 2.0 | prompt_type | unknown | 1964 | 0.20 | 0.922 | 0.659 | -0.263 |
-| Do-Not-Answer | category | Malicious Uses | 1458 | 0.02 | 0.960 | 0.717 | -0.243 |
-| OR-Bench | prompt_type | toxic | 200 | 0.05 | 0.500 | 0.731 | +0.231 |
-| OR-Bench | category | illegal | 76 | 0.01 | 0.272 | 0.500 | +0.228 |
-| OR-Bench | category | harassment | 76 | 0.08 | 0.429 | 0.643 | +0.214 |
-| OR-Bench | language | English | 600 | 0.07 | 0.431 | 0.630 | +0.200 |
-| OR-Bench | target_model | qwen-plus | 600 | 0.07 | 0.431 | 0.630 | +0.200 |
-| OR-Bench | category | privacy | 76 | 0.05 | 0.320 | 0.500 | +0.180 |
-| OR-Bench | category | sexual | 35 | 0.31 | 0.583 | 0.714 | +0.131 |
-| OR-Bench | category | hate | 77 | 0.10 | 0.490 | 0.611 | +0.121 |
-| OR-Bench | prompt_type | regular_safe | 150 | 0.03 | 0.585 | 0.500 | -0.085 |
-| OR-Bench | category | harmful | 77 | 0.08 | 0.421 | 0.500 | +0.079 |
-| OR-Bench | category | self-harm | 36 | 0.00 | 0.458 | 0.500 | +0.042 |
-| Fraud-R1 | language | Chinese | 300 | 0.00 | 0.539 | 0.500 | -0.039 |
-| Fraud-R1 | target_model | qwen-plus | 600 | 0.00 | 0.529 | 0.500 | -0.029 |
-| Fraud-R1 | prompt_type | unknown | 600 | 0.00 | 0.529 | 0.500 | -0.029 |
-| Fraud-R1 | category | Phishing Scams | 120 | 0.00 | 0.475 | 0.500 | +0.025 |
-| Fraud-R1 | category | Fake Job Postings | 120 | 0.01 | 0.521 | 0.500 | -0.021 |
-| OR-Bench | category | unethical | 35 | 0.00 | 0.486 | 0.500 | +0.014 |
-| OR-Bench | category | violence | 35 | 0.00 | 0.486 | 0.500 | +0.014 |
-| Fraud-R1 | language | English | 300 | 0.00 | 0.490 | 0.500 | +0.010 |
-| Fraud-R1 | category | Online Relationships | 120 | 0.00 | 0.492 | 0.500 | +0.008 |
-| Fraud-R1 | category | Fraudulent Services | 120 | 0.00 | 0.500 | 0.500 | +0.000 |
+| Benchmark | Direct-fraud R | Trust-facilitation R | Partial-leakage R | Clean-refusal FPR | Hard-safe FPR | Within-prompt pair acc |
+|---|---:|---:|---:|---:|---:|---:|
+| Fraud-R1 | 0.0000 (n=9) | 0.0000 (n=10) | - | 0.0000 (n=785) | - | - |
+| OR-Bench | - | 0.0000 (n=3) | 0.0000 (n=2) | 0.0000 (n=777) | 0.0000 (n=348) | - |
+| Do-Not-Answer | 0.1053 (n=19) | 0.0513 (n=39) | 0.1200 (n=25) | 0.0000 (n=748) | - | 0.0642 (n=265) |
+| Aegis 2.0 | 0.9044 (n=136) | 0.6716 (n=67) | 0.8810 (n=126) | 0.0803 (n=473) | - | - |
 
-Full subgroup table: `_metrics/subgroup_metrics.csv`.
+**匹配 FPR/召回（仅 DNA，因基线有连续分数）**：基线 FPR=0.1736 时教师最大召回 0.4576（阈值视角）；基线召回 0.4746 时教师 FPR=1.0000（说明要追上 Longformer 的召回需放低阈值、牺牲 FPR）；AUPRC Δ=+0.0264。
 
-## 4. Error analysis (paired)
+## 5. Native-task 附录（同一 manifest 上的官方标签）
 
-- baseline_correct_teacher_wrong: 956
-- baseline_wrong_teacher_correct: 264
-- both_correct: 7492
-- both_wrong: 86
+| Benchmark | n | Baseline Acc | Baseline MF1 | T6 Acc | T6 MF1 |
+|---|---:|---:|---:|---:|---:|
+| Do-Not-Answer | 900 | 0.9722 | 0.9638 | 0.7878 | 0.5145 |
+| Aegis 2.0 | 813 | 0.8819 | 0.8787 | 0.7552 | 0.8072 |
 
-Redacted sample-level errors: `_metrics/error_analysis.jsonl` and `error_analysis_redacted.md`.
+## 6. 数据与标注质量
 
-## 5. Cost summary
+- Manifest：`manifests/test_manifest.jsonl`（fraudr1 800 / orbench 800 / dna 900 / aegis 813，共 3313 条）。
+- Exp3 暴露审计：`audit/exp3_exposure_qy_hashes.json`；overlap 数见 `audit/overlap_summary.json`。
+- 盲审一致性：见各基准 `human_audit/human_audit_adjudicated_20260805.jsonl` 的 annotator 字段（全量 kappa 记录于审计日志）。
+- 教师覆盖率：1.0000；abstain=0；parse_fail=0（见 canonical_metrics.json 各基准）。
 
-| Benchmark | Method | N | input tok | output tok | est. RMB | mean latency (ms) |
-|---|---|---:|---:|---:|---:|---:|
-| Fraud-R1 | baseline | 8564 | 10200247 | 10256 | 10.2208 | 3748.0 |
-| Fraud-R1 | teacher | 8564 | 52209365 | 4123375 | 60.4561 | 10805.7 |
-| OR-Bench | baseline | 3798 | 2262313 | 220600 | 2.7035 | 2910.2 |
-| OR-Bench | teacher | 3000 | 9833421 | 1377750 | 12.5889 | 13593.1 |
-| Do-Not-Answer | baseline | 5634 | 0 | 0 | 0.0 | 529.5 |
-| Do-Not-Answer | teacher | 5634 | 11130528 | 2118060 | 15.3666 | 9489.9 |
-| Aegis 2.0 | baseline | 2014 | 0 | 0 | 0.0 | 150480.3 |
-| Aegis 2.0 | teacher | 1964 | 3597069 | 660339 | 4.9177 | 11513.2 |
+### 盲审一致性（A=deepseek-v4-flash vs B=deepseek-v4-pro）
+| Benchmark | n | Raw binary | Kappa binary | Raw 4-way | Kappa 4-way |
+|---|---:|---:|---:|---:|---:|
+| Fraud-R1 | 795 | 0.990 | - | 0.990 | - |
+| OR-Bench | 799 | 0.995 | -0.003 | 0.995 | -0.001 |
+| Do-Not-Answer | 898 | 0.929 | 0.521 | 0.922 | 0.489 |
+| Aegis 2.0 | 773 | 0.887 | 0.745 | 0.788 | 0.577 |
 
-## 6. Deliverables index
+注：fraudr1/orbench 的 Gold 正例率极低（1.4% / 0.3%），kappa 在类别高度不平衡时退化为无信息值（nan/负值），此时 raw agreement（99.0% / 99.5%）更有意义；DNA kappa 0.52、Aegis kappa 0.74/0.58 如实报告。所有分歧均由第三人仲裁，Gold 为单一最终标签（adjudicated 字段标记仲裁行）。
 
-- `experiments/exp2_prior_work_comparison/fraudr1/unified/fraudr1_eval.jsonl`
-- `experiments/exp2_prior_work_comparison/fraudr1/baseline_predictions/`
-- `experiments/exp2_prior_work_comparison/fraudr1/teacher_predictions/`
-- `experiments/exp2_prior_work_comparison/fraudr1/human_audit/`
-- `experiments/exp2_prior_work_comparison/orbench/unified/orbench_eval.jsonl`
-- `experiments/exp2_prior_work_comparison/orbench/baseline_predictions/`
-- `experiments/exp2_prior_work_comparison/orbench/teacher_predictions/`
-- `experiments/exp2_prior_work_comparison/orbench/human_audit/`
-- `experiments/exp2_prior_work_comparison/do_not_answer/unified/do_not_answer_eval.jsonl`
-- `experiments/exp2_prior_work_comparison/do_not_answer/baseline_predictions/`
-- `experiments/exp2_prior_work_comparison/do_not_answer/teacher_predictions/`
-- `experiments/exp2_prior_work_comparison/do_not_answer/human_audit/`
-- `experiments/exp2_prior_work_comparison/aegis2/unified/aegis2_eval.jsonl`
-- `experiments/exp2_prior_work_comparison/aegis2/baseline_predictions/`
-- `experiments/exp2_prior_work_comparison/aegis2/teacher_predictions/`
-- `experiments/exp2_prior_work_comparison/aegis2/human_audit/`
+## 7. 成本报告
+
+- 总使用：`16.8076` RMB；上限：`32.00` RMB（36 硬上限 - 4 预留）。
+- 教师：`metrics/cost_teacher_t6_test.json`；盲审与仲裁计入共享 `audit/budget_state.json`。
+- 基线全部复用历史预测（零 API 成本）；Aegis 794/813 复用 Exp3 冻结 T6 预测。
+
+## 8. 误差分析与分组
+
+- 分歧样本数（基线 vs 教师预测不一致）：`metrics/error_analysis.jsonl`（782 条）。
+- 分组指标：`metrics/subgroup_metrics.csv`（language / category / prompt_type / target_model）。
+
+## 9. 冻结与复现
+
+- 冻结 commit：见 `preregistration.md`；教师 prompt hash 记录于每条预测的 `teacher_prompt_hash`。
+- 复现命令：`python scripts/run_exp2_teacher.py`；`python -m frauddistill.exp2_cross_benchmark.audit --manifest --annotate --adjudicate --agreement`；`python scripts/evaluate_exp2.py`；`python scripts/make_exp2_report.py`。

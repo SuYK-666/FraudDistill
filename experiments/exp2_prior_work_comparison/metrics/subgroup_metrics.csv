@@ -1,0 +1,39 @@
+benchmark,group,subgroup,n,gold_rate,baseline_macro_f1,teacher_macro_f1,delta_macro_f1
+aegis2,category,general_safety,813,0.323,0.721,0.859,0.138
+aegis2,language,English,813,0.323,0.721,0.859,0.138
+aegis2,target_model,unknown,813,0.323,0.721,0.859,0.138
+do_not_answer,category,"Discrimination, Exclusion, Toxicity, Hateful, Offensive",144,0.097,0.385,0.567,0.182
+do_not_answer,category,Human-Chatbot Interaction Harms,96,0.062,0.47,0.5,0.03
+do_not_answer,category,Information Hazards,282,0.032,0.432,0.5,0.068
+do_not_answer,category,Malicious Uses,192,0.125,0.841,0.611,-0.229
+do_not_answer,category,Misinformation Harms,186,0.032,0.491,0.5,0.009
+do_not_answer,language,English,900,0.066,0.533,0.563,0.03
+do_not_answer,target_model,ChatGLM2,150,0.167,0.427,0.574,0.147
+do_not_answer,target_model,ChatGPT,150,0.02,0.515,0.5,-0.015
+do_not_answer,target_model,Claude,150,0.02,0.537,0.5,-0.037
+do_not_answer,target_model,GPT4,150,0.02,0.555,0.5,-0.055
+do_not_answer,target_model,llama2-7b-chat,150,0.107,0.493,0.5,0.007
+do_not_answer,target_model,vicuna-7b,150,0.06,0.456,0.682,0.225
+fraudr1,category,Fake Job Postings,160,0.037,0.42,0.5,0.08
+fraudr1,category,Fraudulent Services,160,0.0,0.453,0.5,0.047
+fraudr1,category,Impersonation,160,0.006,0.478,0.5,0.022
+fraudr1,category,Online Relationships,160,0.019,0.559,0.5,-0.059
+fraudr1,category,Phishing Scams,160,0.006,0.433,0.5,0.067
+fraudr1,language,Chinese,400,0.01,0.452,0.5,0.048
+fraudr1,language,English,400,0.018,0.534,0.5,-0.034
+fraudr1,target_model,qwen-plus,800,0.014,0.489,0.5,0.011
+orbench,category,deception,77,0.0,0.305,0.5,0.195
+orbench,category,harassment,47,0.0,0.479,0.5,0.021
+orbench,category,harmful,92,0.011,0.247,0.5,0.253
+orbench,category,hate,59,0.0,0.398,0.5,0.102
+orbench,category,illegal,168,0.0,0.205,0.5,0.295
+orbench,category,privacy,168,0.006,0.24,0.5,0.26
+orbench,category,self-harm,47,0.0,0.479,0.5,0.021
+orbench,category,sexual,48,0.0,0.479,0.5,0.021
+orbench,category,unethical,47,0.0,0.479,0.5,0.021
+orbench,category,violence,47,0.0,0.479,0.5,0.021
+orbench,language,English,800,0.003,0.322,0.5,0.178
+orbench,prompt_type,hard_safe,350,0.006,0.124,0.5,0.376
+orbench,prompt_type,regular_safe,200,0.0,0.45,0.5,0.05
+orbench,prompt_type,toxic,250,0.0,0.496,0.5,0.004
+orbench,target_model,qwen-plus,800,0.003,0.322,0.5,0.178
