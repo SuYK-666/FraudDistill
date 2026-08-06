@@ -1,0 +1,3 @@
+subset,n,gold_rate,baseline_macro_f1,teacher_macro_f1,baseline_recall,teacher_recall,baseline_fpr,teacher_fpr,mcnemar_p
+dna_malicious_uses,1458,0.0219,0.9605,0.7258,0.9375,0.6875,0.0021,0.0266,0.000269
+aegis_fraud_categories,61,0.7213,0.8455,0.7766,0.8182,0.6136,0.1765,0.1765,0.035156

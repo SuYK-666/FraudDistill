@@ -26,6 +26,7 @@ from frauddistill.exp2_cross_benchmark.paths import (  # noqa: E402
     BENCHMARKS,
     EXPERIMENT_DIR,
     MANIFEST_DIR,
+    RAW_AEGIS,
     SEED,
 )
 
@@ -174,6 +175,13 @@ def sample_aegis(rows: list[dict], exp: set[str], rng: random.Random) -> list[di
 
 
 def main() -> None:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--full", action="store_true", help="build the full-coverage manifest suite (guide 2026-08-06)")
+    args = ap.parse_args()
+    if args.full:
+        build_full()
+        return
     exp = exposure_hashes()
     rng = random.Random(SEED)
     MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
@@ -239,6 +247,232 @@ def main() -> None:
         json.dumps({"n_exposure_hashes": len(exp), "per_benchmark": {b: {"n": selection[b]["n"], "overlap_exp3": selection[b]["overlap_exp3"]} for b in BENCHMARKS}}, ensure_ascii=False, indent=1),
         encoding="utf-8")
     print(f"manifest rows: {len(all_rows)} -> {out}")
+
+
+
+
+# ---------------------------------------------------------------------------
+# Full-coverage manifest (guide 2026-08-06 sections 2-3, 7, 15, 21, 26).
+# ---------------------------------------------------------------------------
+
+NULL_VALUES = {None, "", "None", "null", "nan", "N/A"}
+
+
+def _clean(v):
+    if v is None:
+        return None
+    if isinstance(v, str) and v.strip() in NULL_VALUES:
+        return None
+    return v
+
+
+def _full_row(r: dict, source: str, *, overlap: bool, mode: str = "response",
+              prompt_label=None, response_label=None, official_category=None,
+              gold_binary=None, gold_type=None) -> dict:
+    query = str(r.get("query", "") or "")
+    answer = str(r.get("answer", "") or "")
+    return {
+        "sample_id": str(r["id"]),
+        "qy_hash": qy_hash(query, answer),
+        "source": source,
+        "group_id": str(r.get("group_id", "") or r["id"]),
+        "language": str(r.get("language", "") or ""),
+        "official_category": official_category,
+        "official_prompt_label": prompt_label,
+        "official_response_label": response_label,
+        "target_model": str(r.get("target_model", "") or ""),
+        "query": query,
+        "answer": answer,
+        "has_response": mode == "response",
+        "evaluation_mode": mode,
+        "overlap_exp3": bool(overlap),
+        "split": "test",
+        "track": "fraud_assist",
+        "expected_behavior": str(r.get("expected_behavior", "") or ""),
+        "official_gold_binary": gold_binary,
+        "official_gold_type": gold_type,
+        "original_id": str(r.get("original_id", "") or r.get("id", "")),
+        "metadata": r.get("metadata") or {},
+    }
+
+
+def build_full() -> None:
+    """Build the full-coverage manifest suite (guide 2, 3, 7, 26). Zero API."""
+    from frauddistill.exp2_cross_benchmark.paths import (
+        AEGIS_PROMPT_MANIFEST, AEGIS_RESPONSE_MANIFEST, AUDIT_DIR, CACHE_AUDIT_FILE,
+        FRAUD_ALIGNED_MANIFEST, FULL_MANIFEST, FULL_POOL_SUMMARY_FILE,
+        SILVER_LABEL_TAG, TEACHER_T6_DIR, DNA_FRAUD_ALIGNED_AREAS,
+        AEGIS_FRAUD_ALIGNED_CATEGORIES,
+    )
+    exp = exposure_hashes()
+    all_rows: list[dict] = []
+    cache_audit: dict[str, dict] = {}
+    baseline_files = {
+        "fraudr1": "fraudr1/baseline_predictions/fraudr1_official_judge_predictions.jsonl",
+        "orbench": "orbench/baseline_predictions/orbench_response_checker_predictions.jsonl",
+        "do_not_answer": "do_not_answer/baseline_predictions/dna_longformer_harmful_predictions.jsonl",
+        "aegis2": "aegis2/baseline_predictions/aegis_nemoguard_predictions.jsonl",
+    }
+
+    # ---- fraudr1: 8,564 (guide 8) ----------------------------------------
+    fr_rows = []
+    for r in read_jsonl(EXPERIMENT_DIR / "fraudr1/unified/fraudr1_eval.jsonl"):
+        h = qy_hash(r.get("query"), r.get("answer"))
+        fr_rows.append(_full_row(
+            r, "fraudr1", overlap=h in exp,
+            official_category=str(r.get("category", "") or ""),
+        ))
+    all_rows.extend(fr_rows)
+
+    # ---- orbench: 3,000 core pool (guide 9) ------------------------------
+    or_rows = []
+    for r in read_jsonl(EXPERIMENT_DIR / "orbench/unified/orbench_eval.jsonl"):
+        h = qy_hash(r.get("query"), r.get("answer"))
+        md = r.get("metadata") or {}
+        or_rows.append(_full_row(
+            r, "orbench", overlap=h in exp,
+            official_category=str(r.get("category", "") or ""),
+            gold_type=str(md.get("orbench_prompt_type", "") or ""),
+        ))
+    all_rows.extend(or_rows)
+
+    # ---- do-not-answer: 5,634, official human labels (guide 10) ----------
+    dna_rows = []
+    for r in read_jsonl(EXPERIMENT_DIR / "do_not_answer/unified/do_not_answer_eval.jsonl"):
+        h = qy_hash(r.get("query"), r.get("answer"))
+        md = r.get("metadata") or {}
+        g = _clean(r.get("gold_binary"))
+        if g is None and _clean(md.get("harmful")) is not None:
+            g = int(md["harmful"])
+        gtype = str(r.get("gold_type", "") or "")
+        if not gtype and g is not None:
+            gtype = "unsafe" if g == 1 else "safe"
+        dna_rows.append(_full_row(
+            r, "do_not_answer", overlap=h in exp,
+            official_category=str(md.get("risk_area", "") or ""),
+            gold_binary=g, gold_type=gtype,
+        ))
+    all_rows.extend(dna_rows)
+
+    # ---- aegis: 1,964 official test, response/prompt split (guide 3) ----
+    raw_aegis = {r["id"]: r for r in json.loads((RAW_AEGIS / "test.json").read_text(encoding="utf-8"))}
+    aegis_rows: list[dict] = []
+    for r in read_jsonl(EXPERIMENT_DIR / "aegis2/unified/aegis2_eval.jsonl"):
+        rid = str(r["id"]).replace("aegis_", "")
+        raw = raw_aegis.get(rid, {})
+        mode = "response" if ((raw.get("response") or "").strip() and raw.get("response_label") not in (None, "")) else "prompt_only"
+        md = r.get("metadata") or {}
+        pl = _clean(raw.get("prompt_label")) or _clean(md.get("prompt_label"))
+        rl = _clean(raw.get("response_label")) or _clean(md.get("response_label"))
+        gold = None
+        gtype = None
+        if mode == "response" and rl is not None:
+            gold = 1 if str(rl).lower().startswith("unsafe") else 0
+            gtype = "unsafe" if gold == 1 else "safe"
+        elif mode == "prompt_only" and pl is not None:
+            gold = 1 if str(pl).lower().startswith("unsafe") else 0
+            gtype = "unsafe" if gold == 1 else "safe"
+        row = _full_row(
+            {**r, "query": str(raw.get("prompt", "") or r.get("query", "")),
+             "answer": str(raw.get("response", "") or "")},
+            "aegis2", overlap=qy_hash(str(raw.get("prompt", "") or ""), str(raw.get("response", "") or "")) in exp,
+            mode=mode,
+            prompt_label=(1 if pl is not None and str(pl).lower().startswith("unsafe") else 0) if pl is not None else None,
+            response_label=(1 if rl is not None and str(rl).lower().startswith("unsafe") else 0) if rl is not None else None,
+            official_category=str(raw.get("violated_categories", "") or ""),
+            gold_binary=gold, gold_type=gtype,
+        )
+        row["metadata"] = {**md, "violated_categories": raw.get("violated_categories") or "",
+                           "prompt_label_source": raw.get("prompt_label_source"),
+                           "response_label_source": raw.get("response_label_source")}
+        aegis_rows.append(row)
+    all_rows.extend(aegis_rows)
+
+    # ---- write full manifest + per-mode subsets ---------------------------
+    MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
+    with FULL_MANIFEST.open("w", encoding="utf-8") as f:
+        for r in all_rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    aegis_resp = [r for r in aegis_rows if r["evaluation_mode"] == "response"]
+    aegis_prompt = [r for r in aegis_rows if r["evaluation_mode"] == "prompt_only"]
+    for path, rs in ((AEGIS_RESPONSE_MANIFEST, aegis_resp), (AEGIS_PROMPT_MANIFEST, aegis_prompt)):
+        with path.open("w", encoding="utf-8") as f:
+            for r in rs:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+    # ---- fraud-aligned official subsets (guide 5.3) ------------------------
+    fraud_aligned = []
+    for r in dna_rows:
+        if (r["official_category"] or "") in DNA_FRAUD_ALIGNED_AREAS:
+            fraud_aligned.append(r)
+    for r in aegis_rows:
+        cats = {c.strip() for c in (r["official_category"] or "").split(",") if c.strip()}
+        if cats & AEGIS_FRAUD_ALIGNED_CATEGORIES:
+            fraud_aligned.append(r)
+    with FRAUD_ALIGNED_MANIFEST.open("w", encoding="utf-8") as f:
+        for r in fraud_aligned:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+    # ---- cache audit (guide 21) --------------------------------------------
+    teacher_files = {
+        "fraudr1": TEACHER_T6_DIR / "fraudr1_t6_predictions.jsonl",
+        "orbench": TEACHER_T6_DIR / "orbench_t6_predictions.jsonl",
+        "do_not_answer": TEACHER_T6_DIR / "do_not_answer_t6_predictions.jsonl",
+        "aegis2": TEACHER_T6_DIR / "aegis2_t6_predictions.jsonl",
+    }
+    teacher_prompt_file = TEACHER_T6_DIR / "aegis2_t6_prompt_predictions.jsonl"
+    by_source: dict[str, list[dict]] = defaultdict(list)
+    for r in all_rows:
+        by_source[r["source"]].append(r)
+    for b in BENCHMARKS:
+        rows = by_source[b]
+        t_done = {str(r["id"]): r for r in read_jsonl(teacher_files[b])}
+        b_done = {str(r["id"]): r for r in read_jsonl(EXPERIMENT_DIR / baseline_files[b])}
+        missing_resp = [r for r in rows if r["evaluation_mode"] == "response" and r["sample_id"] not in t_done]
+        if b == "aegis2":
+            t_p = {str(r["id"]): r for r in read_jsonl(teacher_prompt_file)}
+            missing_prompt = [r for r in rows if r["evaluation_mode"] == "prompt_only" and r["sample_id"] not in t_p]
+        else:
+            t_p = {}
+            missing_prompt = []
+        cache_audit[b] = {
+            "total": len(rows),
+            "response_rows": sum(1 for r in rows if r["evaluation_mode"] == "response"),
+            "prompt_only_rows": sum(1 for r in rows if r["evaluation_mode"] == "prompt_only"),
+            "valid_teacher_cache": len(t_done) + len(t_p),
+            "teacher_response_cache": len(t_done),
+            "teacher_prompt_cache": len(t_p),
+            "missing_response": len(missing_resp),
+            "missing_prompt": len(missing_prompt),
+            "baseline_coverage": len(b_done),
+        }
+        print(f"[{b}] total={len(rows)} teacher_cache={len(t_done)}+{len(t_p)} missing_resp={len(missing_resp)} missing_prompt={len(missing_prompt)} baseline={len(b_done)}")
+
+    # ---- pool assertions (guide 2.3) + summary ------------------------------
+    n_fr = len({r["sample_id"] for r in fr_rows})
+    n_or = len({r["sample_id"] for r in or_rows})
+    n_dna = len({r["sample_id"] for r in dna_rows})
+    n_ae = len({r["sample_id"] for r in aegis_rows})
+    assert n_fr == 8564, n_fr
+    assert n_or == 3000, n_or
+    assert n_dna == 5634, n_dna
+    assert n_ae == 1964, n_ae
+    summary = {
+        "guide": "2026-08-06",
+        "pool": {"fraudr1": n_fr, "orbench": n_or, "do_not_answer": n_dna, "aegis2": n_ae},
+        "aegis_response": len(aegis_resp),
+        "aegis_prompt_only": len(aegis_prompt),
+        "fraud_aligned": {"dna": sum(1 for r in fraud_aligned if r["source"] == "do_not_answer"),
+                          "aegis": sum(1 for r in fraud_aligned if r["source"] == "aegis2")},
+        "silver_label_tag": SILVER_LABEL_TAG,
+    }
+    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+    CACHE_AUDIT_FILE.write_text(json.dumps(cache_audit, ensure_ascii=False, indent=1), encoding="utf-8")
+    FULL_POOL_SUMMARY_FILE.write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"full manifest: {len(all_rows)} rows -> {FULL_MANIFEST}")
+    print(f"aegis response={len(aegis_resp)} prompt={len(aegis_prompt)} -> {AEGIS_RESPONSE_MANIFEST.parent}")
+    print(f"fraud_aligned={len(fraud_aligned)} -> {FRAUD_ALIGNED_MANIFEST}")
+    print(f"cache audit -> {CACHE_AUDIT_FILE}; summary -> {FULL_POOL_SUMMARY_FILE}")
 
 
 if __name__ == "__main__":

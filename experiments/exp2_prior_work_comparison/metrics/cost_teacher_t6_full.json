@@ -1,0 +1,24 @@
+{
+  "calls": 3295,
+  "cache_hits": 158,
+  "cache_misses": 3295,
+  "input_hit_tokens": 2889088,
+  "input_miss_tokens": 148571,
+  "output_tokens": 807046,
+  "retries": 1,
+  "errors": 0,
+  "mean_latency_ms": 2258.0,
+  "p95_latency_ms": 4009.4,
+  "estimated_cost_rmb": 1.8204,
+  "used_rmb": 108.114719,
+  "prev_round_rmb": 16.8076,
+  "cumulative_rmb": 124.922319,
+  "cap_rmb": 140.0,
+  "cache": {
+    "hits": 158,
+    "misses": 3295
+  },
+  "commit": "8f1ce4afdc86",
+  "prompt_digest": "bbcbf121fba6f130",
+  "tag": "full"
+}

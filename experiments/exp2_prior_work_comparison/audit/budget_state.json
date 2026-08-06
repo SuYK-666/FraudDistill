@@ -1,1 +1,10 @@
-{"used_rmb": 16.807587, "cap_rmb": 32.0, "reserved_rmb": 4.0, "owner": "exp2_20260805"}
+{
+ "used_rmb": 109.078351,
+ "cap_rmb": 140.0,
+ "reserve_rmb": 4.0,
+ "prev_round_rmb": 16.8076,
+ "cumulative_rmb": 125.885951,
+ "owner": "exp2_full_20260806",
+ "tag": "calib_aegis",
+ "updated": "2026-08-06T12:21:53"
+}

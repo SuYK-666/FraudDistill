@@ -113,7 +113,11 @@ def auprc_auroc(y: np.ndarray, s: np.ndarray) -> tuple[float, float]:
     ranks = np.arange(1, len(y) + 1)
     pr = np.cumsum(y_s) / np.arange(1, len(y_s) + 1)
     ap = float(np.sum(pr[y_s == 1])) / n_pos
-    pos_ranks = ranks[y_s == 1]
+    # 2026-08-06 bugfix: AUROC needs ASCENDING ranks (higher score -> larger
+    # rank). Previously used descending positions, inverting the direction
+    # (perfect separation returned 0.0 instead of 1.0).
+    asc_ranks = len(y) - ranks + 1
+    pos_ranks = asc_ranks[y_s == 1]
     auroc = (pos_ranks.sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)
     return ap, auroc
 

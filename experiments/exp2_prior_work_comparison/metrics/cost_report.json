@@ -1,51 +1,83 @@
 {
- "used_rmb_total": 16.8076,
- "cap_rmb": 32.0,
- "reserved_rmb": 4.0,
- "teacher": {
-  "pilot": {
-   "calls": 100,
-   "cache_hits": 0,
-   "cache_misses": 100,
-   "input_hit_tokens": 215680,
-   "input_miss_tokens": 20963,
-   "output_tokens": 15375,
-   "retries": 93,
-   "errors": 0,
-   "mean_latency_ms": 4384.0,
-   "p95_latency_ms": 5183.6,
-   "estimated_cost_rmb": 0.056,
-   "used_rmb": 0.056027,
-   "cache": {
-    "hits": 0,
-    "misses": 100
-   },
-   "commit": "16ca0db94c33",
-   "prompt_digest": "bbcbf121fba6f130",
-   "tag": "pilot"
+ "used_rmb_round": 109.0784,
+ "prev_round_rmb": 16.8076,
+ "cumulative_rmb": 125.886,
+ "cap_rmb": 140.0,
+ "reserve_rmb": 4.0,
+ "history": [
+  {
+   "time": "2026-08-06T10:21:45",
+   "tag": "pilot",
+   "used_rmb": 0.152626,
+   "cumulative_rmb": 16.960226
   },
-  "test": {
-   "calls": 9980,
-   "cache_hits": 0,
-   "cache_misses": 9980,
-   "input_hit_tokens": 13796736,
-   "input_miss_tokens": 1715764,
-   "output_tokens": 1512605,
-   "retries": 8382,
-   "errors": 13,
-   "mean_latency_ms": 3787.5,
-   "p95_latency_ms": 4783.3,
-   "estimated_cost_rmb": 5.0169,
-   "used_rmb": 5.26507,
-   "cache": {
-    "hits": 0,
-    "misses": 9980
-   },
-   "commit": "16ca0db94c33",
-   "prompt_digest": "bbcbf121fba6f130",
-   "tag": "test"
+  {
+   "time": "2026-08-06T10:23:15",
+   "tag": "pilot",
+   "used_rmb": 0.252931,
+   "cumulative_rmb": 17.060531
+  },
+  {
+   "time": "2026-08-06T10:25:01",
+   "tag": "calib_aegis",
+   "used_rmb": 0.786171,
+   "cumulative_rmb": 17.593771
+  },
+  {
+   "time": "2026-08-06T10:40:51",
+   "tag": "full",
+   "used_rmb": 8.86907,
+   "cumulative_rmb": 25.67667
+  },
+  {
+   "time": "2026-08-06T10:49:23",
+   "tag": "full",
+   "used_rmb": 13.264603,
+   "cumulative_rmb": 30.072203
+  },
+  {
+   "time": "2026-08-06T11:26:23",
+   "tag": "full",
+   "used_rmb": 31.302138,
+   "cumulative_rmb": 48.109738
+  },
+  {
+   "time": "2026-08-06T11:28:48",
+   "tag": "full",
+   "used_rmb": 32.537945,
+   "cumulative_rmb": 49.345545
+  },
+  {
+   "time": "2026-08-06T11:57:29",
+   "tag": "full",
+   "used_rmb": 49.73535,
+   "cumulative_rmb": 66.54295
+  },
+  {
+   "time": "2026-08-06T12:02:54",
+   "tag": "full",
+   "used_rmb": 61.874929,
+   "cumulative_rmb": 78.682529
+  },
+  {
+   "time": "2026-08-06T12:18:34",
+   "tag": "full",
+   "used_rmb": 106.294274,
+   "cumulative_rmb": 123.101874
+  },
+  {
+   "time": "2026-08-06T12:20:22",
+   "tag": "full",
+   "used_rmb": 108.114719,
+   "cumulative_rmb": 124.922319
+  },
+  {
+   "time": "2026-08-06T12:21:53",
+   "tag": "calib_aegis",
+   "used_rmb": 109.078351,
+   "cumulative_rmb": 125.885951
   }
- },
+ ],
  "currency": "RMB",
- "note": "shared BudgetState across teacher + blind audit; baseline predictions fully reused (zero API)"
+ "note": "round ledger: new API only; baselines fully reused (zero API); Aegis 813 response rows reused from the 2026-08-05 run"
 }

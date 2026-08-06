@@ -1,0 +1,46 @@
+{
+ "fraudr1": {
+  "total": 8564,
+  "response_rows": 8564,
+  "prompt_only_rows": 0,
+  "valid_teacher_cache": 800,
+  "teacher_response_cache": 800,
+  "teacher_prompt_cache": 0,
+  "missing_response": 7764,
+  "missing_prompt": 0,
+  "baseline_coverage": 8564
+ },
+ "orbench": {
+  "total": 3000,
+  "response_rows": 3000,
+  "prompt_only_rows": 0,
+  "valid_teacher_cache": 800,
+  "teacher_response_cache": 800,
+  "teacher_prompt_cache": 0,
+  "missing_response": 2200,
+  "missing_prompt": 0,
+  "baseline_coverage": 3000
+ },
+ "do_not_answer": {
+  "total": 5634,
+  "response_rows": 5634,
+  "prompt_only_rows": 0,
+  "valid_teacher_cache": 900,
+  "teacher_response_cache": 900,
+  "teacher_prompt_cache": 0,
+  "missing_response": 4734,
+  "missing_prompt": 0,
+  "baseline_coverage": 5634
+ },
+ "aegis2": {
+  "total": 1964,
+  "response_rows": 813,
+  "prompt_only_rows": 1151,
+  "valid_teacher_cache": 813,
+  "teacher_response_cache": 813,
+  "teacher_prompt_cache": 0,
+  "missing_response": 0,
+  "missing_prompt": 1151,
+  "baseline_coverage": 1964
+ }
+}

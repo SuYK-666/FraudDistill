@@ -273,7 +273,11 @@ class ArbiterAgent(BaseAgent):
         system, user = (prompt[:idx], prompt[idx + 1:]) if idx > 0 else (prompt, prompt)
         resp = await client.chat(system, user, prompt_version=self.prompt_version, max_tokens=self.max_tokens)
         parsed: dict[str, Any] = resp.get("parsed") or {}
+        # 2026-08-06 bugfix: same silent-parse-failure guard as BaseAgent.run_async.
         ok, errors = self.validate(parsed)
+        if resp.get("parse_ok") is False:
+            ok = False
+            errors = ["client json parse failed (possibly truncated output)"] + errors
         if not ok:
             resp2 = await client.chat(system, self.repair_prompt(parsed, errors), prompt_version=self.prompt_version + "-repair", max_tokens=self.max_tokens)
             parsed2: dict[str, Any] = resp2.get("parsed") or {}

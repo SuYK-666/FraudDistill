@@ -170,7 +170,14 @@ class BaseAgent:
             system, user, prompt_version=self.prompt_version, max_tokens=self.max_tokens,
         )
         parsed: dict[str, Any] = resp.get("parsed") or {}
+        # 2026-08-06 bugfix: the client returns parsed={} when the model output
+        # fails JSON extraction (e.g. truncated at max_tokens). Schemas have
+        # all-default fields, so validate({}) would silently pass and produce
+        # all-zero evidence. Force the repair path and surface parse failures.
         ok, errors = self.validate(parsed)
+        if resp.get("parse_ok") is False:
+            ok = False
+            errors = ["client json parse failed (possibly truncated output)"] + errors
         raw_text = str(resp.get("raw", ""))
         if not ok:
             repair_user = self.repair_prompt(parsed, errors)

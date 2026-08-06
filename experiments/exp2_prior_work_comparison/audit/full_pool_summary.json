@@ -1,0 +1,16 @@
+{
+ "guide": "2026-08-06",
+ "pool": {
+  "fraudr1": 8564,
+  "orbench": 3000,
+  "do_not_answer": 5634,
+  "aegis2": 1964
+ },
+ "aegis_response": 813,
+ "aegis_prompt_only": 1151,
+ "fraud_aligned": {
+  "dna": 1458,
+  "aegis": 128
+ },
+ "silver_label_tag": "20260805"
+}

@@ -1,78 +1,62 @@
 {
- "fraudr1": {
+ "dna_official": {
   "mcnemar": {
-   "b_wrong_t_right": 0,
-   "b_right_t_wrong": 135,
-   "p": 0.0
+   "b_wrong_t_right": 175,
+   "b_right_t_wrong": 149,
+   "p": 0.164766
   },
-  "mcnemar_p_holm": 0.0,
-  "bootstrap_delta_macro_f1": {
-   "observed_delta": 0.0719,
-   "bootstrap_mean": 0.0718,
-   "ci95_low": 0.0587,
-   "ci95_high": 0.0856,
+  "mcnemar_p_holm": 0.1648,
+  "bootstrap": {
+   "observed_delta": -0.0633,
+   "bootstrap_mean": -0.0634,
+   "ci95_low": -0.0744,
+   "ci95_high": -0.0526,
    "ci_excludes_zero": true
-  },
-  "matched": {},
-  "n": 800,
-  "gold_positive_rate": 0.0138
+  }
  },
- "orbench": {
-  "mcnemar": {
-   "b_wrong_t_right": 0,
-   "b_right_t_wrong": 284,
-   "p": 0.0
-  },
-  "mcnemar_p_holm": 0.0,
-  "bootstrap_delta_macro_f1": {
-   "observed_delta": 0.1775,
-   "bootstrap_mean": 0.1775,
-   "ci95_low": 0.1606,
-   "ci95_high": 0.1944,
-   "ci_excludes_zero": true
-  },
-  "matched": {},
-  "n": 800,
-  "gold_positive_rate": 0.0025
- },
- "do_not_answer": {
-  "mcnemar": {
-   "b_wrong_t_right": 1,
-   "b_right_t_wrong": 171,
-   "p": 0.0
-  },
-  "mcnemar_p_holm": 0.0,
-  "bootstrap_delta_macro_f1": {
-   "observed_delta": 0.023,
-   "bootstrap_mean": 0.023,
-   "ci95_low": -0.0111,
-   "ci95_high": 0.056,
-   "ci_excludes_zero": false
-  },
-  "matched": {
-   "matched_fpr_recall": 0.4576,
-   "matched_recall_fpr": 1.0,
-   "auprc_delta": 0.0264
-  },
-  "n": 900,
-  "gold_positive_rate": 0.0656
- },
- "aegis2": {
+ "aegis_response_official": {
   "mcnemar": {
    "b_wrong_t_right": 28,
    "b_right_t_wrong": 163,
    "p": 0.0
   },
   "mcnemar_p_holm": 0.0,
-  "bootstrap_delta_macro_f1": {
-   "observed_delta": 0.0486,
-   "bootstrap_mean": 0.0485,
-   "ci95_low": 0.032,
-   "ci95_high": 0.0652,
+  "bootstrap": {
+   "observed_delta": -0.0633,
+   "bootstrap_mean": -0.0632,
+   "ci95_low": -0.0793,
+   "ci95_high": -0.0467,
    "ci_excludes_zero": true
+  }
+ },
+ "dna_malicious_uses": {
+  "mcnemar": {
+   "b_wrong_t_right": 40,
+   "b_right_t_wrong": 13,
+   "p": 0.000269
   },
-  "matched": {},
-  "n": 813,
-  "gold_positive_rate": 0.3235
+  "mcnemar_p_holm": 0.0008,
+  "bootstrap": {
+   "observed_delta": -0.0213,
+   "bootstrap_mean": -0.0213,
+   "ci95_low": -0.0342,
+   "ci95_high": -0.0092,
+   "ci_excludes_zero": true
+  }
+ },
+ "aegis_fraud_categories": {
+  "mcnemar": {
+   "b_wrong_t_right": 3,
+   "b_right_t_wrong": 12,
+   "p": 0.035156
+  },
+  "mcnemar_p_holm": 0.0703,
+  "bootstrap": {
+   "observed_delta": -0.0738,
+   "bootstrap_mean": -0.0736,
+   "ci95_low": -0.1311,
+   "ci95_high": -0.0164,
+   "ci_excludes_zero": true
+  }
  }
 }
