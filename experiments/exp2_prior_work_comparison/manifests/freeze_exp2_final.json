@@ -1,8 +1,8 @@
 {
  "name": "FraudDistill Evidence MAT - Exp2 formal full run",
- "commit": "b35abd480ed702c5648e8cdda8c21de05f1a9657",
- "short_commit": "b35abd4",
- "frozen_at": "2026-08-06T21:04:11",
+ "commit": "fbc81462b5fa138b395a02f989a73ec224299c49",
+ "short_commit": "fbc8146",
+ "frozen_at": "2026-08-06T21:04:31",
  "model": {
   "provider": "deepseek",
   "model": "deepseek-v4-flash",
