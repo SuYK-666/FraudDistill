@@ -49,8 +49,9 @@
   "positive_candidates": 193
  },
  "aegis_validation": {
-  "n": 1445,
-  "response_labeled": 687
+  "n": 1399,
+  "response_labeled": 641,
+  "note": "1,245 validation + 154 unique refusals (46 raw dup rows dropped)"
  },
  "aegis_test_response": {
   "n": 813,

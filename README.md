@@ -76,6 +76,12 @@ data/teacher_signals/fraudr1_qwen_teacher.jsonl
 
 注意：报告和公开材料中不展示可复用的高风险 prompt、诈骗话术或完整欺诈脚本。
 
+## 实验报告
+
+| 实验 | 说明 | 报告 |
+|---|---|---|
+| Exp2 跨工作对比（正式全量） | 12,447 行主表；Fraud-R1/OR-Bench 盲审 Gold；四基准统一评估与门槛判定 | [EXP2_FINAL_REPORT.md](experiments/exp2_prior_work_comparison/EXP2_FINAL_REPORT.md) |
+
 ## 项目结构
 
 ```text

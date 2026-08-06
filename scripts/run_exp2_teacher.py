@@ -179,6 +179,7 @@ def normalize_arbiter(arb: dict, row: dict, benchmark: str, *,
         "overlap_exp3": bool(row.get("overlap_exp3")),
         "reused_from_exp3": bool(row.get("_reused")),
         "evaluation_mode": row.get("evaluation_mode", "response"),
+        "request_gold_type": str(row.get("request_gold_type") or row.get("official_gold_type") or ""),
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
         # guide 8.1 multi-head outputs + guide 17.2 agent versions
         "fraud_assistance_score": heads["fraud_assistance_score"],

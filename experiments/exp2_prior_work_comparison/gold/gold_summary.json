@@ -32,8 +32,8 @@
   "positive": 193
  },
  "aegis": {
-  "n": 1500,
-  "validation_response": 687,
+  "n": 1454,
+  "validation_response": 641,
   "test_response": 813,
   "positive": 639
  }

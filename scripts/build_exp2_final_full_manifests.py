@@ -248,10 +248,10 @@ def build_dna() -> list[dict]:
 
 
 def build_aegis() -> tuple[list[dict], list[dict], list[dict]]:
-    def rows_from(raw: list[dict], split: str) -> list[dict]:
+    def rows_from(raw: list[dict], split: str, id_suffix: str = "") -> list[dict]:
         out = []
         for r in raw:
-            sid = f"aegis_{r['id']}"
+            sid = f"aegis_{r['id']}{id_suffix}"
             resp = (r.get("response") or "").strip()
             rl = r.get("response_label")
             has_resp = bool(resp) and rl not in (None, "")
@@ -273,9 +273,26 @@ def build_aegis() -> tuple[list[dict], list[dict], list[dict]]:
         return out
 
     val = rows_from(json.loads((RAW_AEGIS / "validation.json").read_text(encoding="utf-8")), "validation")
-    ref_val = rows_from(json.loads((RAW_AEGIS / "refusals_validation.json").read_text(encoding="utf-8")), "validation")
+    # refusals_validation.json holds ALTERNATE (refused) responses for prompts
+    # that also appear in validation.json; the raw file contains 46 internal
+    # (id,response) duplicates and every id collides with validation.json ids,
+    # so refusals get a "_refusal" suffix and internal dups are dropped
+    # (sample_id is the (prompt,response) unit).
+    ref_raw = json.loads((RAW_AEGIS / "refusals_validation.json").read_text(encoding="utf-8"))
+    seen_ref: set[str] = set()
+    ref_unique = []
+    for r in ref_raw:
+        h = qy_hash(str(r.get("prompt", "")), str(r.get("response", "") or ""))
+        if h in seen_ref:
+            continue
+        seen_ref.add(h)
+        ref_unique.append(r)
+    ref_val = rows_from(ref_unique, "validation", id_suffix="_refusal")
     test = rows_from(json.loads((RAW_AEGIS / "test.json").read_text(encoding="utf-8")), "test")
     validation = val + ref_val
+    assert len({r["sample_id"] for r in validation}) == len(validation), "validation sample_id collision"
+    # NOTE: the official validation split contains 43 interactions with
+    # identical (q,y) content but distinct ids; sample_id is the unit.
     print(f"[aegis] validation={len(validation)} (response-labeled={sum(1 for r in validation if r['evaluation_mode']=='response')})")
     print(f"[aegis] test={len(test)} response={sum(1 for r in test if r['evaluation_mode']=='response')} prompt={sum(1 for r in test if r['evaluation_mode']=='prompt_only')}")
     test_resp = [r for r in test if r["evaluation_mode"] == "response"]
@@ -304,7 +321,7 @@ def main() -> None:
     assert set(r["fraud_family"] for r in fraud) == set(FRAUD_FAMILIES)
     assert len(orbench) == 3000
     assert len(dna) == 5634
-    assert len(aegis_val) == 1445
+    assert len(aegis_val) == 1399  # 1,245 validation + 154 unique refusals (deduped)
     assert len(aegis_test_resp) == 813
     assert len(aegis_test_prompt) == 1151
     assert len({r["sample_id"] for r in orbench}) == 3000
@@ -328,7 +345,8 @@ def main() -> None:
             "strata": dict(Counter(r["request_gold_type"] for r in orbench)),
         },
         "dna": {"n": len(dna), "positive_candidates": sum(1 for r in dna if r.get("official_harmfulness") == 1)},
-        "aegis_validation": {"n": len(aegis_val), "response_labeled": sum(1 for r in aegis_val if r["evaluation_mode"] == "response")},
+        "aegis_validation": {"n": len(aegis_val), "response_labeled": sum(1 for r in aegis_val if r["evaluation_mode"] == "response"),
+                              "note": "1,245 validation + 154 unique refusals (46 raw dup rows dropped)"},
         "aegis_test_response": {"n": len(aegis_test_resp), "unsafe": sum(1 for r in aegis_test_resp if r["official_response_label"] == 1)},
         "aegis_test_prompt": {"n": len(aegis_test_prompt)},
         "main_table_total": 3000 + 3000 + 5634 + 813,

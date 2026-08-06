@@ -184,8 +184,8 @@ def grouped_delta(groups: list[tuple[str, int, int, int, float, float]], reps: i
                   "ci95_high": round(float(np.percentile(arr, 97.5)), 4),
                   "excludes_zero": bool(np.percentile(arr, 2.5) > 0 or np.percentile(arr, 97.5) < 0)}
     # AUPRC delta when both methods have continuous scores
-    bs_all = np.array([r[4] for rs in by_group.values() for r in rs])
-    ts_all = np.array([r[5] for rs in by_group.values() for r in rs])
+    bs_all = np.array([r[3] for rs in by_group.values() for r in rs])
+    ts_all = np.array([r[4] for rs in by_group.values() for r in rs])
     y_all = np.array([r[0] for rs in by_group.values() for r in rs])
     if len(np.unique(bs_all)) > 1 and len(np.unique(ts_all)) > 1:
         ab, _ = auprc_auroc(y_all, bs_all)
@@ -377,6 +377,7 @@ def main() -> None:
     write_json(METRICS_DIR / "confusion_matrices.json", confusions)
     write_json(METRICS_DIR / "paired_significance.json", significance)
     write_json(METRICS_DIR / "acceptance_gates.json", gate_summary)
+    write_json(METRICS_DIR / "subgroup_metrics.json", subgroup)
 
     # Main table
     header = ["benchmark", "method", "n", "n_positive", "positive_rate", "accuracy", "precision",
