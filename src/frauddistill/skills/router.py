@@ -119,8 +119,11 @@ MAX_SKILL_CHARS = {
     "arbiter": 7_000,
 }
 
-# Skill-count caps (guide section 7).
-MAX_SKILL_COUNT = {"fraud": 4, "refusal": 5, "context": 3, "arbiter": 2}
+# Skill-count caps (guide section 7; refusal raised to 6 on 2026-08-06 so the
+# formal response_behavior_error mode keeps partial-leakage-detection on toxic
+# rows where dangerous-topic skills also apply; worst-case refusal bundle is
+# 10,421 chars < the 11,000 char budget).
+MAX_SKILL_COUNT = {"fraud": 4, "refusal": 6, "context": 3, "arbiter": 2}
 
 # Budget priority order (guide section 9.4): mandatory skills first.
 PRIORITY_ORDER = {
@@ -225,6 +228,19 @@ class SkillRouter:
                 # enters the prompt (only the abstract task mode is passed).
                 add("response-content-harm", "general response-safety mode: mandatory answer-internal moderation head.")
                 add("safe-context-disambiguation", "general response-safety mode: mandatory protective-context separation.")
+            if task_mode == "fraud_content":
+                # Formal guide 2026-08-06: content-level fraud-assistance mode.
+                # Answer actionability is the core fraud-assistance signal and
+                # protective context must be separated from executable help.
+                add("response-actionability", "fraud content mode: mandatory answer-actionability head.")
+                add("safe-context-disambiguation", "fraud content mode: mandatory protective-context separation.")
+            if task_mode == "response_behavior_error":
+                # Formal guide 2026-08-06 section 4.2: unified behavior-error
+                # mode. Over-refusal (benign request refused) and refuse-then-
+                # leak are the two core error classes and must be scored for
+                # every row.
+                add("overrefusal-diagnosis", "response-behavior-error mode: mandatory over-refusal check.")
+                add("partial-leakage-detection", "response-behavior-error mode: mandatory leakage check.")
             if dangerous >= 0.25:
                 add("response-actionability", "Dangerous topic: judge whether answer provides executable help.")
                 add("safe-context-disambiguation", "Dangerous topic: avoid treating description/education as assistance.")

@@ -1,9 +1,0 @@
-{
- "n": 1151,
- "n_positive": 584,
- "prediction_digest": "d4a7419c9d19bff9",
- "gold_digest": "f1b13f08544ccc0a",
- "manifest_digest": "",
- "binary_label_mapping": "0=safe,1=unsafe",
- "score_field": "prompt_risk_score"
-}

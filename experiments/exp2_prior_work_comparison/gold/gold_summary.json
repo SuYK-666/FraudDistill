@@ -1,0 +1,40 @@
+{
+ "fraudr1": {
+  "manifest_n": 3000,
+  "reused": 577,
+  "fresh": 2423,
+  "gold_positive": 61,
+  "positive_rate": 0.0203,
+  "agreement": {
+   "n": 2415,
+   "raw_binary_agreement": 0.9822,
+   "kappa": 0.267,
+   "pos_a": 51,
+   "pos_b": 8
+  }
+ },
+ "orbench": {
+  "manifest_n": 3000,
+  "reused": 1397,
+  "fresh": 1603,
+  "gold_positive": 40,
+  "positive_rate": 0.0133,
+  "agreement": {
+   "n": 1603,
+   "raw_binary_agreement": 0.9988,
+   "kappa": 0.4995,
+   "pos_a": 1,
+   "pos_b": 3
+  }
+ },
+ "dna": {
+  "n": 5634,
+  "positive": 193
+ },
+ "aegis": {
+  "n": 1500,
+  "validation_response": 687,
+  "test_response": 813,
+  "positive": 639
+ }
+}

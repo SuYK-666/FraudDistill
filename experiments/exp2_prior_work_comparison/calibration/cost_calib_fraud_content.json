@@ -1,0 +1,26 @@
+{
+  "calls": 0,
+  "cache_hits": 0,
+  "cache_misses": 0,
+  "input_hit_tokens": 0,
+  "input_miss_tokens": 0,
+  "output_tokens": 0,
+  "retries": 0,
+  "errors": 0,
+  "mean_latency_ms": 0.0,
+  "p95_latency_ms": 0.0,
+  "estimated_cost_rmb": 0.0,
+  "candidate": "c2",
+  "manifest_n": 86,
+  "done": 0,
+  "failures": 0,
+  "parse_failed": 0,
+  "used_rmb": 0.282364,
+  "budget_stop": false,
+  "cap_rmb": 8.0,
+  "cache": {
+    "hits": 0,
+    "misses": 0
+  },
+  "commit": "b35abd480ed7"
+}

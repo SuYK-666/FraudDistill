@@ -1,0 +1,37 @@
+{
+ "used_rmb": 22.81362,
+ "cap_rmb": 120.0,
+ "owner": "exp2_final_gold",
+ "history": [
+  {
+   "time": "2026-08-06T20:58:00",
+   "tag": "fraudr1_annotate_deepseek-v4-flash",
+   "used_rmb": 3.259521
+  },
+  {
+   "time": "2026-08-06T20:59:16",
+   "tag": "fraudr1_annotate_deepseek-v4-pro",
+   "used_rmb": 16.4315
+  },
+  {
+   "time": "2026-08-06T20:59:31",
+   "tag": "fraudr1_adjudicate",
+   "used_rmb": 16.45202
+  },
+  {
+   "time": "2026-08-06T21:00:06",
+   "tag": "orbench_annotate_deepseek-v4-flash",
+   "used_rmb": 17.704943
+  },
+  {
+   "time": "2026-08-06T21:00:57",
+   "tag": "orbench_annotate_deepseek-v4-pro",
+   "used_rmb": 22.812851
+  },
+  {
+   "time": "2026-08-06T21:01:02",
+   "tag": "orbench_adjudicate",
+   "used_rmb": 22.81362
+  }
+ ]
+}
