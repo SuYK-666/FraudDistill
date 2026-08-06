@@ -45,6 +45,8 @@ from frauddistill.runtime.budget import BudgetExceeded, BudgetState  # noqa: E40
 from frauddistill.runtime.cache import RequestCache  # noqa: E402
 from frauddistill.teacher.evidence_table import build_evidence_table  # noqa: E402
 from frauddistill.exp2_static_repair.delta_planner import agent_versions  # noqa: E402
+from frauddistill.skills.runtime import SkillRuntime, build_skill_runtime  # noqa: E402
+from frauddistill.skills.c2_prompts import build_c2_prompts  # noqa: E402
 from frauddistill.exp2_cross_benchmark.paths import (  # noqa: E402
     AUDIT_DIR,
     BUDGET_FILE,
@@ -101,14 +103,17 @@ def git_commit() -> str:
         return "unknown"
 
 
-def prompt_digest() -> str:
+def prompt_digest(base_prompts: dict[str, str] | None = None) -> str:
     from frauddistill.agents import (  # noqa: F401
         fraud_assistance_agent as fa,
         refusal_quality_agent as rq,
         relevance_agent as rl,
         arbiter_agent as ar,
     )
-    parts = [fa.SYSTEM_PROMPT, rq.SYSTEM_PROMPT, rl.SYSTEM_PROMPT, ar.SYSTEM_PROMPT]
+    if base_prompts is not None:
+        parts = [base_prompts[k] for k in ("fraud", "refusal", "context", "arbiter")]
+    else:
+        parts = [fa.SYSTEM_PROMPT, rq.SYSTEM_PROMPT, rl.SYSTEM_PROMPT, ar.SYSTEM_PROMPT]
     return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()[:16]
 
 
@@ -121,7 +126,9 @@ def sample_for_agents(row: dict, *, prompt_only: bool = False) -> dict:
     }
 
 
-def normalize_arbiter(arb: dict, row: dict, benchmark: str) -> dict:
+def normalize_arbiter(arb: dict, row: dict, benchmark: str, *,
+                      base_prompts: dict[str, str] | None = None,
+                      skill_trace: dict | None = None) -> dict:
     """Map an arbiter/signal dict into the exp2 prediction-row schema."""
     label = str(arb.get("teacher_label", "safe")).lower()
     rtype = str(arb.get("teacher_type", "safe")).lower()
@@ -136,7 +143,8 @@ def normalize_arbiter(arb: dict, row: dict, benchmark: str) -> dict:
     parsed = arb.get("parsed") or arb
     heads = {
         h: round(max(0.0, min(1.0, float(parsed.get(h, 0.0) or 0.0))), 4)
-        for h in ("fraud_assistance_score", "general_harmful_compliance_score",
+        for h in ("fraud_assistance_score", "harmful_engagement_score",
+                  "general_harmful_compliance_score", "response_content_harm_score",
                   "did_refuse_score", "clean_refusal_score", "over_refusal_score",
                   "prompt_risk_score")
     }
@@ -148,7 +156,7 @@ def normalize_arbiter(arb: dict, row: dict, benchmark: str) -> dict:
         "answer": row["answer"],
         "method": "frauddistill_evidence_mat_t6",
         "teacher_model": MODEL_TEACHER,
-        "teacher_prompt_hash": prompt_digest(),
+        "teacher_prompt_hash": prompt_digest(base_prompts if base_prompts else None),
         "prediction_binary": binary,
         "prediction_type": rtype,
         "risk_score": score,
@@ -169,8 +177,11 @@ def normalize_arbiter(arb: dict, row: dict, benchmark: str) -> dict:
         "clean_refusal_score": heads["clean_refusal_score"],
         "over_refusal_score": heads["over_refusal_score"],
         "prompt_risk_score": heads["prompt_risk_score"],
+        "harmful_engagement_score": heads["harmful_engagement_score"],
+        "response_content_harm_score": heads["response_content_harm_score"],
         "primary_type": str(parsed.get("primary_type", rtype)),
         "agent_versions": agent_versions(),
+        "skill_trace": skill_trace,
     }
 
 
@@ -350,6 +361,152 @@ async def process_row_prompt_only(teacher: MultiAgentTeacher, row: dict, *,
         "agent_versions": agent_versions(),
     }
     return out
+
+
+async def process_row_skill_gate(teacher: MultiAgentTeacher, row: dict, *,
+                                 skills_rt: SkillRuntime | None,
+                                 candidate: str) -> dict:
+    """Skills-gate pilot row (guide 21-24): run all four agents with composed
+    skill prompts and record the skill trace. C0 runs without skills."""
+    sample = sample_for_agents(row)
+    selections: dict[str, Any] = {}
+    prompts: dict[str, str | None] = {"fraud": None, "refusal": None, "context": None, "arbiter": None}
+    if skills_rt is not None:
+        for name in ("fraud", "refusal", "context", "arbiter"):
+            sel = skills_rt.selection(name, sample)
+            selections[name] = sel
+            prompts[name] = skills_rt.compose_system(name, sel)
+    env: dict[str, dict] = {}
+    tasks = []
+    agents = {
+        "fraud": teacher.fraud_agent,
+        "refusal": teacher.refusal_agent,
+        "context": teacher.context_agent,
+    }
+    for name, agent in agents.items():
+        tasks.append((name, agent.run_async(sample, teacher.client, system_prompt_override=prompts[name])))
+    for name, task in tasks:
+        env[name] = await task
+    table = build_evidence_table(env.get("fraud"), env.get("refusal"), env.get("context"))
+    arb = await teacher.arbiter_agent.run_async(
+        sample, table, threshold=teacher.threshold, client=teacher.client,
+        system_prompt_override=prompts["arbiter"],
+    )
+    skill_trace = None
+    if skills_rt is not None:
+        skill_trace = skills_rt.trace(selections)
+    out = normalize_arbiter(
+        arb, row, row["source"],
+        base_prompts=skills_rt.base_prompts if skills_rt is not None else None,
+        skill_trace=skill_trace,
+    )
+    out["evidence_table"] = table
+    out["agent_fraud_json"] = env.get("fraud", {}).get("parsed")
+    out["agent_refusal_json"] = env.get("refusal", {}).get("parsed")
+    out["agent_context_json"] = env.get("context", {}).get("parsed")
+    out["arbiter_json"] = arb if (isinstance(arb, dict) and arb.get("teacher_label") is not None) else (arb or {}).get("parsed")
+    out["agent_agreement"] = arb.get("agent_agreement")
+    out["contradiction_flags"] = arb.get("contradiction_flags")
+    out["latency_ms"] = round(
+        float(arb.get("latency_ms", 0))
+        + sum(float(env[k].get("latency_ms", 0)) for k in ("fraud", "refusal", "context")),
+        1,
+    )
+    arb_usage = arb.get("usage") or {}
+    out["input_tokens"] = sum(int((env[k].get("usage") or {}).get("input_miss", 0) + (env[k].get("usage") or {}).get("input_hit", 0)) for k in ("fraud", "refusal", "context")) + int(arb_usage.get("input_miss", 0) + arb_usage.get("input_hit", 0))
+    out["output_tokens"] = sum(int((env[k].get("usage") or {}).get("output", 0)) for k in ("fraud", "refusal", "context")) + int(arb_usage.get("output", 0))
+    out["candidate"] = candidate
+    return out
+
+
+def skill_runtime_for_candidate(candidate: str) -> SkillRuntime | None:
+    """Candidate configs (guide 23): C0 no skills; C1 skills + current schema;
+    C2 skills + task-alignment fix (content-harm head + hard-exit split)."""
+    if candidate == "c0":
+        return None
+    if candidate == "c1":
+        return build_skill_runtime(content_harm=False, strict=True)
+    if candidate == "c2":
+        return build_skill_runtime(
+            content_harm=True, strict=True, base_prompts=build_c2_prompts()
+        )
+    raise ValueError(f"Unknown candidate: {candidate}")
+
+
+async def run_skill_gate(teacher: MultiAgentTeacher, manifest_path: Path, out_path: Path,
+                         budget: BudgetState, budget_file: Path, *,
+                         candidate: str, skills_rt: SkillRuntime | None,
+                         concurrency: int = ROW_CONCURRENCY) -> dict:
+    """Run the skills-gate pilot rows for one candidate config (guide 33.5-33.7)."""
+    rows = read_jsonl(manifest_path)
+    existing = load_existing(out_path)
+    todo = [r for r in rows if str(r["sample_id"]) not in existing]
+    print(f"[skill-gate:{candidate}] manifest={len(rows)} done={len(rows) - len(todo)} todo={len(todo)}")
+    failures = 0
+    parse_failed = 0
+    sem = asyncio.Semaphore(concurrency)
+
+    async def worker(row: dict):
+        async with sem:
+            try:
+                return str(row["sample_id"]), await process_row_skill_gate(
+                    teacher, row, skills_rt=skills_rt, candidate=candidate
+                ), ""
+            except BudgetExceeded as exc:
+                return str(row["sample_id"]), None, f"BUDGET_EXCEEDED: {exc}"
+            except Exception as exc:  # noqa: BLE001
+                return str(row["sample_id"]), None, f"{type(exc).__name__}: {exc}"
+
+    started = time.perf_counter()
+    done_count = 0
+    batch: list[asyncio.Task] = []
+    budget_stop = False
+    for row in todo:
+        if not teacher.client.budget.can_spend(0.05):
+            print(f"[skill-gate:{candidate}] BUDGET STOP: used={teacher.client.budget.used_rmb:.2f} cap={teacher.client.budget.effective_cap:.2f}")
+            budget_stop = True
+            break
+        batch.append(asyncio.create_task(worker(row)))
+        if len(batch) >= concurrency:
+            for rid, rec, err in await asyncio.gather(*batch):
+                done_count += 1
+                if rec is not None:
+                    append_rows(out_path, [rec])
+                    if rec.get("abstain") or rec.get("parse_status") == "parse_failed":
+                        parse_failed += 1
+                else:
+                    failures += 1
+                    if err.startswith("BUDGET_EXCEEDED"):
+                        budget_stop = True
+                    print(f"[skill-gate:{candidate}] FAILED {rid}: {err}")
+            batch = []
+            if done_count % CHECKPOINT_EVERY == 0:
+                rate = done_count / max(time.perf_counter() - started, 1e-9)
+                print(f"[skill-gate:{candidate}] progress {done_count}/{len(todo)} rows/s={rate:.2f} used_rmb={teacher.client.budget.used_rmb:.4f} failures={failures} parse_failed={parse_failed}")
+                save_budget(teacher.client.budget, tag=f"skill_gate_{candidate}_progress", budget_file=budget_file)
+    if batch:
+        for rid, rec, err in await asyncio.gather(*batch):
+            done_count += 1
+            if rec is not None:
+                append_rows(out_path, [rec])
+                if rec.get("abstain") or rec.get("parse_status") == "parse_failed":
+                    parse_failed += 1
+            else:
+                failures += 1
+                if err.startswith("BUDGET_EXCEEDED"):
+                    budget_stop = True
+                print(f"[skill-gate:{candidate}] FAILED {rid}: {err}")
+    save_budget(teacher.client.budget, tag=f"skill_gate_{candidate}_final", budget_file=budget_file)
+    print(f"[skill-gate:{candidate}] finished done={done_count} failures={failures} parse_failed={parse_failed} used_rmb={teacher.client.budget.used_rmb:.4f} budget_stop={budget_stop}")
+    return {
+        "candidate": candidate,
+        "manifest_n": len(rows),
+        "done": done_count,
+        "failures": failures,
+        "parse_failed": parse_failed,
+        "used_rmb": teacher.client.budget.used_rmb,
+        "budget_stop": budget_stop,
+    }
 
 
 def build_teacher(client) -> MultiAgentTeacher:
@@ -710,6 +867,20 @@ def main() -> None:
                     help="re-run every specialist + arbiter (all prompts changed; guide 17.3)")
     ap.add_argument("--boundary", action="store_true",
                     help="boundary-repair pilot mode: guide-17 max_tokens + guide-12 rerun matrix")
+    ap.add_argument("--skills", action="store_true",
+                    help="skills-gate pilot: enable skill routing + composed prompts (guide 33)")
+    ap.add_argument("--candidate", choices=["c0", "c1", "c2"], default="c2",
+                    help="three-config diagnostic (guide 23): c0 no skills, c1 skills only, c2 skills + fixes")
+    ap.add_argument("--response-content-harm", action="store_true",
+                    help="enable the response-content-harm head (C2 schema; guide 16)")
+    ap.add_argument("--engagement-boundary-fix", action="store_true",
+                    help="enable the hard-exit/soft-caution engagement split (C2; guide 17)")
+    ap.add_argument("--input", type=str, default=None,
+                    help="skills-gate pilot manifest (guide 33.5-33.7)")
+    ap.add_argument("--out", type=str, default=None,
+                    help="skills-gate prediction output file")
+    ap.add_argument("--tag", type=str, default="skill_gate",
+                    help="cost ledger tag")
     args = ap.parse_args()
 
     budget_file = Path(args.budget_file) if args.budget_file else (PILOT_BUDGET_FILE if args.pilot_file else BUDGET_FILE)
@@ -735,6 +906,36 @@ def main() -> None:
     else:
         teacher = build_teacher(client)
     monitor = MilestoneMonitor(budget.used_rmb)
+
+    if args.input:
+        # Skills-gate pilot mode (guide 33.5-33.7): fresh frozen pilot rows.
+        candidate = args.candidate
+        if args.skills or candidate in ("c1", "c2"):
+            skills_rt = skill_runtime_for_candidate(candidate)
+        else:
+            skills_rt = None
+        if args.response_content_harm or args.engagement_boundary_fix:
+            # explicit flags force C2 semantics
+            skills_rt = skill_runtime_for_candidate("c2")
+            candidate = "c2"
+        pilot_out = Path(args.out) if args.out else PILOT_DIR / "skill_gate_predictions.jsonl"
+        result = asyncio.run(run_skill_gate(
+            teacher, Path(args.input), pilot_out, budget, budget_file,
+            candidate=candidate, skills_rt=skills_rt,
+            concurrency=args.concurrency,
+        ))
+        ledger = client.ledger.snapshot(client.prices)
+        cost_file = PILOT_DIR / f"cost_{args.tag}.json"
+        cost_file.write_text(
+            json.dumps({**ledger, **result,
+                        "cap_rmb": budget.effective_cap,
+                        "cache": client.cache.stats() if client.cache else {},
+                        "commit": git_commit()},
+                       ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        print(f"[cost:{args.tag}] used_rmb={budget.used_rmb:.4f} -> {cost_file}")
+        return
 
     if args.pilot_file:
         if not args.delta_only:

@@ -155,17 +155,32 @@ class BaseAgent:
             **parsed,
         }
 
-    async def run_async(self, sample: dict[str, Any], client: Any | None = None) -> dict[str, Any]:
+    async def run_async(
+        self,
+        sample: dict[str, Any],
+        client: Any | None = None,
+        *,
+        system_prompt_override: str | None = None,
+    ) -> dict[str, Any]:
         """Async execution with the shared DeepSeekClient (cache + budget + retry).
 
         First JSON/schema failure triggers one repair call; second failure is
         marked parse_failed/abstain (never silently defaulted to safe/unsafe).
+
+        system_prompt_override: when provided (skills runtime), the system
+        message is the composed prompt (role + constraints + skills + schema)
+        and the user message keeps the q+y serialization. The cache key covers
+        the full system prompt, so skill digest changes invalidate the cache.
         """
         client = client or self.client
         started = time.perf_counter()
         if client is None:
             return self._heuristic_envelope(sample)
-        system, user = self.build_messages(sample)
+        if system_prompt_override is not None:
+            system = system_prompt_override
+            _, user = self.build_messages(sample)
+        else:
+            system, user = self.build_messages(sample)
         resp = await client.chat(
             system, user, prompt_version=self.prompt_version, max_tokens=self.max_tokens,
         )
@@ -187,6 +202,9 @@ class BaseAgent:
             )
             parsed2: dict[str, Any] = resp2.get("parsed") or {}
             ok2, errors2 = self.validate(parsed2)
+            if resp2.get("parse_ok") is False:
+                ok2 = False
+                errors2 = ["client json parse failed (possibly truncated output)"] + errors2
             if ok2:
                 parsed, ok = parsed2, True
             else:
