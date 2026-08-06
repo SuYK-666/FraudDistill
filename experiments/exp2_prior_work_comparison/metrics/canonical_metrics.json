@@ -1004,5 +1004,394 @@
     "clean_refusal_fpr": 0.0803
    }
   }
+ },
+ "static_repair": {
+  "guide": "exp2-static-fix-20260806",
+  "offline": true,
+  "metadata": {
+   "commit": "20a80e8",
+   "generated_at": "",
+   "offline": true
+  },
+  "frames": {
+   "dna_response": {
+    "frame_id": "do_not_answer_response_official",
+    "prediction_digest": "eed9b2ddf3336206",
+    "gold_digest": "6fe500c6e45c8586",
+    "n": 5634,
+    "n_positive": 193,
+    "score_head": "general_harmful_compliance_score"
+   },
+   "aegis_response": {
+    "frame_id": "aegis2_response_official",
+    "prediction_digest": "81822b42592ed667",
+    "gold_digest": "f7f0b1d44f473c51",
+    "n": 813,
+    "n_positive": 394,
+    "score_head": "general_harmful_compliance_score"
+   },
+   "aegis_prompt": {
+    "frame_id": "aegis2_prompt_official",
+    "prediction_digest": "d4a7419c9d19bff9",
+    "gold_digest": "f1b13f08544ccc0a",
+    "n": 1151,
+    "n_positive": 584,
+    "score_head": "prompt_risk_score"
+   }
+  },
+  "binary_metrics": {
+   "dna_response": {
+    "n": 5634,
+    "n_positive": 193,
+    "tn": 5407,
+    "fp": 34,
+    "fn": 159,
+    "tp": 34,
+    "accuracy": 0.965743698970536,
+    "precision": 0.5,
+    "unsafe_recall": 0.17616580310880828,
+    "unsafe_f1": 0.26053639846743293,
+    "safe_f1": 0.9824657036431362,
+    "macro_f1": 0.6215010510552845,
+    "fpr": 0.006248851314096674,
+    "balanced_accuracy": 0.5849584758973558,
+    "mcc": 0.2830275217446461,
+    "auprc": 0.2257947899062748,
+    "auroc": 0.6692546421194672
+   },
+   "aegis_response": {
+    "n": 813,
+    "n_positive": 394,
+    "tn": 390,
+    "fp": 29,
+    "fn": 199,
+    "tp": 195,
+    "accuracy": 0.7195571955719557,
+    "precision": 0.8705357142857143,
+    "unsafe_recall": 0.4949238578680203,
+    "unsafe_f1": 0.6310679611650486,
+    "safe_f1": 0.7738095238095238,
+    "macro_f1": 0.7024387424872862,
+    "fpr": 0.06921241050119331,
+    "balanced_accuracy": 0.7128557236834134,
+    "mcc": 0.4761993456858108,
+    "auprc": 0.7136765725921403,
+    "auroc": 0.7245011690876271
+   },
+   "aegis_prompt": {
+    "n": 1151,
+    "n_positive": 584,
+    "tn": 511,
+    "fp": 56,
+    "fn": 212,
+    "tp": 372,
+    "accuracy": 0.7671589921807124,
+    "precision": 0.8691588785046729,
+    "unsafe_recall": 0.636986301369863,
+    "unsafe_f1": 0.7351778656126482,
+    "safe_f1": 0.7922480620155039,
+    "macro_f1": 0.763712963814076,
+    "fpr": 0.09876543209876543,
+    "balanced_accuracy": 0.7691104346355488,
+    "mcc": 0.556759265434378,
+    "auprc": 0.8107898994200979,
+    "auroc": 0.8008338165301635
+   }
+  },
+  "baseline_metrics": {
+   "dna_response": {
+    "n": 5634,
+    "n_positive": 193,
+    "tn": 5435,
+    "fp": 6,
+    "fn": 22,
+    "tp": 171,
+    "accuracy": 0.9950301739439119,
+    "precision": 0.9661016949152542,
+    "unsafe_recall": 0.8860103626943006,
+    "unsafe_f1": 0.9243243243243243,
+    "safe_f1": 0.9974307212332538,
+    "macro_f1": 0.9608775227787891,
+    "fpr": 0.0011027384671935306,
+    "balanced_accuracy": 0.9424538121135535,
+    "mcc": 0.9226826288472313
+   },
+   "aegis_response": {
+    "n": 813,
+    "n_positive": 394,
+    "tn": 368,
+    "fp": 51,
+    "fn": 45,
+    "tp": 349,
+    "accuracy": 0.8819188191881919,
+    "precision": 0.8725,
+    "unsafe_recall": 0.8857868020304569,
+    "unsafe_f1": 0.8790931989924433,
+    "safe_f1": 0.8846153846153846,
+    "macro_f1": 0.881854291803914,
+    "fpr": 0.12171837708830549,
+    "balanced_accuracy": 0.8820342124710757,
+    "mcc": 0.763804748087981
+   },
+   "aegis_prompt": {
+    "n": 1151,
+    "n_positive": 584,
+    "tn": 486,
+    "fp": 81,
+    "fn": 72,
+    "tp": 512,
+    "accuracy": 0.8670721112076455,
+    "precision": 0.863406408094435,
+    "unsafe_recall": 0.8767123287671232,
+    "unsafe_f1": 0.8700084961767205,
+    "safe_f1": 0.864,
+    "macro_f1": 0.8670042480883602,
+    "fpr": 0.14285714285714285,
+    "balanced_accuracy": 0.8669275929549902,
+    "mcc": 0.7341146221113499
+   }
+  },
+  "native_metrics": {
+   "fraudr1_judge_agreement_det": {
+    "n": 8564,
+    "judge_unsafe_rate": 0.14631013545072397,
+    "score_head": "fraud_assistance_score",
+    "unsafe_rate_th0.2": 0.0577,
+    "judge_coverage_th0.2": 0.3735,
+    "t6_only_rate_th0.2": 0.003,
+    "unsafe_rate_th0.3": 0.0542,
+    "judge_coverage_th0.3": 0.3504,
+    "t6_only_rate_th0.3": 0.0029,
+    "unsafe_rate_th0.4": 0.0408,
+    "judge_coverage_th0.4": 0.265,
+    "t6_only_rate_th0.4": 0.002,
+    "unsafe_rate_th0.5": 0.0279,
+    "judge_coverage_th0.5": 0.1899,
+    "t6_only_rate_th0.5": 0.0001,
+    "unsafe_rate_th0.6": 0.0276,
+    "judge_coverage_th0.6": 0.1875,
+    "t6_only_rate_th0.6": 0.0001,
+    "category_rates": {
+     "Fake Job Postings": {
+      "n": 1200,
+      "rate_ge_0_5": 0.1633,
+      "rate_ge_0_4": 0.2008
+     },
+     "Fraudulent Services": {
+      "n": 2400,
+      "rate_ge_0_5": 0.0008,
+      "rate_ge_0_4": 0.0058
+     },
+     "Impersonation": {
+      "n": 2400,
+      "rate_ge_0_5": 0.005,
+      "rate_ge_0_4": 0.0138
+     },
+     "Online Relationships": {
+      "n": 676,
+      "rate_ge_0_5": 0.0207,
+      "rate_ge_0_4": 0.0251
+     },
+     "Phishing Scams": {
+      "n": 1888,
+      "rate_ge_0_5": 0.0079,
+      "rate_ge_0_4": 0.0233
+     }
+    }
+   },
+   "fraudr1_judge_agreement_adapter": {
+    "n": 8564,
+    "judge_unsafe_rate": 0.14631013545072397,
+    "score_head": "adapter_score",
+    "unsafe_rate_th0.2": 0.5111,
+    "judge_coverage_th0.2": 0.7215,
+    "t6_only_rate_th0.2": 0.4055,
+    "unsafe_rate_th0.3": 0.3053,
+    "judge_coverage_th0.3": 0.593,
+    "t6_only_rate_th0.3": 0.2186,
+    "unsafe_rate_th0.4": 0.2142,
+    "judge_coverage_th0.4": 0.3919,
+    "t6_only_rate_th0.4": 0.1568,
+    "unsafe_rate_th0.5": 0.1051,
+    "judge_coverage_th0.5": 0.2386,
+    "t6_only_rate_th0.5": 0.0702,
+    "unsafe_rate_th0.6": 0.0931,
+    "judge_coverage_th0.6": 0.1796,
+    "t6_only_rate_th0.6": 0.0668,
+    "category_rates": {
+     "Fake Job Postings": {
+      "n": 1200,
+      "rate_ge_0_5": 0.1333,
+      "rate_ge_0_4": 0.1925
+     },
+     "Fraudulent Services": {
+      "n": 2400,
+      "rate_ge_0_5": 0.1158,
+      "rate_ge_0_4": 0.2375
+     },
+     "Impersonation": {
+      "n": 2400,
+      "rate_ge_0_5": 0.0571,
+      "rate_ge_0_4": 0.1638
+     },
+     "Online Relationships": {
+      "n": 676,
+      "rate_ge_0_5": 0.1006,
+      "rate_ge_0_4": 0.1716
+     },
+     "Phishing Scams": {
+      "n": 1888,
+      "rate_ge_0_5": 0.1361,
+      "rate_ge_0_4": 0.2775
+     }
+    }
+   },
+   "or_native": {
+    "n": 3000,
+    "n_hard_safe": 1000,
+    "n_regular_safe": 1400,
+    "n_toxic": 600,
+    "native_refused_rate": 0.457,
+    "hard_safe_over_refusal_rate": 0.0,
+    "regular_safe_over_refusal_rate": 0.0,
+    "toxic_harmful_compliance_rate": 0.0016666666666666668,
+    "toxic_clean_refusal_rate": 0.985,
+    "toxic_safety_rate": 0.9983333333333333,
+    "safety_utility_score": 0.9996666666666667,
+    "checker_agreement": 0.7393,
+    "n_checker_rejected": 929
+   }
+  },
+  "paired_significance": [
+   {
+    "comparison": "DNA baseline vs T6-det",
+    "raw_p": 1.9724849948829125e-39,
+    "holm_p": 5.917454984648737e-39,
+    "reject_h0": true
+   },
+   {
+    "comparison": "Aegis response baseline vs T6-det",
+    "raw_p": 2.765717699698189e-20,
+    "holm_p": 5.531435399396377e-20,
+    "reject_h0": true
+   },
+   {
+    "comparison": "Aegis prompt baseline vs T6-det",
+    "raw_p": 1.0847994869799824e-15,
+    "holm_p": 1.0847994869799824e-15,
+    "reject_h0": true
+   }
+  ],
+  "bootstrap": {
+   "dna_response": {
+    "observed_delta": -0.3393764717235046,
+    "bootstrap_mean_delta": -0.3393343881468805,
+    "ci95_low": -0.38117935386517365,
+    "ci95_high": -0.2966089980889557,
+    "reps": 10000,
+    "seed": 20260806
+   },
+   "aegis_response": {
+    "observed_delta": -0.17941554931662773,
+    "bootstrap_mean_delta": -0.17976732454191707,
+    "ci95_low": -0.21433032921450282,
+    "ci95_high": -0.14570684282148658,
+    "reps": 10000,
+    "seed": 20260806
+   },
+   "aegis_prompt": {
+    "observed_delta": -0.10329128427428413,
+    "bootstrap_mean_delta": -0.10328856743340281,
+    "ci95_low": -0.1273826431181752,
+    "ci95_high": -0.07936862503683643,
+    "reps": 10000,
+    "seed": 20260806
+   }
+  },
+  "narrative": {
+   "dna_response": "FraudDistill 显著低于基线。",
+   "aegis_response": "FraudDistill 显著低于基线。",
+   "aegis_prompt": "FraudDistill 显著低于基线。"
+  },
+  "thresholds": {
+   "dna_response": {
+    "score_head": "general_harmful_compliance_score",
+    "threshold": 0.5,
+    "source": "frozen_deterministic",
+    "objective": "default_0.5",
+    "max_fpr": null,
+    "frozen_before_test": true
+   },
+   "aegis_response": {
+    "score_head": "general_harmful_compliance_score",
+    "threshold": 0.5,
+    "source": "frozen_deterministic",
+    "objective": "default_0.5",
+    "max_fpr": null,
+    "frozen_before_test": true
+   },
+   "aegis_prompt": {
+    "score_head": "prompt_risk_score",
+    "threshold": 0.5,
+    "source": "frozen_deterministic",
+    "objective": "default_0.5",
+    "max_fpr": null,
+    "frozen_before_test": true
+   },
+   "fraudr1": {
+    "score_head": "fraud_assistance_score",
+    "threshold": 0.5,
+    "source": "frozen_deterministic",
+    "objective": "default_0.5",
+    "max_fpr": null,
+    "frozen_before_test": true
+   }
+  },
+  "error_matrix": {
+   "dna_false_negative": 159,
+   "dna_false_positive": 34,
+   "aegis_false_negative": 199,
+   "aegis_false_positive": 29,
+   "fraudr1_judge_only": 1015,
+   "fraudr1_t6_only": 1,
+   "or_refusal_disagreement": 782,
+   "bucket_summary": {
+    "dna_false_negative": {
+     "empty_or_missing_agent_fields": 159
+    },
+    "dna_false_positive": {
+     "empty_or_missing_agent_fields": 34
+    },
+    "aegis_false_negative": {
+     "empty_or_missing_agent_fields": 199
+    },
+    "aegis_false_positive": {
+     "empty_or_missing_agent_fields": 29
+    },
+    "fraudr1_judge_only": {
+     "empty_or_missing_agent_fields": 1015
+    },
+    "fraudr1_t6_only": {
+     "empty_or_missing_agent_fields": 1
+    },
+    "or_refusal_disagreement": {
+     "empty_or_missing_agent_fields": 782
+    }
+   }
+  },
+  "integrity_checks": {
+   "n_duplicate_sample_ids": {
+    "dna": 0,
+    "aegis_response": 0,
+    "aegis_prompt": 0,
+    "fraudr1": 0,
+    "orbench": 0
+   },
+   "dna_missing_gold": 0,
+   "aegis_response_missing_gold": 0,
+   "suspicious_empty_agent_outputs": 0,
+   "macro_f1_reconstructible": true,
+   "mcnemar_delta_identity": true
+  }
  }
 }

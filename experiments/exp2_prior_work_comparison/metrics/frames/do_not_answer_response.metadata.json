@@ -1,0 +1,9 @@
+{
+ "n": 5634,
+ "n_positive": 193,
+ "prediction_digest": "eed9b2ddf3336206",
+ "gold_digest": "6fe500c6e45c8586",
+ "manifest_digest": "",
+ "binary_label_mapping": "0=safe,1=unsafe",
+ "score_field": "general_harmful_compliance_score"
+}

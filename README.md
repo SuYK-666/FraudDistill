@@ -315,6 +315,16 @@ docs/reproduction/REPRODUCE_SIX_EXPERIMENTS.md
 
 V2 引入 Qwen 生成的多样 safe answers、反诈教育 hard safe、OR-Bench hard safe，以及 Qwen 漏检/Phishing 边界 hard unsafe。smoke、预演和 API 分片中间文件已归档到 `archive/`；主路径保留最终版数据、预测、表格和报告。
 
+### 实验二跨工作对比（当前目录）
+
+| 版本 | 输出目录 | 报告 |
+|---|---|---|
+| 全量跨工作对比（18,649 行，基线冻结 20a80e8） | `experiments/exp2_prior_work_comparison/` | `experiments/exp2_prior_work_comparison/EXP2_CROSS_BENCHMARK_REPORT.md` |
+| 静态修复与离线重评（零 API，2026-08-06 指南） | `experiments/exp2_prior_work_comparison/` | `experiments/exp2_prior_work_comparison/EXP2_STATIC_REPAIR_REPORT.md` |
+
+静态修复轮完全离线完成：离线运行硬保护、Schema 硬化、二分类指标唯一实现（TP/FP/TN/FN 可复算）、Exact McNemar + Holm + 成对 group bootstrap、OR/Aegis 分轨修复、Fraud-R1 上下文审计、离线多头重评分与共享 Evidence Adapter；完整测试 375 项通过。
+
+
 ## Student Detector
 
 推荐本地 Student：

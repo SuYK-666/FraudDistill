@@ -1,0 +1,14 @@
+{
+ "offline": true,
+ "api_calls": 0,
+ "guard": "FRAUDDISTILL_OFFLINE=1 enforced via require_offline()/assert_online_allowed()",
+ "providers_blocked": [
+  "deepseek",
+  "openai",
+  "dashscope",
+  "google",
+  "zhipuai",
+  "moonshot"
+ ],
+ "validated_at": "exp2-static-fix-20260806"
+}

@@ -1,0 +1,29 @@
+{
+ "guide": "exp2-static-fix-20260806-section19",
+ "n_manifest_rows": 8564,
+ "n_teacher_rows": 8564,
+ "n_teacher_matched": 8564,
+ "n_raw_missing": 0,
+ "raw_data_structure": "single_turn_prompt",
+ "note": "Fraud-R1 raw prompts are single-turn (generated text + role background); multi-turn truncation does not apply. Audit checks prompt completeness.",
+ "full_text_preserved": 4284,
+ "partial_preserved": 4280,
+ "preserved_rate": 1.0,
+ "last_user_only_rate": 0.0,
+ "roleplay_with_role_prefix": 2140,
+ "roleplay_total": 4282,
+ "role_marker_rate": 0.4998,
+ "manifest_query_len_p50": 1069.5,
+ "manifest_query_len_p90": 2371.0,
+ "categories": {
+  "Phishing Scams": 1888,
+  "Online Relationships": 676,
+  "Fake Job Postings": 1200,
+  "Fraudulent Services": 2400,
+  "Impersonation": 2400
+ },
+ "go_no_go": {
+  "context_corrupted": false,
+  "note": "context considered corrupted when >5% raw prompts are missing or >5% queries fail to preserve raw text (guide 19.4)"
+ }
+}

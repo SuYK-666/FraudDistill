@@ -20,6 +20,7 @@ import api_keys  # noqa: E402
 from frauddistill.runtime.budget import BudgetExceeded, BudgetState, estimate_rmb
 from frauddistill.runtime.cache import RequestCache
 from frauddistill.runtime.retry import is_retryable
+from frauddistill.exp2_static_repair.offline_guard import assert_online_allowed  # noqa: E402
 
 # DeepSeek pricing (RMB per 1M tokens), snapshot 2026-08-03 (guide section 12.4).
 DEEPSEEK_PRICES = {"input_hit": 0.02, "input_miss": 1.00, "output": 2.00}
@@ -98,6 +99,7 @@ class DeepSeekClient:
         budget: BudgetState | None = None,
         concurrency: int = 120,
     ):
+        assert_online_allowed()
         self.model = model
         self.json_mode = json_mode
         self.thinking_disabled = thinking_disabled

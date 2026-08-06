@@ -2,6 +2,7 @@
 
 > 本报告由 `scripts/make_exp2_report.py` 自动生成，所有数字来自 `metrics/canonical_metrics.json`、`metrics/paired_significance.json`、`metrics/calibration.json` 与 `audit/budget_state.json`，无手工填写。
 > 执行指南：`FraudDistill_实验二全量跨工作对比实施指南.md`（2026-08-06 版，复制为 `_guide_exp2_full.md`）。
+> 后续零 API 静态修复轮见：`EXP2_STATIC_REPAIR_REPORT.md`（离线保护 / Schema 硬化 / 指标与统计修复 / 多头重评分）。
 
 ## 1. 实验概览
 

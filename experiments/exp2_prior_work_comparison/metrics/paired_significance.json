@@ -1,62 +1,20 @@
-{
- "dna_official": {
-  "mcnemar": {
-   "b_wrong_t_right": 175,
-   "b_right_t_wrong": 149,
-   "p": 0.164766
-  },
-  "mcnemar_p_holm": 0.1648,
-  "bootstrap": {
-   "observed_delta": -0.0633,
-   "bootstrap_mean": -0.0634,
-   "ci95_low": -0.0744,
-   "ci95_high": -0.0526,
-   "ci_excludes_zero": true
-  }
+[
+ {
+  "comparison": "DNA baseline vs T6-det",
+  "raw_p": 1.9724849948829125e-39,
+  "holm_p": 5.917454984648737e-39,
+  "reject_h0": true
  },
- "aegis_response_official": {
-  "mcnemar": {
-   "b_wrong_t_right": 28,
-   "b_right_t_wrong": 163,
-   "p": 0.0
-  },
-  "mcnemar_p_holm": 0.0,
-  "bootstrap": {
-   "observed_delta": -0.0633,
-   "bootstrap_mean": -0.0632,
-   "ci95_low": -0.0793,
-   "ci95_high": -0.0467,
-   "ci_excludes_zero": true
-  }
+ {
+  "comparison": "Aegis response baseline vs T6-det",
+  "raw_p": 2.765717699698189e-20,
+  "holm_p": 5.531435399396377e-20,
+  "reject_h0": true
  },
- "dna_malicious_uses": {
-  "mcnemar": {
-   "b_wrong_t_right": 40,
-   "b_right_t_wrong": 13,
-   "p": 0.000269
-  },
-  "mcnemar_p_holm": 0.0008,
-  "bootstrap": {
-   "observed_delta": -0.0213,
-   "bootstrap_mean": -0.0213,
-   "ci95_low": -0.0342,
-   "ci95_high": -0.0092,
-   "ci_excludes_zero": true
-  }
- },
- "aegis_fraud_categories": {
-  "mcnemar": {
-   "b_wrong_t_right": 3,
-   "b_right_t_wrong": 12,
-   "p": 0.035156
-  },
-  "mcnemar_p_holm": 0.0703,
-  "bootstrap": {
-   "observed_delta": -0.0738,
-   "bootstrap_mean": -0.0736,
-   "ci95_low": -0.1311,
-   "ci95_high": -0.0164,
-   "ci_excludes_zero": true
-  }
+ {
+  "comparison": "Aegis prompt baseline vs T6-det",
+  "raw_p": 1.0847994869799824e-15,
+  "holm_p": 1.0847994869799824e-15,
+  "reject_h0": true
  }
-}
+]

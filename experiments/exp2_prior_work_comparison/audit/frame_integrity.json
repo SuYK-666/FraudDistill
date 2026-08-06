@@ -1,0 +1,23 @@
+{
+ "aegis2_prompt": {
+  "metadata_n": 1151,
+  "parquet_n": 1151,
+  "metadata_n_positive": 584,
+  "parquet_n_positive": 584,
+  "ok": true
+ },
+ "aegis2_response": {
+  "metadata_n": 813,
+  "parquet_n": 813,
+  "metadata_n_positive": 394,
+  "parquet_n_positive": 394,
+  "ok": true
+ },
+ "do_not_answer_response": {
+  "metadata_n": 5634,
+  "parquet_n": 5634,
+  "metadata_n_positive": 193,
+  "parquet_n_positive": 193,
+  "ok": true
+ }
+}
