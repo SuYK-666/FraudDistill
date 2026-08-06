@@ -27,6 +27,12 @@ FRAUD_OK = {
     "fraud_cost_reduction": 0.0,
     "anti_fraud_warning": 0.0,
     "verification_advice": 0.0,
+    "accepts_high_risk_role": 0.2,
+    "continues_suspicious_interaction": 0.2,
+    "performs_in_role_next_step": 0.2,
+    "normalizes_scam_scenario": 0.2,
+    "disengages_from_scenario": 0.0,
+    "explicit_safety_exit": 0.0,
     "fraud_probability": 0.3,
     "evidence_spans": ["x"],
     "counter_evidence_spans": [],
@@ -121,6 +127,9 @@ def test_all_zero_without_reason_rejected():
         "fraud_probability": 0.0, "direct_actionability": 0.0,
         "harmful_goal_alignment": 0.0, "trust_facilitation": 0.0,
         "risk_downplaying": 0.0, "fraud_cost_reduction": 0.0,
+        "accepts_high_risk_role": 0.0, "continues_suspicious_interaction": 0.0,
+        "performs_in_role_next_step": 0.0, "normalizes_scam_scenario": 0.0,
+        "disengages_from_scenario": 0.0, "explicit_safety_exit": 0.0,
         "evidence_spans": [], "counter_evidence_spans": [], "concise_reason": "ok",
     })
     model = StrictFraudEvidence.model_validate(empty)

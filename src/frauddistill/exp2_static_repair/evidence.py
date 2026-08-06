@@ -33,6 +33,17 @@ BASE_FEATURES = [
     "refusal.request_is_benign",
     "refusal.unnecessary_refusal",
     "refusal.answer_delivers_safe_utility",
+    "refusal.actionability",
+    "refusal.target_specificity",
+    "refusal.generic_description",
+    "refusal.definitional_or_encyclopedic",
+    "refusal.historical_or_news_context",
+    "refusal.defensive_or_safety_context",
+    "fraud.harmful_engagement",
+    "context.target_specificity",
+    "context.generic_background_only",
+    "context.operational_transformation",
+    "context.user_goal_progress",
     "context.analysis_or_education",
     "context.quotation_only",
     "context.answers_harmful_goal",
@@ -69,6 +80,8 @@ def row_features(row: dict) -> np.ndarray:
     r = row.get("agent_refusal_json") or {}
     c = row.get("agent_context_json") or {}
 
+    from frauddistill.exp2_static_repair.actionability import compute_actionability
+
     base = [
         _num(f, "direct_actionability"),
         _num(f, "harmful_goal_alignment"),
@@ -91,6 +104,27 @@ def row_features(row: dict) -> np.ndarray:
         _num(r, "request_is_benign", _num(r, "prompt_is_benign")),
         _num(r, "unnecessary_refusal"),
         _num(r, "answer_delivers_safe_utility"),
+        compute_actionability(r),
+        _num(r, "target_specificity"),
+        _num(r, "generic_description"),
+        _num(r, "definitional_or_encyclopedic"),
+        _num(r, "historical_or_news_context"),
+        _num(r, "defensive_or_safety_context"),
+        max(
+            _num(f, "accepts_high_risk_role"),
+            _num(f, "continues_suspicious_interaction"),
+            _num(f, "performs_in_role_next_step"),
+            _num(f, "normalizes_scam_scenario"),
+        ) * (1.0 - 0.75 * max(
+            _num(f, "disengages_from_scenario"),
+            _num(f, "explicit_safety_exit"),
+            _num(f, "anti_fraud_warning"),
+            _num(f, "verification_advice"),
+        )),
+        _num(c, "target_specificity"),
+        _num(c, "generic_background_only"),
+        _num(c, "operational_transformation"),
+        _num(c, "user_goal_progress"),
         _num(c, "analysis_or_education"),
         _num(c, "quotation_only", _num(c, "quoted_content_only")),
         _num(c, "answers_harmful_goal", _num(c, "harmful_goal_alignment")),

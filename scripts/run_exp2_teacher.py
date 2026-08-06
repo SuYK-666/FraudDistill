@@ -78,6 +78,10 @@ PILOT_PRED_FILE = PILOT_DIR / "repair_pilot_predictions.jsonl"
 PILOT_BUDGET_FILE = AUDIT_DIR / "budget_pilot.json"
 PILOT_HARD_CAP_RMB = 12.0      # guide 26.4: pilot_hard_cap_rmb
 
+# Quantified boundary-repair pilot (guide 17: output length caps, 6 RMB hard cap).
+BOUNDARY_DIR = PILOT_DIR
+BOUNDARY_MAX_TOKENS = {"fraud": 560, "refusal": 620, "context": 420, "arbiter": 480}
+
 
 def read_jsonl(path: Path) -> list[dict]:
     if not path.exists():
@@ -208,6 +212,26 @@ def pilot_agents_to_rerun(benchmark: str, *, prompt_only: bool = False,
         return ["refusal", "context", "arbiter"]
     if benchmark == "aegis2":
         return ["refusal", "context", "arbiter"] if not prompt_only else ["refusal"]
+    return ["fraud", "refusal", "context", "arbiter"]
+
+
+def boundary_agents_to_rerun(benchmark: str) -> list[str]:
+    """Guide 12 boundary run matrix.
+
+    - aegis2: all specialists (old T6 rows carry no agent evidence JSON);
+    - fraudr1: all specialists (Refusal/Context schemas gained REQUIRED fields,
+      guide 12.2 forces re-running them);
+    - do_not_answer: refusal + context + arbiter, reuse fraud (guide 12.1);
+    - orbench: refusal + arbiter, reuse fraud/context (guide 12.3).
+    """
+    if benchmark == "aegis2":
+        return ["fraud", "refusal", "context", "arbiter"]
+    if benchmark == "fraudr1":
+        return ["fraud", "refusal", "context", "arbiter"]
+    if benchmark == "do_not_answer":
+        return ["refusal", "context", "arbiter"]
+    if benchmark == "orbench":
+        return ["refusal", "arbiter"]
     return ["fraud", "refusal", "context", "arbiter"]
 
 
@@ -561,7 +585,10 @@ async def run_pilot(teacher: MultiAgentTeacher, manifest_path: Path, out_path: P
         else:
             key = src
         old_row = old.get(key, {}).get(rid)
-        rerun = pilot_agents_to_rerun(src, prompt_only=(mode == "prompt_only"), rerun_all=rerun_all)
+        if row.get("boundary_pilot"):
+            rerun = boundary_agents_to_rerun(src)
+        else:
+            rerun = pilot_agents_to_rerun(src, prompt_only=(mode == "prompt_only"), rerun_all=rerun_all)
         todo.append({"row": row, "old_row": old_row, "rerun": rerun})
     print(f"[pilot] todo={len(todo)}")
 
@@ -681,6 +708,8 @@ def main() -> None:
     ap.add_argument("--concurrency", type=int, default=120)
     ap.add_argument("--rerun-all-agents", action="store_true",
                     help="re-run every specialist + arbiter (all prompts changed; guide 17.3)")
+    ap.add_argument("--boundary", action="store_true",
+                    help="boundary-repair pilot mode: guide-17 max_tokens + guide-12 rerun matrix")
     args = ap.parse_args()
 
     budget_file = Path(args.budget_file) if args.budget_file else (PILOT_BUDGET_FILE if args.pilot_file else BUDGET_FILE)
@@ -696,7 +725,15 @@ def main() -> None:
         budget=budget,
         concurrency=args.concurrency,
     )
-    teacher = build_teacher(client)
+    if args.boundary:
+        teacher = MultiAgentTeacher(
+            client,
+            use_fraud_agent=True, use_refusal_agent=True, use_context_agent=True,
+            arbiter_mode="evidence", use_correction=False, threshold=0.5,
+            max_tokens=dict(BOUNDARY_MAX_TOKENS),
+        )
+    else:
+        teacher = build_teacher(client)
     monitor = MilestoneMonitor(budget.used_rmb)
 
     if args.pilot_file:

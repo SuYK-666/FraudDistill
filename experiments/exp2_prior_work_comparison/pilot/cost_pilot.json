@@ -1,29 +1,29 @@
 {
-  "calls": 234,
-  "cache_hits": 6,
-  "cache_misses": 234,
-  "input_hit_tokens": 279936,
-  "input_miss_tokens": 48423,
-  "output_tokens": 47829,
+  "calls": 136,
+  "cache_hits": 172,
+  "cache_misses": 136,
+  "input_hit_tokens": 215040,
+  "input_miss_tokens": 106406,
+  "output_tokens": 35653,
   "retries": 0,
   "errors": 0,
-  "mean_latency_ms": 1795.0,
-  "p95_latency_ms": 2361.9,
-  "estimated_cost_rmb": 0.1497,
-  "used_rmb": 12.113612,
-  "cap_rmb": 14.0,
+  "mean_latency_ms": 1715.8,
+  "p95_latency_ms": 5155.4,
+  "estimated_cost_rmb": 0.182,
+  "used_rmb": 4.632629,
+  "cap_rmb": 6.0,
   "cache": {
-    "hits": 6,
-    "misses": 234
+    "hits": 172,
+    "misses": 136
   },
-  "rows_todo": 80,
-  "rows_done": 80,
+  "rows_todo": 77,
+  "rows_done": 77,
   "failures": 0,
   "parse_failed": 0,
   "agent_versions": {
-    "fraud": "sha256:008e62b3760ecd63:4ae5650952c8cabb",
-    "refusal": "sha256:e800e639ecc6c5b2:e1bcd7bb135b3e85",
-    "context": "sha256:166a9b8a625594a3:6e5d21123d5f53f7",
-    "arbiter": "sha256:a9e2e4df71ef411d:922f80a06d8f2d55"
+    "fraud": "sha256:61ebf827ef4bd57f:846e6ce8c70b74a0",
+    "refusal": "sha256:383a3a1cb78b7917:8a93c4e17849fbcc",
+    "context": "sha256:c6f99c3d34cb5eef:9168f05ddbeb59c8",
+    "arbiter": "sha256:a33fa2f7ec3a194e:26610faf0f4103f2"
   }
 }
