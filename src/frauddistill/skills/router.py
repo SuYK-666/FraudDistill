@@ -1,4 +1,4 @@
-﻿"""SkillRouter: deterministic, benchmark-neutral skill selection (guide
+"""SkillRouter: deterministic, benchmark-neutral skill selection (guide
 sections 7, 9). The router reads only q+y text features, language, turn_count,
 role-play / refusal / hazard signals and upstream structured fields. It never
 reads Gold, baseline predictions, benchmark names, or test-split labels.
@@ -183,6 +183,7 @@ class SkillRouter:
         sample: dict[str, Any],
         upstream: dict[str, Any] | None = None,
         content_harm: bool = False,
+        task_mode: str | None = None,
     ) -> SkillSelection:
         if agent_name not in ("fraud", "refusal", "context", "arbiter"):
             raise ValueError(f"Unsupported agent: {agent_name}")
@@ -218,6 +219,12 @@ class SkillRouter:
         elif agent_name == "refusal":
             add("request-policy-risk", "Refusal Agent main duty: request policy need.")
             add("refusal-outcome", "Refusal Agent main duty: refusal outcome.")
+            if task_mode == "general_response_safety":
+                # Final-pilot guide 2.1: general response-safety mode forces the
+                # content-harm head for EVERY row; the benchmark name never
+                # enters the prompt (only the abstract task mode is passed).
+                add("response-content-harm", "general response-safety mode: mandatory answer-internal moderation head.")
+                add("safe-context-disambiguation", "general response-safety mode: mandatory protective-context separation.")
             if dangerous >= 0.25:
                 add("response-actionability", "Dangerous topic: judge whether answer provides executable help.")
                 add("safe-context-disambiguation", "Dangerous topic: avoid treating description/education as assistance.")

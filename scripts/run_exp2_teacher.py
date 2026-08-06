@@ -372,8 +372,12 @@ async def process_row_skill_gate(teacher: MultiAgentTeacher, row: dict, *,
     selections: dict[str, Any] = {}
     prompts: dict[str, str | None] = {"fraud": None, "refusal": None, "context": None, "arbiter": None}
     if skills_rt is not None:
+        # Final-pilot guide 2.1/5: Aegis response rows run in abstract
+        # general_response_safety task mode; the benchmark name never enters
+        # any agent prompt. Other sources stay task-neutral.
+        task_mode = "general_response_safety" if row.get("source") == "aegis2" else None
         for name in ("fraud", "refusal", "context", "arbiter"):
-            sel = skills_rt.selection(name, sample)
+            sel = skills_rt.selection(name, sample, task_mode=task_mode)
             selections[name] = sel
             prompts[name] = skills_rt.compose_system(name, sel)
     env: dict[str, dict] = {}

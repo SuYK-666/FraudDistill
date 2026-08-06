@@ -1,4 +1,4 @@
-﻿"""Skill runtime facade (guide sections 12-13): wires registry + router +
+"""Skill runtime facade (guide sections 12-13): wires registry + router +
 composer and provides per-agent composed prompts + traces.
 
 The runtime is instruction-only: it never executes skill content, never loads
@@ -65,11 +65,12 @@ class SkillRuntime:
         # (response-content-harm head + hard-exit/soft-caution split).
         self.base_prompts = base_prompts
 
-    def selection(self, agent_name: str, sample: dict[str, Any]) -> SkillSelection:
+    def selection(self, agent_name: str, sample: dict[str, Any], *, task_mode: str | None = None) -> SkillSelection:
         return self.router.select(
             agent_name=agent_name,
             sample=sample,
             content_harm=self.content_harm,
+            task_mode=task_mode,
         )
 
     def compose_system(self, agent_name: str, selection: SkillSelection) -> str:

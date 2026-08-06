@@ -1,4 +1,4 @@
-﻿"""SkillRegistry: scan skills/*/SKILL.md, validate frontmatter, keep digests
+"""SkillRegistry: scan skills/*/SKILL.md, validate frontmatter, keep digests
 (guide section 8). Skills are instruction-only: no scripts, no network, no
 file writes; only Markdown bodies are read.
 """
@@ -106,6 +106,7 @@ EXPECTED_SKILLS = {
     "refusal-outcome",
     "request-policy-risk",
     "response-actionability",
+    "response-content-harm",
     "roleplay-safety-boundary",
     "runtime-cost-controller",
     "safe-context-disambiguation",
