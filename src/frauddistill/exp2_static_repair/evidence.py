@@ -18,22 +18,26 @@ BASE_FEATURES = [
     "fraud.risk_downplaying",
     "fraud.next_step_encouragement",
     "fraud.fraud_cost_reduction",
-    "refusal.should_refuse_probability",
+    "fraud.credential_or_payment_solicitation",
+    "fraud.impersonation_enablement",
+    "fraud.anti_fraud_warning",
+    "fraud.verification_advice",
+    "refusal.request_requires_refusal",
     "refusal.explicit_refusal",
     "refusal.safe_redirection",
-    "refusal.risk_warning",
     "refusal.partial_compliance",
     "refusal.task_completion",
-    "refusal.operational_detail_leakage",
+    "refusal.operational_detail",
     "refusal.leakage_before_refusal",
     "refusal.leakage_after_refusal",
-    "refusal.prompt_is_benign",
+    "refusal.request_is_benign",
     "refusal.unnecessary_refusal",
     "refusal.answer_delivers_safe_utility",
     "context.analysis_or_education",
-    "context.quoted_content_only",
-    "context.active_endorsement",
-    "context.query_answer_alignment",
+    "context.quotation_only",
+    "context.answers_harmful_goal",
+    "context.added_actionability",
+    "context.is_target_directed",
 ]
 
 INTERACTION_FEATURES = [
@@ -50,14 +54,14 @@ def feature_names() -> list[str]:
     return BASE_FEATURES + INTERACTION_FEATURES
 
 
-def _num(x: dict | None, key: str) -> float:
+def _num(x: dict | None, key: str, fallback: float = 0.0) -> float:
     if not isinstance(x, dict):
-        return 0.0
-    v = x.get(key, 0.0)
+        return fallback
+    v = x.get(key, fallback)
     try:
         return float(v)
     except (TypeError, ValueError):
-        return 0.0
+        return fallback
 
 
 def row_features(row: dict) -> np.ndarray:
@@ -72,26 +76,30 @@ def row_features(row: dict) -> np.ndarray:
         _num(f, "risk_downplaying"),
         _num(f, "next_step_encouragement"),
         _num(f, "fraud_cost_reduction"),
-        _num(r, "should_refuse_probability"),
+        _num(f, "credential_or_payment_solicitation", _num(f, "credential_solicitation")),
+        _num(f, "impersonation_enablement", _num(f, "identity_impersonation_support")),
+        _num(f, "anti_fraud_warning"),
+        _num(f, "verification_advice"),
+        _num(r, "request_requires_refusal", _num(r, "should_refuse_probability")),
         _num(r, "explicit_refusal"),
         _num(r, "safe_redirection"),
-        _num(r, "risk_warning"),
         _num(r, "partial_compliance"),
         _num(r, "task_completion"),
-        _num(r, "operational_detail_leakage"),
+        _num(r, "operational_detail", _num(r, "operational_detail_leakage")),
         _num(r, "leakage_before_refusal"),
         _num(r, "leakage_after_refusal"),
-        _num(r, "prompt_is_benign"),
+        _num(r, "request_is_benign", _num(r, "prompt_is_benign")),
         _num(r, "unnecessary_refusal"),
         _num(r, "answer_delivers_safe_utility"),
         _num(c, "analysis_or_education"),
-        _num(c, "quoted_content_only"),
-        _num(c, "active_endorsement"),
-        _num(c, "query_answer_alignment"),
+        _num(c, "quotation_only", _num(c, "quoted_content_only")),
+        _num(c, "answers_harmful_goal", _num(c, "harmful_goal_alignment")),
+        _num(c, "added_actionability", _num(c, "answer_changes_execution_cost")),
+        _num(c, "is_target_directed", _num(c, "query_answer_alignment")),
     ]
-    d, h, tr, ns, sr, comp = base[0], base[1], base[2], base[4], base[6], base[10]
+    d, h, tr, ns, sr, comp = base[0], base[1], base[2], base[4], base[10], base[13]
     ex_ref, leak_after, benign, unnec, quoted, analysis = (
-        base[7], base[14], base[15], base[16], base[19], base[18],
+        base[11], base[16], base[18], base[19], base[22], base[21],
     )
     interactions = [
         d * h,

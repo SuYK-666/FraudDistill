@@ -44,6 +44,7 @@ from frauddistill.providers.deepseek_client import DeepSeekClient  # noqa: E402
 from frauddistill.runtime.budget import BudgetExceeded, BudgetState  # noqa: E402
 from frauddistill.runtime.cache import RequestCache  # noqa: E402
 from frauddistill.teacher.evidence_table import build_evidence_table  # noqa: E402
+from frauddistill.exp2_static_repair.delta_planner import agent_versions  # noqa: E402
 from frauddistill.exp2_cross_benchmark.paths import (  # noqa: E402
     AUDIT_DIR,
     BUDGET_FILE,
@@ -69,6 +70,13 @@ AEGIS_VALIDATION_MANIFEST = MANIFEST_DIR / "aegis_validation_manifest.jsonl"
 AEGIS_VALIDATION_PRED = TEACHER_T6_DIR / "aegis_validation_t6_predictions.jsonl"
 PROMPT_OUT_FILE = TEACHER_T6_DIR / "aegis2_t6_prompt_predictions.jsonl"
 PREV_ROUND_RMB = 16.8076       # 2026-08-05 sample round (archived budget_state)
+
+# Targeted-capability-repair pilot (guide 13-15, 2026-08-06).
+PILOT_DIR = EXPERIMENT_DIR / "pilot"
+PILOT_MANIFEST = PILOT_DIR / "repair_pilot.jsonl"
+PILOT_PRED_FILE = PILOT_DIR / "repair_pilot_predictions.jsonl"
+PILOT_BUDGET_FILE = AUDIT_DIR / "budget_pilot.json"
+PILOT_HARD_CAP_RMB = 12.0      # guide 26.4: pilot_hard_cap_rmb
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -121,6 +129,13 @@ def normalize_arbiter(arb: dict, row: dict, benchmark: str) -> dict:
     if "parsed" not in arb:
         abstain = status == "parse_failed"
     score = float(arb.get("teacher_score", 0.0) or 0.0)
+    parsed = arb.get("parsed") or arb
+    heads = {
+        h: round(max(0.0, min(1.0, float(parsed.get(h, 0.0) or 0.0))), 4)
+        for h in ("fraud_assistance_score", "general_harmful_compliance_score",
+                  "did_refuse_score", "clean_refusal_score", "over_refusal_score",
+                  "prompt_risk_score")
+    }
     return {
         "id": row["sample_id"],
         "benchmark": benchmark,
@@ -143,6 +158,15 @@ def normalize_arbiter(arb: dict, row: dict, benchmark: str) -> dict:
         "reused_from_exp3": bool(row.get("_reused")),
         "evaluation_mode": row.get("evaluation_mode", "response"),
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        # guide 8.1 multi-head outputs + guide 17.2 agent versions
+        "fraud_assistance_score": heads["fraud_assistance_score"],
+        "general_harmful_compliance_score": heads["general_harmful_compliance_score"],
+        "did_refuse_score": heads["did_refuse_score"],
+        "clean_refusal_score": heads["clean_refusal_score"],
+        "over_refusal_score": heads["over_refusal_score"],
+        "prompt_risk_score": heads["prompt_risk_score"],
+        "primary_type": str(parsed.get("primary_type", rtype)),
+        "agent_versions": agent_versions(),
     }
 
 
@@ -167,14 +191,52 @@ def build_reused_aegis() -> dict[str, dict]:
     return out
 
 
-async def process_row(teacher: MultiAgentTeacher, row: dict) -> dict:
-    sample = sample_for_agents(row)
+def pilot_agents_to_rerun(benchmark: str, *, prompt_only: bool = False,
+                        rerun_all: bool = False) -> list[str]:
+    """Guide 14 run matrix: only modified agents are re-run per source.
+
+    rerun_all=True re-runs every specialist + arbiter (used when all agent
+    prompts changed; guide 17.3 agents_to_rerun == changed agents).
+    """
+    if rerun_all:
+        return ["fraud", "refusal", "context", "arbiter"] if not prompt_only else ["fraud", "refusal", "context"]
+    if benchmark == "fraudr1":
+        return ["fraud", "arbiter"]
+    if benchmark == "orbench":
+        return ["refusal", "arbiter"]
+    if benchmark == "do_not_answer":
+        return ["refusal", "context", "arbiter"]
+    if benchmark == "aegis2":
+        return ["refusal", "context", "arbiter"] if not prompt_only else ["refusal"]
+    return ["fraud", "refusal", "context", "arbiter"]
+
+
+def _old_env(old_row: dict | None, agents: list[str]) -> dict[str, dict]:
+    """Build envelopes for agents whose outputs are reused (guide 17.4)."""
     env: dict[str, dict] = {}
-    tasks = [
-        ("fraud", teacher.fraud_agent.run_async(sample, teacher.client)),
-        ("refusal", teacher.refusal_agent.run_async(sample, teacher.client)),
-        ("context", teacher.context_agent.run_async(sample, teacher.client)),
-    ]
+    if not old_row:
+        return env
+    field = {"fraud": "agent_fraud_json", "refusal": "agent_refusal_json", "context": "agent_context_json"}
+    for a in agents:
+        parsed = old_row.get(field[a]) or {}
+        env[a] = {"parsed": parsed, "status": "ok", "reused": True}
+    return env
+
+
+async def process_row(teacher: MultiAgentTeacher, row: dict, *,
+                      rerun: list[str] | None = None, old_row: dict | None = None) -> dict:
+    """Run the T6 specialists + arbiter. With rerun/old_row (guide 17), only the
+    listed agents are re-run; unchanged specialist outputs are merged back."""
+    sample = sample_for_agents(row)
+    rerun = rerun or ["fraud", "refusal", "context", "arbiter"]
+    old_env = _old_env(old_row, [a for a in ("fraud", "refusal", "context") if a not in rerun])
+    env: dict[str, dict] = dict(old_env)
+    tasks = []
+    for name in ("fraud", "refusal", "context"):
+        if name in rerun:
+            agent = {"fraud": teacher.fraud_agent, "refusal": teacher.refusal_agent,
+                     "context": teacher.context_agent}[name]
+            tasks.append((name, agent.run_async(sample, teacher.client)))
     for name, task in tasks:
         env[name] = await task
     table = build_evidence_table(env.get("fraud"), env.get("refusal"), env.get("context"))
@@ -184,7 +246,7 @@ async def process_row(teacher: MultiAgentTeacher, row: dict) -> dict:
     out["agent_fraud_json"] = env.get("fraud", {}).get("parsed")
     out["agent_refusal_json"] = env.get("refusal", {}).get("parsed")
     out["agent_context_json"] = env.get("context", {}).get("parsed")
-    out["arbiter_json"] = arb.get("parsed")
+    out["arbiter_json"] = arb if (isinstance(arb, dict) and arb.get("teacher_label") is not None) else (arb or {}).get("parsed")
     out["agent_agreement"] = arb.get("agent_agreement")
     out["contradiction_flags"] = arb.get("contradiction_flags")
     out["latency_ms"] = round(
@@ -198,26 +260,34 @@ async def process_row(teacher: MultiAgentTeacher, row: dict) -> dict:
     return out
 
 
-async def process_row_prompt_only(teacher: MultiAgentTeacher, row: dict) -> dict:
+async def process_row_prompt_only(teacher: MultiAgentTeacher, row: dict, *,
+                                    rerun: list[str] | None = None, old_row: dict | None = None) -> dict:
     """Aegis prompt-only auxiliary track (guide 3.2): input-risk fields only.
 
     Runs the three specialists on the prompt with an empty answer; records
     prompt_harm_intent / should_refuse_probability / hazard domain. No arbiter
     verdict (no answer-unsafe claim) and no mixing with response-level metrics.
+    Delta mode re-runs only the refusal specialist (guide 14) and merges the
+    unchanged fraud/context outputs from the old row.
     """
     sample = sample_for_agents(row, prompt_only=True)
-    env: dict[str, dict] = {}
-    tasks = [
-        ("fraud", teacher.fraud_agent.run_async(sample, teacher.client)),
-        ("refusal", teacher.refusal_agent.run_async(sample, teacher.client)),
-        ("context", teacher.context_agent.run_async(sample, teacher.client)),
-    ]
+    rerun = rerun or ["fraud", "refusal", "context"]
+    env: dict[str, dict] = _old_env(old_row, [a for a in ("fraud", "refusal", "context") if a not in rerun])
+    tasks = []
+    for name in ("fraud", "refusal", "context"):
+        if name in rerun:
+            agent = {"fraud": teacher.fraud_agent, "refusal": teacher.refusal_agent,
+                     "context": teacher.context_agent}[name]
+            tasks.append((name, agent.run_async(sample, teacher.client)))
     for name, task in tasks:
         env[name] = await task
     fraud_p = env.get("fraud", {}).get("parsed") or {}
     refusal_p = env.get("refusal", {}).get("parsed") or {}
     prompt_harm_intent = float(fraud_p.get("fraud_probability", 0.0) or 0.0)
-    should_refuse = float(refusal_p.get("should_refuse_probability", 0.0) or 0.0)
+    should_refuse = max(
+        float(refusal_p.get("request_requires_refusal", 0.0) or 0.0),
+        float(refusal_p.get("should_refuse_probability", 0.0) or 0.0),
+    )
     hazard_domain = str(fraud_p.get("fraud_domain", "none") or "none")
     risk_score = max(prompt_harm_intent, should_refuse)
     binary = 1 if risk_score >= PROMPT_RISK_THRESHOLD else 0
@@ -253,6 +323,7 @@ async def process_row_prompt_only(teacher: MultiAgentTeacher, row: dict) -> dict
         "input_tokens": sum(int((env[k].get("usage") or {}).get("input_miss", 0) + (env[k].get("usage") or {}).get("input_hit", 0)) for k in ("fraud", "refusal", "context")),
         "output_tokens": sum(int((env[k].get("usage") or {}).get("output", 0)) for k in ("fraud", "refusal", "context")),
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "agent_versions": agent_versions(),
     }
     return out
 
@@ -286,20 +357,23 @@ def write_rows(out_path: Path, results: dict[str, dict], order: list[str]) -> No
                 f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
 
-def load_budget() -> BudgetState:
-    """Fresh round ledger: hard stop 96 RMB, reserve 4 RMB is the margin to the
-    user's 100 RMB ceiling (guide 20). Previous round is recorded for reporting."""
-    budget = BudgetState(max_rmb=BUDGET_HARD_CAP_RMB, reserved_rmb=0.0, used_rmb=0.0)
-    if BUDGET_FILE.exists():
-        st = json.loads(BUDGET_FILE.read_text(encoding="utf-8"))
+def load_budget(budget_file: Path | None = None, cap_rmb: float | None = None) -> BudgetState:
+    """Fresh round ledger. Default: full-coverage 140 RMB ledger. Pilot passes
+    its own file + 12 RMB cap so the two ledgers never mix (guide 26.5)."""
+    bfile = budget_file or BUDGET_FILE
+    cap = cap_rmb if cap_rmb is not None else BUDGET_HARD_CAP_RMB
+    budget = BudgetState(max_rmb=cap, reserved_rmb=0.0, used_rmb=0.0)
+    if bfile.exists():
+        st = json.loads(bfile.read_text(encoding="utf-8"))
         budget.used_rmb = float(st.get("used_rmb", 0.0))
-        print(f"[budget] resumed used_rmb={budget.used_rmb:.4f} cap={budget.effective_cap:.2f}")
+        print(f"[budget] resumed used_rmb={budget.used_rmb:.4f} cap={budget.effective_cap:.2f} file={bfile}")
     return budget
 
 
-def save_budget(budget, *, tag: str) -> None:
-    AUDIT_DIR.mkdir(parents=True, exist_ok=True)
-    BUDGET_FILE.write_text(
+def save_budget(budget, *, tag: str, budget_file: Path | None = None) -> None:
+    bfile = budget_file or BUDGET_FILE
+    bfile.parent.mkdir(parents=True, exist_ok=True)
+    bfile.write_text(
         json.dumps(
             {
                 "used_rmb": round(budget.used_rmb, 6),
@@ -307,7 +381,7 @@ def save_budget(budget, *, tag: str) -> None:
                 "reserve_rmb": 4.0,
                 "prev_round_rmb": PREV_ROUND_RMB,
                 "cumulative_rmb": round(budget.used_rmb + PREV_ROUND_RMB, 6),
-                "owner": "exp2_full_20260806",
+                "owner": "exp2_full_20260806" if bfile == BUDGET_FILE else "exp2_targeted_pilot_20260806",
                 "tag": tag,
                 "updated": time.strftime("%Y-%m-%dT%H:%M:%S"),
             },
@@ -433,6 +507,131 @@ async def run_benchmark(benchmark: str, rows: list[dict], teacher: MultiAgentTea
     return results
 
 
+def old_prediction_files() -> dict[str, Path]:
+    """Old (pre-fix) prediction files used for delta merging (guide 17)."""
+    return {
+        "fraudr1": TEACHER_T6_DIR / "fraudr1_t6_predictions.jsonl",
+        "orbench": TEACHER_T6_DIR / "orbench_t6_predictions.jsonl",
+        "do_not_answer": TEACHER_T6_DIR / "do_not_answer_t6_predictions.jsonl",
+        "aegis2": TEACHER_T6_DIR / "aegis2_t6_predictions.jsonl",
+        "aegis2_validation": TEACHER_T6_DIR / "aegis_validation_t6_predictions.jsonl",
+    }
+
+
+def load_old_predictions() -> dict[str, dict[str, dict]]:
+    out: dict[str, dict[str, dict]] = {}
+    for b, f in old_prediction_files().items():
+        out[b] = load_existing(f)
+        if b == "aegis2":
+            out["aegis2_prompt"] = load_existing(PROMPT_OUT_FILE)
+    return out
+
+
+async def run_pilot(teacher: MultiAgentTeacher, manifest_path: Path, out_path: Path,
+                    budget: BudgetState, budget_file: Path, *, rerun_all: bool = False) -> None:
+    """Guide 13-15 targeted pilot: delta re-run of modified agents only.
+
+    - fraudr1:        fraud + arbiter
+    - orbench:        refusal + arbiter
+    - do_not_answer:  refusal + context + arbiter
+    - aegis2 response: refusal + context + arbiter
+    - aegis2 prompt:  refusal (prompt-risk fields only)
+    Unchanged specialist outputs are merged from the old prediction row
+    (guide 17.4); each output row records agent_versions (guide 17.2).
+    """
+    rows = read_jsonl(manifest_path)
+    if not rows:
+        print(f"[pilot] empty manifest: {manifest_path}")
+        return
+    old = load_old_predictions()
+    existing = load_existing(out_path)
+    print(f"[pilot] manifest={len(rows)} already_done={len(existing)} old_sources={ {k: len(v) for k, v in old.items()} }")
+
+    todo: list[dict] = []
+    for row in rows:
+        rid = str(row["sample_id"])
+        if rid in existing:
+            continue
+        src = row["source"]
+        mode = row.get("evaluation_mode", "response")
+        if src == "aegis2" and mode == "prompt_only":
+            key = "aegis2_prompt"
+        elif src == "aegis2" and rid in old.get("aegis2_validation", {}):
+            key = "aegis2_validation"
+        else:
+            key = src
+        old_row = old.get(key, {}).get(rid)
+        rerun = pilot_agents_to_rerun(src, prompt_only=(mode == "prompt_only"), rerun_all=rerun_all)
+        todo.append({"row": row, "old_row": old_row, "rerun": rerun})
+    print(f"[pilot] todo={len(todo)}")
+
+    sem = asyncio.Semaphore(ROW_CONCURRENCY)
+    failures = 0
+    parse_failed = 0
+    started = time.perf_counter()
+    done_count = 0
+    batch: list[asyncio.Task] = []
+
+    async def worker(item: dict):
+        async with sem:
+            row, old_row, rerun = item["row"], item["old_row"], item["rerun"]
+            try:
+                if row.get("evaluation_mode") == "prompt_only":
+                    return str(row["sample_id"]), await process_row_prompt_only(
+                        teacher, row, rerun=rerun, old_row=old_row), ""
+                return str(row["sample_id"]), await process_row(
+                    teacher, row, rerun=rerun, old_row=old_row), ""
+            except BudgetExceeded as exc:
+                return str(row["sample_id"]), None, f"BUDGET_EXCEEDED: {exc}"
+            except Exception as exc:  # noqa: BLE001
+                return str(row["sample_id"]), None, f"{type(exc).__name__}: {exc}"
+
+    for item in todo:
+        if not teacher.client.budget.can_spend(0.05):
+            print(f"[pilot] BUDGET STOP used={teacher.client.budget.used_rmb:.2f} cap={teacher.client.budget.effective_cap:.2f}; {len(todo) - done_count} rows left")
+            break
+        batch.append(asyncio.create_task(worker(item)))
+        if len(batch) >= ROW_CONCURRENCY:
+            for rid, rec, err in await asyncio.gather(*batch):
+                done_count += 1
+                if rec is not None:
+                    append_rows(out_path, [rec])
+                    if rec.get("abstain") or rec.get("parse_status") == "parse_failed":
+                        parse_failed += 1
+                else:
+                    failures += 1
+                    print(f"[pilot] FAILED {rid}: {err}")
+            batch = []
+            if done_count % CHECKPOINT_EVERY == 0:
+                rate = done_count / max(time.perf_counter() - started, 1e-9)
+                print(f"[pilot] progress {done_count}/{len(todo)} rows/s={rate:.2f} used_rmb={teacher.client.budget.used_rmb:.4f} failures={failures} parse_failed={parse_failed}")
+                save_budget(teacher.client.budget, tag="pilot_progress", budget_file=budget_file)
+    if batch:
+        for rid, rec, err in await asyncio.gather(*batch):
+            done_count += 1
+            if rec is not None:
+                append_rows(out_path, [rec])
+                if rec.get("abstain") or rec.get("parse_status") == "parse_failed":
+                    parse_failed += 1
+            else:
+                failures += 1
+                print(f"[pilot] FAILED {rid}: {err}")
+    print(f"[pilot] finished done={done_count} failures={failures} parse_failed={parse_failed} used_rmb={teacher.client.budget.used_rmb:.4f}")
+    save_budget(teacher.client.budget, tag="pilot_final", budget_file=budget_file)
+    ledger = teacher.client.ledger.snapshot(teacher.client.prices)
+    cost_file = PILOT_DIR / "cost_pilot.json"
+    cost_file.write_text(
+        json.dumps({**ledger, "used_rmb": round(budget.used_rmb, 6),
+                    "cap_rmb": budget.effective_cap, "cache": teacher.client.cache.stats(),
+                    "rows_todo": len(todo), "rows_done": done_count, "failures": failures,
+                    "parse_failed": parse_failed,
+                    "agent_versions": agent_versions()},
+                   ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    print(f"[pilot] cost -> {cost_file}")
+
+
 def build_aegis_validation_manifest(limit: int | None = None) -> None:
     """Official Aegis validation split -> calibration manifest (guide 14:
     thresholds from the official validation split, never from the new full test)."""
@@ -474,10 +673,18 @@ def main() -> None:
     ap.add_argument("--benchmark", choices=["fraudr1", "orbench", "do_not_answer", "aegis2"], default=None)
     ap.add_argument("--mode", choices=["response", "prompt"], default=None, help="aegis2 evaluation mode")
     ap.add_argument("--calib-aegis", type=int, default=0, help="run T6 on N official Aegis validation rows (calibration)")
+    ap.add_argument("--pilot-file", type=str, default=None, help="targeted repair pilot manifest (guide 13)")
+    ap.add_argument("--pilot-out", type=str, default=None, help="pilot prediction output file (default pilot/repair_pilot_predictions.jsonl)")
+    ap.add_argument("--delta-only", action="store_true", help="re-run only modified agents, merge unchanged (guide 17)")
+    ap.add_argument("--budget", type=float, default=None, help="RMB hard cap for this run (pilot: 12)")
+    ap.add_argument("--budget-file", type=str, default=None, help="budget ledger file (pilot uses audit/budget_pilot.json)")
     ap.add_argument("--concurrency", type=int, default=120)
+    ap.add_argument("--rerun-all-agents", action="store_true",
+                    help="re-run every specialist + arbiter (all prompts changed; guide 17.3)")
     args = ap.parse_args()
 
-    budget = load_budget()
+    budget_file = Path(args.budget_file) if args.budget_file else (PILOT_BUDGET_FILE if args.pilot_file else BUDGET_FILE)
+    budget = load_budget(budget_file=budget_file, cap_rmb=args.budget if args.budget else None)
     cache = RequestCache(str(CACHE_DIR))
     client = DeepSeekClient(
         model=MODEL_TEACHER,
@@ -491,6 +698,16 @@ def main() -> None:
     )
     teacher = build_teacher(client)
     monitor = MilestoneMonitor(budget.used_rmb)
+
+    if args.pilot_file:
+        if not args.delta_only:
+            print("[pilot] --pilot-file requires --delta-only (guide 17 delta re-run); forcing delta mode")
+        pilot_path = Path(args.pilot_file)
+        pilot_out = Path(args.pilot_out) if args.pilot_out else PILOT_PRED_FILE
+        asyncio.run(run_pilot(teacher, pilot_path, pilot_out, budget, budget_file,
+                                rerun_all=args.rerun_all_agents))
+        print(f"[cost] pilot used_rmb={budget.used_rmb:.4f} cap={budget.effective_cap:.2f} -> {pilot_out}")
+        return
 
     if args.calib_aegis:
         build_aegis_validation_manifest(args.calib_aegis)

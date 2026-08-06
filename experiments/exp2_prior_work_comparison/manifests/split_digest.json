@@ -1,0 +1,12 @@
+{
+ "method": "sha256(group_id)[:8] % 100; <20 holdout, <40 repair_dev, else descriptive_only",
+ "digest": "d353c350c7a24283",
+ "counts": {
+  "descriptive_only": 6165,
+  "paper_holdout": 2050,
+  "repair_dev": 1970
+ },
+ "n_groups": 10185,
+ "created": "2026-08-06",
+ "guide_ref": "FraudDistill_???????????????? ?12.6"
+}
