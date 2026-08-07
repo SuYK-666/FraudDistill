@@ -6,6 +6,7 @@
 - **正式训练已启动**：PID 32816，`--setting final_distill`，seed 11，2 epochs，max_length=512。
 - **数据**：训练池 4,747 行（benchmark 1,065 / synthetic_core 1,930 / paired_dev 652 / hard_expansion 1,100），全量 gold + teacher signal，泄漏审计 PASS（train vs dev/test/balanced test 零重叠），采样权重达标，EN 63.9%。
 - **修复**：optimizer-step 口径总步数（进度条 0/296、warmup 5%≈15 步、日志分母正确）——此前误用 micro-batch 总数 2,374，会导致 warmup 占训练 40%。
+- **修复2（重要）**：FinalDistillLoss 原实现把 sample_weight（sampler 专用，总和≈1）当作 loss 重要性权重，分母 clamp_min(1.0) 导致 loss 被压缩约 188 倍（日志显示 0.004，实际应 ~4）；已改为批内均值（保留类别权重、teacher-only 掩码、w_t），离线验证 loss_total≈4.11 后重启训练。
 - **监控**：watchdog（PID 31920）每 60s 检查；训练意外退出会自动 `--resume` 续跑（最多 3 次）；训练完成后自动执行：dev 选点（fast 300 → top-3 全量）→ 阈值校准（FPR≤0.05 & recall≥0.82 最大 MF1，否则 FPR≤0.06 回退）→ reload checksum（128 条，≤1e-5）→ 正式 test（单次，冻结阈值）。
 
 ## 日志位置
