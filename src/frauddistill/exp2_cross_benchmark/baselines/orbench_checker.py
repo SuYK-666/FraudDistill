@@ -1,4 +1,4 @@
-﻿"""OR-Bench official response checker baseline.
+"""OR-Bench official response checker baseline.
 
 Reuses the official response_checking_prompt (direct_answer / direct_refusal /
 indirect_refusal). The official work used gpt-4-turbo / gpt-4o; this run uses the
@@ -12,6 +12,7 @@ import json
 import os
 import re
 import time
+from pathlib import Path
 
 from frauddistill.exp2_cross_benchmark.api_client import ApiConfig, CostLedger, complete_json, make_client
 from frauddistill.exp2_cross_benchmark.paths import CONCURRENCY, MODEL_CHECKER, out_dir
@@ -97,6 +98,69 @@ async def generate(limit: int | None = None, concurrency: int = CONCURRENCY):
         async with sem:
             prompt = CHECKER_PROMPT.format(row["query"], row["answer"])
             rec = await complete_json(client, cfg, ledger, system_prompt="", user_prompt=prompt, max_tokens=512, temperature=0.0, json_mode=False)  # official prompt asks for explanation first; 64 was too tight
+        cls = extract_class(rec["raw"])
+        mapping = map_to_behavior(row["metadata"]["orbench_prompt_type"], cls)
+        result = {
+            "id": row["id"],
+            "benchmark": "orbench",
+            "group_id": row["group_id"],
+            "query": row["query"],
+            "answer": row["answer"],
+            "method": "orbench_official_response_checker",
+            "checker_protocol": "response_checking_prompt_v1",
+            "checker_model": rec["model"],
+            "checker_class": cls,
+            "rejected": mapping["rejected"],
+            "prediction_binary": mapping["prediction_binary"],
+            "prediction_type": mapping["prediction_type"],
+            "raw_output": rec["raw"][:400],
+            "parse_status": "ok" if cls else "abstain",
+            "retry_count": rec["retry_count"],
+            "input_tokens": rec["input_tokens"],
+            "output_tokens": rec["output_tokens"],
+            "latency_ms": round(rec["latency_ms"], 1),
+            "api_request_id": rec["request_id"],
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        }
+        async with lock:
+            with open(out_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(result, ensure_ascii=False) + "\n")
+
+    for i in range(0, len(pending), 500):
+        part = pending[i : i + 500]
+        await asyncio.gather(*[one(r) for r in part])
+        print(f"[orbench_checker] progress {min(i+500, len(pending))}/{len(pending)}; cost={ledger.snapshot(cfg.prices)}", flush=True)
+    print(f"[orbench_checker] done; cost={ledger.snapshot(cfg.prices)}")
+
+
+async def generate_overrides(input_path: str, out_path_override: str, concurrency: int = CONCURRENCY):
+    """Same official checker, custom input/output paths (balanced diagnostics)."""
+    import os
+    rows = [json.loads(line) for line in open(input_path, encoding="utf-8")]
+    rows = [r for r in rows if r.get("answer_status", "frozen") == "frozen" and r.get("answer")]
+    out_path = Path(out_path_override)
+    done: dict[str, dict] = {}
+    if os.path.exists(out_path):
+        for line in open(out_path, encoding="utf-8"):
+            try:
+                rec = json.loads(line)
+                done[rec["id"]] = rec
+            except Exception:
+                continue
+    pending = [r for r in rows if r["id"] not in done or done[r["id"]].get("parse_status") != "ok"]
+    print(f"[orbench_checker] total={len(rows)} done={len(done)} pending={len(pending)}")
+    if not pending:
+        return
+    cfg = ApiConfig("deepseek", MODEL_CHECKER)
+    client = make_client(cfg)
+    ledger = CostLedger()
+    sem = asyncio.Semaphore(concurrency)
+    lock = asyncio.Lock()
+
+    async def one(row):
+        async with sem:
+            prompt = CHECKER_PROMPT.format(row["query"], row["answer"])
+            rec = await complete_json(client, cfg, ledger, system_prompt="", user_prompt=prompt, max_tokens=512, temperature=0.0, json_mode=False)
         cls = extract_class(rec["raw"])
         mapping = map_to_behavior(row["metadata"]["orbench_prompt_type"], cls)
         result = {

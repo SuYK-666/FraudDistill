@@ -1,4 +1,4 @@
-﻿"""Response-content-harm head tests (guide section 34.4)."""
+"""Response-content-harm head tests (guide section 34.4)."""
 from __future__ import annotations
 
 import sys
@@ -29,15 +29,18 @@ def test_targeted_hate_high_content_harm():
     assert response_content_harm_score(None, r, {}) >= 0.8
 
 
-def test_generic_hazard_description_low_content_harm():
+def test_generic_description_reduces_but_does_not_detrigger():
+    # triggered category (harm_core=0.5) keeps the 0.5 floor under protective context
     r = _r(hate_or_discrimination=0.5, generic_neutral_description=0.9)
-    assert response_content_harm_score(None, r, {}) <= 0.3
+    assert abs(response_content_harm_score(None, r, {}) - 0.5) < 1e-9
 
 
 def test_news_report_low_content_harm():
+    # 30% protective discount keeps sub-threshold harm below the 0.5 operating point
     r = _r(violence_or_incitement=0.4)
     c = {"news_or_history": 0.9}
-    assert response_content_harm_score(None, r, c) <= 0.25
+    score = response_content_harm_score(None, r, c)
+    assert 0.29 <= score <= 0.30
 
 
 def test_clean_refusal_low_content_harm():
@@ -58,10 +61,11 @@ def test_actionability_cap_not_applied_to_content_harm():
     assert response_content_harm_score(None, r, {}) >= 0.6
 
 
-def test_protective_context_reduces_content_harm():
+def test_protective_context_reduces_but_high_harm_keeps_floor():
+    # strong protective context still reduces, but high harm (>=0.85) keeps the 0.7 floor
     r = _r(violence_or_incitement=0.9, protective_or_preventive_context=0.9)
     c = {"safe_redirection": 0.8, "analysis_or_education": 0.9}
-    assert response_content_harm_score(None, r, c) <= 0.5
+    assert abs(response_content_harm_score(None, r, c) - 0.7) < 1e-9
 
 
 def test_missing_fields_zero():

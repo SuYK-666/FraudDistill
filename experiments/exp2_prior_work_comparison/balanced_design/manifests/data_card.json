@@ -1,0 +1,27 @@
+{
+  "created_at": "2026-08-07T03:34:41",
+  "design": "balanced response-level diagnostics (guide 2026-08-06)",
+  "test_counts": {
+    "fraudr1:1": 1500,
+    "fraudr1:0": 1500,
+    "orbench:1": 1000,
+    "orbench:0": 1000,
+    "do_not_answer:1": 2500,
+    "do_not_answer:0": 2500,
+    "aegis2:1": 394,
+    "aegis2:0": 419
+  },
+  "test_rows": 10813,
+  "dev_rows": 700,
+  "gold_test_rows": 10813,
+  "gold_dev_rows": 700,
+  "digests": {
+    "balanced_test_manifest.jsonl": "38a6325f10dd598a5cc6786420e151d971642a8aea0ee84cf040330593deb819",
+    "balanced_dev_manifest.jsonl": "7e43b19ce97db7ba86dc8a5c311fb842016a088b8bd52f6909bd8e50a00e4ebf",
+    "balanced_test_gold.jsonl": "228bf530ae672b4e597b7857bb60fd76cc23b67069e1466286fd6b1992008e4a",
+    "balanced_dev_gold.jsonl": "c98a251d1abeae726dd9276860734103f169f4eff80a121b595e72b214011236"
+  },
+  "selection_rule": "adjudicated gold only; no evaluator predictions used",
+  "digest_updated_at": "2026-08-07T14:00:00",
+  "note": "final frozen balanced test set; sample_ids renumbered sequentially for release"
+}

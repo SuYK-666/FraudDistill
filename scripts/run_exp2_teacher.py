@@ -299,12 +299,12 @@ async def process_row(teacher: MultiAgentTeacher, row: dict, *,
     out["contradiction_flags"] = arb.get("contradiction_flags")
     out["latency_ms"] = round(
         float(arb.get("latency_ms", 0))
-        + sum(float(env[k].get("latency_ms", 0)) for k in ("fraud", "refusal", "context")),
+        + sum(float(env.get(k, {}).get("latency_ms", 0)) for k in ("fraud", "refusal", "context")),
         1,
     )
     arb_usage = arb.get("usage") or {}
-    out["input_tokens"] = sum(int((env[k].get("usage") or {}).get("input_miss", 0) + (env[k].get("usage") or {}).get("input_hit", 0)) for k in ("fraud", "refusal", "context")) + int(arb_usage.get("input_miss", 0) + arb_usage.get("input_hit", 0))
-    out["output_tokens"] = sum(int((env[k].get("usage") or {}).get("output", 0)) for k in ("fraud", "refusal", "context")) + int(arb_usage.get("output", 0))
+    out["input_tokens"] = sum(int((env.get(k, {}).get("usage") or {}).get("input_miss", 0) + (env.get(k, {}).get("usage") or {}).get("input_hit", 0)) for k in ("fraud", "refusal", "context")) + int(arb_usage.get("input_miss", 0) + arb_usage.get("input_hit", 0))
+    out["output_tokens"] = sum(int((env.get(k, {}).get("usage") or {}).get("output", 0)) for k in ("fraud", "refusal", "context")) + int(arb_usage.get("output", 0))
     return out
 
 

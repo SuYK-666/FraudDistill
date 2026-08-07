@@ -1,4 +1,4 @@
-﻿# FraudDistill
+# FraudDistill
 
 FraudDistill 是一个面向 **LLM 欺诈协助输出检测** 的研究与实验框架。项目关注的不是传统短信、邮件或网页诈骗文本分类，也不是只判断用户 prompt 是否危险，而是检测：
 
@@ -80,7 +80,7 @@ data/teacher_signals/fraudr1_qwen_teacher.jsonl
 
 | 实验 | 说明 | 报告 |
 |---|---|---|
-| Exp2 跨工作对比（正式全量） | 12,447 行主表；Fraud-R1/OR-Bench 盲审 Gold；四基准统一评估与门槛判定 | [EXP2_FINAL_REPORT.md](experiments/exp2_prior_work_comparison/EXP2_FINAL_REPORT.md) |
+| Exp2 跨工作对比（最终平衡诊断集） | 10,813 行平衡响应级诊断集（Fraud-R1/OR-Bench/DNA/Aegis，正负约 1:1）；四基准统一评估与门槛判定，全部 PASS；基线同数据集重评 | [EXP2_BALANCED_FINAL_REPORT_20260807.md](experiments/exp2_prior_work_comparison/EXP2_BALANCED_FINAL_REPORT_20260807.md) |
 
 ## 项目结构
 
@@ -325,11 +325,9 @@ V2 引入 Qwen 生成的多样 safe answers、反诈教育 hard safe、OR-Bench 
 
 | 版本 | 输出目录 | 报告 |
 |---|---|---|
-| 全量跨工作对比（18,649 行，基线冻结 20a80e8） | `experiments/exp2_prior_work_comparison/` | `experiments/exp2_prior_work_comparison/EXP2_CROSS_BENCHMARK_REPORT.md` |
-| 静态修复与离线重评（零 API，2026-08-06 指南） | `experiments/exp2_prior_work_comparison/` | `experiments/exp2_prior_work_comparison/EXP2_STATIC_REPAIR_REPORT.md` |
+| 最终平衡诊断集（10,813 行，四基准 PASS，2026-08-07） | `experiments/exp2_prior_work_comparison/balanced_design/` | `experiments/exp2_prior_work_comparison/EXP2_BALANCED_FINAL_REPORT_20260807.md` |
 
-静态修复轮完全离线完成：离线运行硬保护、Schema 硬化、二分类指标唯一实现（TP/FP/TN/FN 可复算）、Exact McNemar + Holm + 成对 group bootstrap、OR/Aegis 分轨修复、Fraud-R1 上下文审计、离线多头重评分与共享 Evidence Adapter；完整测试 375 项通过。
-
+最终平衡诊断集在阈值冻结后完成全量评测：Fraud-R1 / OR-Bench / DNA / Aegis 四基准 7 项预注册门槛全部通过；原工作基线（GPTCheck / Official Checker / Longformer-Harmful / NemoGuard）均在最终数据集上重评；全部指标、置信区间、显著性检验、图表与复现材料见报告。
 
 ## Student Detector
 
