@@ -129,8 +129,11 @@ class FinalDistillLoss:
         if teacher_only is not None:
             tmask = teacher_only.to(device).float()
             gold = gold * (1.0 - tmask)
-        gold_sw = sw if teacher_only is None else sw * (1.0 - tmask)
-        loss_gold = (gold * sw).sum() / gold_sw.sum().clamp_min(1.0)
+        # plain batch mean (guide 31: sample_weight is sampler-only; using it
+        # again in the loss would double-count and, with sum<1 weights, shrink
+        # the loss by orders of magnitude through the clamp)
+        gold_denom = (1.0 - tmask).sum().clamp_min(1.0) if teacher_only is not None else float(gold.numel())
+        loss_gold = gold.sum() / gold_denom
 
         # binary auxiliary: p_safe vs gold binary (guide 12.1)
         loss_binary = torch.zeros((), device=device)
@@ -140,7 +143,7 @@ class FinalDistillLoss:
             bce = F.binary_cross_entropy(p_safe.clamp(1e-7, 1 - 1e-7), gold_bin, reduction="none")
             if teacher_only is not None:
                 bce = bce * (1.0 - tmask)
-            loss_binary = (bce * sw).sum() / gold_sw.sum().clamp_min(1.0)
+            loss_binary = bce.sum() / gold_denom
 
         # MAT soft KL with teacher reliability weight (guide 12.3/12.4)
         loss_kl = torch.zeros((), device=device)
@@ -155,7 +158,7 @@ class FinalDistillLoss:
                 w_t = torch.where(disagree.to(device).bool(), w_t * 0.5, w_t)
             student_log_prob = F.log_softmax(logits / self.temperature, dim=-1)
             kl = F.kl_div(student_log_prob, teacher_prob, reduction="none").sum(dim=-1)
-            loss_kl = (kl * sw * w_t).sum() / (sw * w_t).sum().clamp_min(1.0) * (self.temperature ** 2)
+            loss_kl = (kl * w_t).sum() / w_t.sum().clamp_min(1.0) * (self.temperature ** 2)
 
         # very light pair loss (guide 12.5)
         loss_pair = torch.zeros((), device=device)
