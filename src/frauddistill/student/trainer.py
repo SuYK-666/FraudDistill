@@ -103,7 +103,7 @@ def train_neural(model, train_loader, dev_loader, loss_fn, tokenizer,
                 if max_steps is not None and global_step >= max_steps:
                     print(f"max_steps reached ({max_steps}); stopping", flush=True)
                     if best_state:
-                        model.load_state_dict(best_state)
+                        model.load_state_dict(best_state, strict=False)
                     return best_state, history
                 if global_step % log_every == 0:
                     print(f"  epoch {epoch+1} step {global_step} " +
@@ -122,14 +122,15 @@ def train_neural(model, train_loader, dev_loader, loss_fn, tokenizer,
                 if dev_metric["macro_f1"] > best_metric:
                     best_metric = dev_metric["macro_f1"]
                     best_epoch = epoch + 1
-                    best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+                    best_state = {k: v.detach().clone() for k, v in model.state_dict().items()
+                                  if any(tag in k for tag in ("lora_", "score", "head"))}
                     if out_dir:
                         save_checkpoint(model, tokenizer, out_dir / f"best_step{global_step}", architecture)
                 else:
                     if epoch >= best_epoch + patience:
                         print(f"early stop at epoch {epoch+1} step {global_step}", flush=True)
                         if best_state:
-                            model.load_state_dict(best_state)
+                            model.load_state_dict(best_state, strict=False)
                         return best_state, history
                 if out_dir:
                     save_resume(model, optimizer, scheduler, out_dir / "resume.pt", epoch, step, global_step,
@@ -141,11 +142,12 @@ def train_neural(model, train_loader, dev_loader, loss_fn, tokenizer,
         if dev_metric["macro_f1"] > best_metric:
             best_metric = dev_metric["macro_f1"]
             best_epoch = epoch + 1
-            best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+            best_state = {k: v.detach().clone() for k, v in model.state_dict().items()
+                                  if any(tag in k for tag in ("lora_", "score", "head"))}
             if out_dir:
                 save_checkpoint(model, tokenizer, out_dir / f"best_epoch{epoch+1}", architecture)
     if best_state:
-        model.load_state_dict(best_state)
+        model.load_state_dict(best_state, strict=False)
     return best_state, history
 
 
@@ -199,7 +201,7 @@ def save_resume(model, optimizer, scheduler, path, epoch, step_in_epoch, global_
     torch.save({"model": trainable, "optimizer": optimizer.state_dict(),
                 "scheduler": scheduler.state_dict(), "epoch": epoch, "step_in_epoch": step_in_epoch,
                 "global_step": global_step, "best_metric": best_metric, "best_epoch": best_epoch,
-                "history": history, "no_improve": no_improve}, path)
+                "best_step": best_epoch, "history": history, "no_improve": no_improve}, path)
 
 
 def save_checkpoint(model, tokenizer, path, architecture="standard"):
@@ -374,7 +376,7 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
         start_step = int(ck["step_in_epoch"])
         global_step = int(ck["global_step"])
         best_metric = float(ck.get("best_metric", -1.0))
-        best_step = int(ck.get("best_step", 0))
+        best_step = int(ck.get("best_step", ck.get("best_epoch", 0)))
         no_improve = int(ck.get("no_improve", 0))
         history = ck.get("history", history)
         print(f"[final] resumed from {resume}: epoch={start_epoch} step={start_step} global={global_step}", flush=True)
@@ -419,7 +421,7 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                 if max_steps is not None and global_step >= max_steps:
                     print(f"max_steps reached ({max_steps}); stopping", flush=True)
                     if best_state:
-                        model.load_state_dict(best_state)
+                        model.load_state_dict(best_state, strict=False)
                     pbar.close()
                     return best_state, history
                 if global_step % log_every == 0 and out_dir:
@@ -439,57 +441,73 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                           f" | grad={float(gnorm):.4f} lr_lora={lr0:.2e} lr_head={lr1:.2e}"
                           f" | safe={safe_n}/{len(batch.get('gold_binary', []))} en={en_n}"
                           f" | src={srcs} teacher_only={to_n}", flush=True)
+                    if out_dir:
+                        with (out_dir / "step_log.jsonl").open("a", encoding="utf-8") as _sf:
+                            _sf.write(json.dumps({
+                                "global_step": global_step, "epoch": epoch + 1, "micro_step": step + 1,
+                                **{k: round(v / max(_steps_since_log, 1), 4) for k, v in running.items()},
+                                "grad_norm": round(float(gnorm), 4),
+                                "lr_lora": round(lr0, 8), "lr_head": round(lr1, 8),
+                                "ts": round(time.time(), 2)}, ensure_ascii=False) + "\n")
                     running = {k: 0.0 for k in running}
                     _steps_since_log = 0
-            if global_step > 0 and global_step % save_steps == 0:
-                if out_dir:
-                    ck_path = out_dir / f"checkpoint-{global_step}"
-                    save_checkpoint(model, tokenizer, ck_path, architecture)
-                    _prune_checkpoints(out_dir, keep=3)
-            if global_step > 0 and global_step % eval_steps == 0:
-                dev_metric = evaluate_neural_full(model, dev_loader, device, architecture, loss_fn)
-                history["dev"].append({"step": global_step, "epoch": epoch + 1, **dev_metric})
-                mf1 = dev_metric["macro_f1"]
-                sl = dev_metric.get("slices") or {}
-                real_mf1 = sl.get("real_only", {}).get("macro_f1", 0.0)
-                syn_mf1 = sl.get("synthetic_only", {}).get("macro_f1", 0.0)
-                print(f"  [eval step {global_step}] macro_f1={mf1:.4f} recall={dev_metric['recall']:.4f} "
-                      f"fpr={dev_metric['fpr']:.4f} auprc={dev_metric['auprc']:.4f} mcc={dev_metric['mcc']:.4f} "
-                      f"4class={dev_metric.get('4class_macro_f1')} real_mf1={real_mf1:.4f} syn_mf1={syn_mf1:.4f} "
-                      f"en_mf1={sl.get('en', {}).get('macro_f1', 0):.4f} "
-                      f"zh_mf1={sl.get('zh', {}).get('macro_f1', 0):.4f}", flush=True)
-                improved = mf1 > best_metric
-                if improved:
-                    best_metric = mf1
-                    best_step = global_step
-                    no_improve = 0
-                    real_down_streak = 0
-                    best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+                if global_step > 0 and global_step % save_steps == 0:
                     if out_dir:
-                        save_checkpoint(model, tokenizer, out_dir / f"best_step{global_step}", architecture)
-                        (out_dir / "best_metric.json").write_text(
-                            json.dumps({"best_metric": best_metric, "best_step": best_step,
-                                        "dev": dev_metric}, ensure_ascii=False, indent=2), encoding="utf-8")
-                else:
-                    no_improve += 1
-                    if len(history["dev"]) >= 2:
-                        prev = history["dev"][-2]
-                        prev_sl = prev.get("slices") or {}
-                        prev_real = prev_sl.get("real_only", {}).get("macro_f1", 0.0)
-                        prev_syn = prev_sl.get("synthetic_only", {}).get("macro_f1", 0.0)
-                        if real_mf1 < prev_real and syn_mf1 > prev_syn:
-                            real_down_streak += 1
-                        else:
-                            real_down_streak = 0
-                    if no_improve >= patience or real_down_streak >= 3:
-                        print(f"early stop at step {global_step} (no_improve={no_improve} real_streak={real_down_streak})", flush=True)
-                        if best_state:
-                            model.load_state_dict(best_state)
-                        pbar.close()
-                        return best_state, history
-                if out_dir:
-                    save_resume(model, optimizer, scheduler, out_dir / "resume.pt", epoch, step, global_step,
-                                best_metric, best_step, history, no_improve=no_improve)
+                        ck_path = out_dir / f"checkpoint-{global_step}"
+                        save_checkpoint(model, tokenizer, ck_path, architecture)
+                        _prune_checkpoints(out_dir, keep=3)
+                if global_step > 0 and global_step % eval_steps == 0:
+                    dev_metric = evaluate_neural_full(model, dev_loader, device, architecture, loss_fn)
+                    history["dev"].append({"step": global_step, "epoch": epoch + 1, **dev_metric})
+                    mf1 = dev_metric["macro_f1"]
+                    sl = dev_metric.get("slices") or {}
+                    real_mf1 = sl.get("real_only", {}).get("macro_f1", 0.0)
+                    syn_mf1 = sl.get("synthetic_only", {}).get("macro_f1", 0.0)
+                    print(f"  [eval step {global_step}] macro_f1={mf1:.4f} recall={dev_metric['recall']:.4f} "
+                          f"fpr={dev_metric['fpr']:.4f} auprc={dev_metric['auprc']:.4f} mcc={dev_metric['mcc']:.4f} "
+                          f"4class={dev_metric.get('4class_macro_f1')} real_mf1={real_mf1:.4f} syn_mf1={syn_mf1:.4f} "
+                          f"en_mf1={sl.get('en', {}).get('macro_f1', 0):.4f} "
+                          f"zh_mf1={sl.get('zh', {}).get('macro_f1', 0):.4f}", flush=True)
+                    if out_dir:
+                        with (out_dir / "eval_log.jsonl").open("a", encoding="utf-8") as _ef:
+                            _ef.write(json.dumps({"global_step": global_step, "event": "eval_done",
+                                                  "macro_f1": mf1, "recall": dev_metric["recall"],
+                                                  "fpr": dev_metric["fpr"], "auprc": dev_metric["auprc"],
+                                                  "mcc": dev_metric["mcc"], "ts": round(time.time(), 2)},
+                                                 ensure_ascii=False) + "\n")
+                    improved = mf1 > best_metric
+                    if improved:
+                        best_metric = mf1
+                        best_step = global_step
+                        no_improve = 0
+                        real_down_streak = 0
+                        best_state = {k: v.detach().clone() for k, v in model.state_dict().items()
+                                      if any(tag in k for tag in ("lora_", "score", "head"))}
+                        if out_dir:
+                            save_checkpoint(model, tokenizer, out_dir / f"best_step{global_step}", architecture)
+                            (out_dir / "best_metric.json").write_text(
+                                json.dumps({"best_metric": best_metric, "best_step": best_step,
+                                            "dev": dev_metric}, ensure_ascii=False, indent=2), encoding="utf-8")
+                    else:
+                        no_improve += 1
+                        if len(history["dev"]) >= 2:
+                            prev = history["dev"][-2]
+                            prev_sl = prev.get("slices") or {}
+                            prev_real = prev_sl.get("real_only", {}).get("macro_f1", 0.0)
+                            prev_syn = prev_sl.get("synthetic_only", {}).get("macro_f1", 0.0)
+                            if real_mf1 < prev_real and syn_mf1 > prev_syn:
+                                real_down_streak += 1
+                            else:
+                                real_down_streak = 0
+                        if no_improve >= patience or real_down_streak >= 3:
+                            print(f"early stop at step {global_step} (no_improve={no_improve} real_streak={real_down_streak})", flush=True)
+                            if best_state:
+                                model.load_state_dict(best_state, strict=False)
+                            pbar.close()
+                            return best_state, history
+                    if out_dir:
+                        save_resume(model, optimizer, scheduler, out_dir / "resume.pt", epoch, step, global_step,
+                                    best_metric, best_step, history, no_improve=no_improve)
         dev_metric = evaluate_neural_full(model, dev_loader, device, architecture, loss_fn)
         history["dev"].append({"step": global_step, "epoch": epoch + 1, **dev_metric})
         print(f"epoch {epoch+1} dev: macro_f1={dev_metric['macro_f1']:.4f} recall={dev_metric['recall']:.4f} "
@@ -497,7 +515,8 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
         if dev_metric["macro_f1"] > best_metric:
             best_metric = dev_metric["macro_f1"]
             best_step = global_step
-            best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+            best_state = {k: v.detach().clone() for k, v in model.state_dict().items()
+                                  if any(tag in k for tag in ("lora_", "score", "head"))}
             if out_dir:
                 save_checkpoint(model, tokenizer, out_dir / f"best_step{global_step}", architecture)
         if out_dir:
@@ -505,7 +524,7 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                         best_metric, best_step, history, no_improve=no_improve)
     pbar.close()
     if best_state:
-        model.load_state_dict(best_state)
+        model.load_state_dict(best_state, strict=False)
     return best_state, history
 
 
