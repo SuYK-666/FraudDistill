@@ -317,7 +317,7 @@ def main_neural(args) -> None:
     from frauddistill.student.collator import neural_collate
     from frauddistill.student.trainer import train_neural, train_neural_final, evaluate_neural, evaluate_neural_full, save_checkpoint
     from frauddistill.student.losses import FinalDistillLoss
-    from torch.utils.data import WeightedRandomSampler
+    from torch.utils.data import Sampler, WeightedRandomSampler
     from transformers import AutoTokenizer
 
     out_root = Path(args.out_root or (OUT_ROOT / "neural_student"))
@@ -400,14 +400,35 @@ def main_neural(args) -> None:
         cfg = NeuralStudentConfig(model_name=args.model_name, architecture=args.architecture,
                                   max_length=args.max_length, lora_r=args.lora_r,
                                   lora_alpha=args.lora_alpha, lora_dropout=0.05)
+        import math
         from collections import Counter as _Counter
         src_counts = _Counter(ex.get("source_bucket", "") for ex in train_examples)
         print(f"[final_distill] train rows={len(train_examples)} buckets={dict(src_counts)}", flush=True)
+        # balanced batches (guide 7): every micro-batch is ~50/50 safe/unsafe so
+        # early majority drift cannot push the randomly-initialized head into a
+        # confident-wrong regime; within each class the source-aware
+        # sample_weight still drives the draw (guide 8)
         weights = [max(float(ex["sample_weight"]), 1e-9) for ex in train_examples]
-        sampler = WeightedRandomSampler(weights, num_samples=len(train_examples),
-                                        replacement=True, generator=torch.Generator().manual_seed(args.seed))
-        train_loader = DataLoader(SimpleDataset(train_examples), batch_size=args.micro_batch,
-                                  sampler=sampler, collate_fn=collate)
+        _safe_idx = [i for i, e in enumerate(train_examples) if e["gold_label"] != "unsafe"]
+        _unsafe_idx = [i for i, e in enumerate(train_examples) if e["gold_label"] == "unsafe"]
+        _ws = torch.tensor([weights[i] for i in _safe_idx])
+        _wu = torch.tensor([weights[i] for i in _unsafe_idx])
+        _half = max(1, args.micro_batch // 2)
+        _n_batches = int(math.ceil(len(train_examples) / args.micro_batch))
+
+        class _BalancedBatchSampler(Sampler):
+            def __len__(self):
+                return _n_batches
+
+            def __iter__(self):
+                gen = torch.Generator().manual_seed(args.seed)
+                for _ in range(_n_batches):
+                    si = [_safe_idx[int(i)] for i in torch.multinomial(_ws, _half, replacement=True, generator=gen)]
+                    ui = [_unsafe_idx[int(i)] for i in torch.multinomial(_wu, _half, replacement=True, generator=gen)]
+                    yield si + ui
+
+        train_loader = DataLoader(SimpleDataset(train_examples), batch_sampler=_BalancedBatchSampler(),
+                                  collate_fn=collate)
         # class weights: 1/sqrt(count), normalize mean=1, clip [0.75, 1.50] (guide 13)
         cls_counts = _Counter(ex["gold_type_id"] for ex in train_examples)
         cw = [1.0 / max(float(cls_counts[c]) ** 0.5, 1e-9) for c in range(4)]
@@ -417,6 +438,9 @@ def main_neural(args) -> None:
         loss_fn = FinalDistillLoss(lambda_binary=0.30, lambda_kl=0.30, lambda_pair=0.05,
                                    temperature=2.0, pair_margin=args.pair_margin,
                                    class_weights=cw)
+        # deterministic init: seed the torch RNG before building the model so the
+        # single official run is reproducible and verifiable (guide 42.1)
+        torch.manual_seed(args.seed)
         model = build_neural_student(cfg, freeze_base=False, device=device)
         t0 = time.time()
         run_dir = out_root / f"final_distilled_student"

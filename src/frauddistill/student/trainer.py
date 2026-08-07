@@ -384,6 +384,7 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
     for epoch in range(start_epoch, epochs):
         model.train()
         running = {"loss_gold": 0.0, "loss_binary": 0.0, "loss_kl": 0.0, "loss_pair": 0.0, "loss_total": 0.0}
+        _steps_since_log = 0
         for step, batch in enumerate(train_loader):
             if epoch == start_epoch and step < start_step:
                 continue
@@ -412,14 +413,18 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                 scheduler.step()
                 optimizer.zero_grad()
                 global_step += 1
+                _steps_since_log += 1
                 pbar.update(1)
-                pbar.set_postfix({k: f"{v:.4f}" for k, v in running.items()})
+                pbar.set_postfix({k: f"{v / max(_steps_since_log, 1):.4f}" for k, v in running.items()})
                 if max_steps is not None and global_step >= max_steps:
                     print(f"max_steps reached ({max_steps}); stopping", flush=True)
                     if best_state:
                         model.load_state_dict(best_state)
                     pbar.close()
                     return best_state, history
+                if global_step % log_every == 0 and out_dir:
+                    save_resume(model, optimizer, scheduler, out_dir / "resume.pt", epoch, step, global_step,
+                                best_metric, best_step, history, no_improve=no_improve)
                 if global_step % log_every == 0:
                     lr0 = optimizer.param_groups[0]["lr"]
                     lr1 = optimizer.param_groups[1]["lr"] if len(optimizer.param_groups) > 1 else lr0
@@ -430,11 +435,12 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                         srcs[x] = srcs.get(x, 0) + 1
                     to_n = int(batch.get("teacher_only", torch.zeros(1)).sum())
                     print(f"  [step {global_step}/{total_steps}] " +
-                          " ".join(f"{k}={v:.4f}" for k, v in running.items()) +
+                          " ".join(f"{k}={v / max(_steps_since_log, 1):.4f}" for k, v in running.items()) +
                           f" | grad={float(gnorm):.4f} lr_lora={lr0:.2e} lr_head={lr1:.2e}"
                           f" | safe={safe_n}/{len(batch.get('gold_binary', []))} en={en_n}"
                           f" | src={srcs} teacher_only={to_n}", flush=True)
                     running = {k: 0.0 for k in running}
+                    _steps_since_log = 0
             if global_step > 0 and global_step % save_steps == 0:
                 if out_dir:
                     ck_path = out_dir / f"checkpoint-{global_step}"

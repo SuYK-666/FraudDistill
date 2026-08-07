@@ -136,11 +136,14 @@ class FinalDistillLoss:
         loss_gold = gold.sum() / gold_denom
 
         # binary auxiliary: p_safe vs gold binary (guide 12.1)
+        # NOTE: gold_binary=1 means UNSAFE, so the p_safe target is (1 - gold_binary);
+        # an inverted target (BCE(p_safe, gold_binary)) trains unsafe rows toward
+        # safe and makes the term fight CE/KL, diverging the final training.
         loss_binary = torch.zeros((), device=device)
         if self.lambda_binary > 0:
             gold_bin = batch["gold_binary"].to(device).float()
             p_safe = F.softmax(logits, dim=-1)[:, 0]
-            bce = F.binary_cross_entropy(p_safe.clamp(1e-7, 1 - 1e-7), gold_bin, reduction="none")
+            bce = F.binary_cross_entropy(p_safe.clamp(1e-7, 1 - 1e-7), 1.0 - gold_bin, reduction="none")
             if teacher_only is not None:
                 bce = bce * (1.0 - tmask)
             loss_binary = bce.sum() / gold_denom
