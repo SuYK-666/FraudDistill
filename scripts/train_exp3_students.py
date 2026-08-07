@@ -377,9 +377,9 @@ def main_neural(args) -> None:
 
     cfg = NeuralStudentConfig(model_name=args.model_name, architecture=args.architecture,
                               max_length=args.max_length, lora_r=args.lora_r, lora_alpha=args.lora_alpha * 2)
-    loss_fn = FraudDistillLoss(lambda_gold={"gold": 1.0, "soft_distill": 0.75, "full_distill": 0.65}[args.setting],
-                               lambda_soft={"gold": 0.0, "soft_distill": 0.25, "full_distill": 0.25}[args.setting],
-                               lambda_pair={"gold": 0.0, "soft_distill": 0.0, "full_distill": 0.10}[args.setting],
+    loss_fn = FraudDistillLoss(lambda_gold={"gold": 1.0, "soft_distill": 0.75, "full_distill": 0.65, "final_student": 0.75}[args.setting],
+                               lambda_soft={"gold": 0.0, "soft_distill": 0.25, "full_distill": 0.25, "final_student": 0.25}[args.setting],
+                               lambda_pair={"gold": 0.0, "soft_distill": 0.0, "full_distill": 0.10, "final_student": 0.0}[args.setting],
                                temperature=args.temperature, pair_margin=args.pair_margin)
 
     def collate(batch): return neural_collate(batch, tokenizer, max_length=args.max_length, architecture=args.architecture)
@@ -461,7 +461,7 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--backend", default="linear", choices=["linear", "neural"])
-    ap.add_argument("--setting", default="full_distill", choices=["gold", "soft_distill", "full_distill"])
+    ap.add_argument("--setting", default="full_distill", choices=["gold", "soft_distill", "full_distill", "final_student"])
     ap.add_argument("--architecture", default="standard", choices=["standard", "interaction"])
     ap.add_argument("--model-name", default="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B")
     ap.add_argument("--manifest", default="data/prepared/exp3_neural_student/train_manifest.jsonl")

@@ -1,7 +1,8 @@
-﻿# FraudDistill 实验3：增强多Agent教师与蒸馏消融 — 实验报告
+# FraudDistill 实验3：增强多Agent教师与蒸馏消融 — 实验报告
 
 > 实验目录：`experiments/exp3_agent_distillation_ablation/`
 > 生成日期：2026-08-04 ｜ 指南：《FraudDistill_实验3_增强多Agent与蒸馏消融_40元预算实施指南》
+> 2026-08-07 更新：《FraudDistill_实验三后续修改方案》——合并 T6/T7 为 T6 Full MAT；新增 Base-1.5B Zero-shot 下界；整理 Student 蒸馏对比链；预留 Final Student 重训接口（`--setting final_student`）。
 > 模型：DeepSeek V4 Flash（非思考模式，JSON Output）｜ 预算：**已用 38.84 / 40.00 元**
 > 全部 API 阶段已完成；本报告由缓存重放 + 离线评估生成，无新增 API 成本。
 
@@ -11,12 +12,13 @@
 
 - **数据集**：6,400 条（train/dev/test = 4,091 / 1,047 / 1,262；Block A/B/C/D = 2,400/1,600/1,600/800；EN/ZH = 4,435/1,965；16 类细分子类）。
 - **冻结配置**：dev 校准（Platt + FPR≤0.08 上限）冻结阈值 **0.8409**。
-- **Teacher 主结果（test, n=1,262）**：T1 单判官 Macro-F1 **0.6952** → T7 完整增强 MAT **0.9016**（Δ **+0.166**，10k bootstrap CI [0.1449, 0.1878] 不跨 0，显著）。
+- **Teacher 主结果（test, n=1,262）**：T1 单判官 Macro-F1 **0.6952** → T6 完整增强 MAT **0.9016**（Δ **+0.166**，10k bootstrap CI [0.1449, 0.1878] 不跨 0，显著）。
 - **组件消融**：去掉 Refusal Agent（L2）影响最大：Macro-F1 **−0.1099**、Recall −22.5pp；去掉 Context Agent（L3）FPR +5.6pp。
-- **纠错（correction）**：dev/test 触发率 14.0% / 15.3%，全部为“确认型”（193 条 test 冲突样本从未改判，T7≡T6）。
+- **纠错（correction）**：dev/test 触发率 14.0% / 15.3%，全部为“确认型”（193 条 test 冲突样本从未改判；T6 与含纠错的完整版完全一致，按指南合并为 T6 Full MAT）。
 - **Student 蒸馏梯度（test, 5 seeds）**：S2 分数蒸馏最优 Macro-F1 **0.9073**（vs S0 gold 0.9031）；S4 证据蒸馏 AUPRC **0.9793** 最优。S4 vs S0 未达文档 +2pp 目标，原因见 §9.2。
 - **神经学生（1.5B QLoRA，CPU 训练，seed 11）**：Neural-SoftDistill 最优 Macro-F1 **0.8849**（test，Recall 0.8094 / FPR 0.0404 / AUPRC 0.9532 / MCC 0.7795）；Neural-Gold 0.8676；Neural-FullDistill（+4,000 困难扩展）Recall 0.8207 最高但 FPR 0.0918；低标注 10% gold：Neural-Gold 0.8422。离线评估已修复分类头保存问题，指标与训练日志一致。本轮 API 新增 7.00 元（详见 §16）。
-- **测试**：pytest 330 passed；所有脚本/产物已整理，代码已提交 GitHub。
+- **Base-1.5B 下界（08-07 补充）**：同一 500 条 test 子集上，未训练 1.5B 基座 Macro-F1 **0.3584**（FPR 0.9611，几乎全判 unsafe）→ Neural-Gold 0.8794 → Neural-SoftDistill **0.9032**，能力提升链 Base → Trained Student 成立，详见 §16.9。
+- **测试**：pytest 460 passed；所有脚本/产物已整理，代码已提交 GitHub。
 
 ---
 
@@ -24,15 +26,15 @@
 
 ### 1.1 目标（指南 §12–§21）
 1. **代码补强**：完成增强型 Multi-Agent Teacher（三专家 + Evidence Arbiter + 冲突纠错 + 分数校准 + 预算/缓存/断点）。
-2. **Teacher 嵌套消融**（T0–T7）：验证“Agent 分解价值”与“Arbiter 价值”。
+2. **Teacher 嵌套消融**（T0–T6）：验证“Agent 分解价值”与“Arbiter 价值”。
 3. **Leave-one-out 组件消融**（L0–L7）与**组件压力测试**：给出机制证据。
 4. **Student 蒸馏梯度**（S0–S4）：证明结构化教师信号优于 hard pseudo-label。
 5. **统计检验**：10k paired bootstrap + McNemar + Holm。
 
 ### 1.2 总体结论
-- 完整增强 MAT（T7）显著优于单判官（T1）：Macro-F1 +0.166、Recall +0.167，主要收益来自**召回**（FPR 由 0.056 升至 0.096，属于安全—可用性权衡中的可用性方向）。
+- 完整增强 MAT（T6）显著优于单判官（T1）：Macro-F1 +0.166、Recall +0.167，主要收益来自**召回**（FPR 由 0.056 升至 0.096，属于安全—可用性权衡中的可用性方向）。
 - 证据仲裁（T5→T6）带来显著但小幅提升（+0.0064，CI 不跨 0），ECE 由 0.1404 降至 0.0414（−70.5%），校准质量大幅改善。
-- 冲突纠错（T6→T7）无变化：教师内部一致性很高（test 上教师标签与 gold 一致率 90.3%），纠错仅确认、不改判；触发率 15.3% 但额外成本仅约 6.6%，符合“成本可控”的预期，收益未显现。
+- 冲突纠错为确认型：教师内部一致性很高（test 上教师标签与 gold 一致率 90.3%），193 条冲突样本纠错仅确认、0 次改判，触发率 15.3% 但额外成本仅约 6.6%，符合“成本可控”的预期；T6 与含纠错的完整版完全一致，按指南合并为 T6 Full MAT，收益未显现。
 - 轻量学生上，教师分数蒸馏（S2）与证据加权（S4）均≥gold 基线，但增益有限（教师标签 89% 与 gold 一致，信息增量受限），如实报告。
 
 ---
@@ -108,15 +110,14 @@
 | T3 Fraud+Refusal | 0.8059 | 0.9517 | 0.6365 | 0.7628 | 0.0311 | 0.8976 | 0.6446 | 5.38 |
 | T4 +Context | 0.8051 | 0.9538 | 0.6333 | 0.7612 | 0.0295 | 0.9024 | 0.6440 | 5.38 |
 | T5 Specialists+Rule Arbiter | 0.8970 | 0.8989 | 0.8901 | 0.8945 | 0.0964 | 0.9078 | 0.7939 | 5.38 |
-| T6 Evidence MAT（无纠错） | 0.9033 | 0.9002 | 0.9031 | 0.9016 | 0.0964 | 0.9236 | 0.8066 | 5.38 |
-| T7 Full MAT（含纠错） | 0.9033 | 0.9002 | 0.9031 | 0.9016 | 0.0964 | 0.9236 | 0.8066 | 5.77 |
+| T6 Full MAT | 0.9033 | 0.9002 | 0.9031 | 0.9016 | 0.0964 | 0.9236 | 0.8066 | 5.38 |
 
 解读：
 - T0 规则基线 Macro-F1 0.3918，验证“关键词/拒答模板”只适合做下界（指南 §15.1）。
 - T1 单判官 0.6952：强单模型，但 AUPRC 仅 0.5158（分数质量差），为完整 MAT 提供对比下界。
 - T2→T3/T4：加入 Refusal/Context 后 0.5 阈值下的确定性组合偏向保守（Recall 下降、FPR 大幅下降 0.0575→0.0295，AUPRC 0.8408→0.9024）；Macro-F1 的 −3.6pp 属于**确定性组合尺度问题**（文档风险 1 所述，不据此改 Prompt），机制收益见 §6 组件指标。
 - T5→T6：证据仲裁提升 Macro-F1 +0.0064（bootstrap CI 不跨 0，显著），AUPRC +0.0158，ECE 0.1404→0.0414。
-- T6→T7：纠错为确认型，指标一致（详见 §8）。
+- T6 Full MAT：纠错为确认型（193 条冲突样本 0 次改判），与含纠错的完整版完全一致，按指南合并（详见 §8）。
 
 ---
 
@@ -132,19 +133,18 @@
 | T3 Fraud+Refusal | 0.8313 | 0.9125 | 0.0000 | 0.0337 | 0.0000 | 0.0000 |
 | T4 +Context | 0.8187 | 0.9125 | 0.0000 | 0.0288 | 0.0000 | 0.0000 |
 | T5 Rule Arbiter | 0.9500 | 1.0000 | 0.7667 | 0.1010 | 0.0333 | 0.9167 |
-| T6 Evidence MAT | 0.9688 | 1.0000 | 0.7667 | 0.1010 | 0.0333 | 0.9167 |
-| T7 Full MAT | 0.9688 | 1.0000 | 0.7667 | 0.1010 | 0.0333 | 0.9167 |
+| T6 Full MAT | 0.9688 | 1.0000 | 0.7667 | 0.1010 | 0.0333 | 0.9167 |
 
-补充压力指标（`outputs/metrics/stress_metrics.json`，T7）：
+补充压力指标（`outputs/metrics/stress_metrics.json`，T6）：
 - Actionability（直接协助）召回 0.9688；Trust facilitation 召回 1.0000。
 - 干净拒答→欺诈（clean_refusal_to_fraud）FPR 0.177；干净拒答 FPR 0.0105；hard-safe FPR 0.0333。
 - Quotation FPR 0.10、Anti-fraud education FPR 0.05、Over-refusal 召回 0.9167、Toxic 召回 1.0000。
-- 冲突子集（n=193）：T6/T7 Macro-F1 均 0.8078（纠错确认型，见 §8）。
+- 冲突子集（n=193）：T6（含纠错）Macro-F1 0.8078（纠错确认型，见 §8）。
 
 机制解读（指南 §16.1 口径）：
-- **Fraud Agent**：direct/trust 召回由 T0 0.4062/0.0 提升至 T7 0.9688/1.0000。
-- **Refusal Agent**：clean-refusal FPR 由 T0 0.375 降至 T4 0.0288；T2→T4 相对下降 33.5%。部分泄漏召回在“规则组合”口径（T3/T4）失效（0.0），在**仲裁器口径**（T5/T6/T7）达 0.7667（相对 T2 的 0.4167 提升 +35pp）。
-- **Context Agent**：T2→T4 hard-safe FPR 0.0083→0.0；quotation FPR 从 T0 的 0.675 降至 0（T1–T7 均≈0）。
+- **Fraud Agent**：direct/trust 召回由 T0 0.4062/0.0 提升至 T6 0.9688/1.0000。
+- **Refusal Agent**：clean-refusal FPR 由 T0 0.375 降至 T4 0.0288；T2→T4 相对下降 33.5%。部分泄漏召回在“规则组合”口径（T3/T4）失效（0.0），在**仲裁器口径**（T5/T6）达 0.7667（相对 T2 的 0.4167 提升 +35pp）。
+- **Context Agent**：T2→T4 hard-safe FPR 0.0083→0.0；quotation FPR 从 T0 的 0.675 降至 0（T1–T6 均≈0）。
 - **Arbiter**：over-refusal 召回 0→0.9167，是仲裁器引入“过度拒答”检测的直接证据。
 
 ---
@@ -155,7 +155,7 @@
 
 | Removed | ΔMacro-F1 | ΔRecall | ΔFPR | 主要受损切片 |
 |---|---:|---:|---:|---|
-| L0 Full（T7） | 0.0000 | 0.0000 | 0.0000 | — |
+| L0 Full（T6） | 0.0000 | 0.0000 | 0.0000 | — |
 | L1 −Fraud Agent | −0.0122 | −0.0259 | −0.0046 | Direct/Trust 召回（Direct R 0.9688→0.8438，Trust R 1.0→0.95） |
 | L2 −Refusal Agent | **−0.1099** | **−0.2246** | −0.0622 | Refusal 边界：clean-refusal_to_fraud、partial leakage 大面积漏检（Leakage R 0.7667→0.0） |
 | L3 −Context Agent | −0.0325 | −0.0130 | **+0.0560** | Hard-safe / quotation / education 误报显著上升（FPR +5.6pp） |
@@ -172,7 +172,7 @@
 
 ### 8.1 纠错行为
 - dev 触发 147/1,047（14.0%），test 触发 193/1,262（15.3%）；每行调用 unsafe/safe 双辩护人 + 复核仲裁。
-- **193 条 test 冲突样本纠错前后标签 0 次改变（确认型）**，因此 T7≡T6；冲突子集 Macro-F1 0.8078（T6=T7）。
+- **193 条 test 冲突样本纠错前后标签 0 次改变（确认型）**，因此 T6 与含纠错的完整版完全一致；冲突子集 Macro-F1 0.8078，按指南合并为 T6 Full MAT。
 - 成本影响：test 纠错新增约 0.48 元（占 test 总成本约 6.6%，≤20% 上限）。
 
 ### 8.2 配对统计检验（`outputs/metrics/paired_significance.json`）
@@ -180,13 +180,12 @@
 
 | 对比 | ΔMacro-F1 | 95% CI | CI 不跨 0 | McNemar (b/c) | 结论 |
 |---|---:|---|---:|---|---|
-| T1→T7 | +0.1660 | [0.1449, 0.1878] | 是 | 46/230 | **显著**（主结论） |
+| T1→T6 | +0.1660 | [0.1449, 0.1878] | 是 | 46/230 | **显著**（主结论） |
 | T5→T6 | +0.0064 | [0.0024, 0.0111] | 是 | 0/8 | 显著（证据仲裁） |
-| T6→T7 | 0.0000 | [0.0, 0.0] | 否 | 0/0 | 无差异（确认型纠错） |
 | T2→T3 | −0.0356 | [−0.0461, −0.0256] | 是 | 45/17 | 显著但属确定性组合尺度（风险 1 口径） |
 | T3→T4 | −0.0013 | [−0.0034, 0.0000] | 否 | 2/1 | 不显著 |
 
-- AUPRC（pooled 点估计）：T1 0.5158 → T6/T7 0.9236。
+- AUPRC（pooled 点估计）：T1 0.5158 → T6 0.9236。
 - 说明：McNemar 经 Holm 校正后 p=1.0（多重比较下无单项通过）；主结论以 bootstrap CI 为准。AUPRC 的单类别组 NaN 已修复（bootstrap 只对 F1/Recall/FPR，AUPRC 用全局 pooled 点估计）。
 ---
 
@@ -252,7 +251,7 @@
 |---|---|---|---|
 | Full MAT vs Single Judge | ΔMacro-F1 ≥ +0.03 且主要 CI 不跨 0 | **+0.166**，CI [0.1449, 0.1878] | ✅ 达成 |
 | Fraud Agent | Direct Recall ≥ 0.88；Trust Recall ≥ 0.80 | 0.9688 / 1.0000 | ✅ 达成 |
-| Refusal Agent | Clean-refusal FPR 相对下降 ≥30%；Leakage Recall 提高 ≥8pp | FPR 0.0433→0.0288（T2→T4，−33.5%）✅；Leakage R 0.4167→0.7667（T2→T7 仲裁口径，+35pp）✅；但规则组合口径 T3 下为 0 | ⚠️ 部分达成（机制证据成立；规则尺度问题见 §5） |
+| Refusal Agent | Clean-refusal FPR 相对下降 ≥30%；Leakage Recall 提高 ≥8pp | FPR 0.0433→0.0288（T2→T4，−33.5%）✅；Leakage R 0.4167→0.7667（T2→T6 仲裁口径，+35pp）✅；但规则组合口径 T3 下为 0 | ⚠️ 部分达成（机制证据成立；规则尺度问题见 §5） |
 | Context Agent | Hard-safe FPR 相对下降 ≥30%；Quotation/Education FPR 下降 ≥10pp | Hard-safe 0.0083→0.0；Quotation T0 0.675→0；Education T0 0.675→0.05 | ✅/⚠️ 达成（压力子集基数小，绝对量有限） |
 | Evidence Arbiter | AUPRC 提高 ≥0.03；ECE 相对下降 ≥20% | AUPRC +0.0158（未达 0.03）；ECE −70.5% | ⚠️ 部分达成 |
 | Correction | 冲突子集 F1 提高 ≥5pp；全体 F1 ≥1pp；额外成本 ≤20% | 0pp / 0pp（确认型，无改判）；成本 6.6% | ❌ 未达成（无改判收益；成本可控） |
@@ -260,9 +259,10 @@
 
 | Neural-SoftDistill vs Neural-Gold（同数据） | 蒸馏增益 ≥1.5pp 或 FPR 相对下降 ≥15% | Macro-F1 **+1.73pp**；FPR 0.0669→0.0404（相对 −39.6%） | ✅ 达成（单种子，方向一致） |
 | Neural-FullDistill vs Neural-Gold | 同上 | Macro-F1 −0.28pp；Recall +1.94pp；FPR +2.49pp | ❌ 未达成（困难样本阈值偏移，如实报告） |
+| Base（未训练 1.5B 明显低于训练后模型） | Base Macro-F1 显著低于 SoftDistill | 0.3584 vs 0.9032（500 子集，Δ+0.545）；FPR 0.9611 vs 0.0311 | ✅ 达成（能力提升链成立，§16.9） |
 | 神经学生切片（指南 §24.6） | Direct R≥0.94 / Hard-safe FPR≤0.04 / Clean-refusal FPR≤0.05 / Over-refusal R≥0.85 / Context-flip≥0.90 | 见 §16.6：trust/leakage/over-refusal/context-flip 达成；direct（0.72–0.81）与 clean-refusal（soft 0.0105 达成，gold/full 未达）部分未达 | ⚠️ 部分达成 |
 
-> 总体：**教师侧（T1→T7、Fraud/Refusal/Context/Arbiter 机制）全部达成或部分达成且方向正确；纠错与 Student 两个目标未达成**，均已给出机制解释，并作为后续工作（神经学生、对抗型纠错样本、冲突阈值下调）的依据。
+> 总体：**教师侧（T1→T6、Fraud/Refusal/Context/Arbiter 机制）全部达成或部分达成且方向正确；纠错与 Student 两个目标未达成**，均已给出机制解释，并作为后续工作（神经学生、对抗型纠错样本、冲突阈值下调）的依据。
 
 ---
 
@@ -291,7 +291,14 @@ python scripts/train_exp3_students.py --manifest data/prepared/exp3_neural_stude
 python scripts/evaluate_neural_student.py --checkpoint experiments/exp3_agent_distillation_ablation/outputs/neural_student/soft_distill_standard_seed11_final --architecture standard --max-length 384 --out-dir experiments/exp3_agent_distillation_ablation/outputs/neural_student/eval_soft
 python scripts/_run_lowlabel.py   # 低标注曲线驱动（gold10 已完成；soft10/25/50 后续补跑）
 
-# 4) 离线消融 / 统计检验 / Student / 图
+# 4) Base-1.5B Zero-shot baseline（本地 CPU，0 元；双分片并行，seed 20260804 固定 500 条）
+python scripts/run_exp3_base_zeroshot.py --n 500 --seed 20260804 --shard-idx 0 --shard-total 2 --out-dir experiments/exp3_agent_distillation_ablation/outputs/neural_student/base_zeroshot
+python scripts/run_exp3_base_zeroshot.py --n 500 --seed 20260804 --shard-idx 1 --shard-total 2 --out-dir experiments/exp3_agent_distillation_ablation/outputs/neural_student/base_zeroshot
+python scripts/run_exp3_base_zeroshot.py --eval-only --out-dir experiments/exp3_agent_distillation_ablation/outputs/neural_student/base_zeroshot
+python scripts/compare_exp3_base_chain.py
+python scripts/make_exp3_base_figure.py
+
+# 5) 离线消融 / 统计检验 / Student / 图
 python scripts/build_exp3_agent_ablations.py
 python scripts/evaluate_exp3.py
 python scripts/train_exp3_students.py
@@ -321,9 +328,11 @@ experiments/exp3_agent_distillation_ablation/
     ├── neural_student/
     │   ├── {gold,soft,full}_standard_seed11_final/   (<-> LoRA 适配器 + 分类头（modules_to_save）)
     │   ├── eval_{gold,soft,full,lowlabel_gold10,zero_shot}/   (<-> 完整评估：指标 JSON + 预测)
+    │   ├── base_zeroshot/                  (<-> Base-1.5B 生成式下界：subset_ids + 预测 + 指标)
+    │   ├── base_chain_500.csv/.json         (<-> 500 子集能力链：Base/RandomHead/Gold/Soft/Full)
     │   └── lowlabel/                          (<-> 低标注 gold10 完成；soft10 resume.pt 保留)
     ├── metrics/neural_student_metrics.json      (<-> canonical 合并指标，指南 §3.8)
-    └── figures/fig1..fig6.png  fig7_neural_student.png  fig8_lowlabel_curve.png
+    └── figures/fig1..fig6.png  fig7_neural_student.png  fig8_lowlabel_curve.png  fig9_student_capability_chain.png
 ```
 
 ---
@@ -335,9 +344,9 @@ experiments/exp3_agent_distillation_ablation/
 3. **T2→T3 尺度问题**：确定性组合在 0.5 阈值下偏保守，建议论文写作时以组件指标（§6）+ 仲裁器口径为主证据。
 4. **FPR 跨集差异**：冻结阈值在 test 上 FPR 0.0964 略超 dev 目标 0.08，属分布差异，未做 test 调参。
 5. **预算**：38.84/40 元已用，剩余 1.16 元预留；本报告后不再调用 API。
-6. **下一步（实验 2 衔接）**：冻结 T7 完整增强 MAT（不再改 Prompt），在 Exp2 的四个 benchmark（Fraud-R1 / OR-Bench / Do-Not-Answer / Aegis 2.0）上以同 q+y 运行，与各原工作 evaluator 比较（指南 §28.4）。
+6. **下一步（实验 2 衔接）**：冻结 T6 完整增强 MAT（不再改 Prompt），在 Exp2 的四个 benchmark（Fraud-R1 / OR-Bench / Do-Not-Answer / Aegis 2.0）上以同 q+y 运行，与各原工作 evaluator 比较（指南 §28.4）。
 
-7. **神经学生（§16）局限与后续**：① 仅 seed 11（CPU 训练 ~5–7h/轮，3 seeds 与配对统计检验未跑）；② 低标注曲线只完成 10%（gold10；soft10 中断于 ~1 epoch，resume.pt 已保留可续训），25%/50% 未跑；③ FullDistill 因 +4,000 困难扩展样本导致 FPR 上升（0.0918），0.5 固定阈值协议下如实报告，部署可用 dev 阈值调节；④ real-only 切片明显低于 synthetic（Recall 0.34–0.41 vs 1.0），提示模板学习风险，主论文需以 real-only 为核心（指南 §28.7）；⑤ 4 类 Macro-F1 仅 ~0.41，类型头容量不足；⑥ 部署量化（INT8/ONNX）未做；⑦ zero-shot 为随机分类头下界（0.4176），仅作底线展示。
+7. **神经学生（§16）局限与后续**：① 仅 seed 11（CPU 训练 ~5–7h/轮，3 seeds 与配对统计检验未跑）；② 低标注曲线只完成 10%（gold10；soft10 中断于 ~1 epoch，resume.pt 已保留可续训），25%/50% 未跑；③ FullDistill 因 +4,000 困难扩展样本导致 FPR 上升（0.0918），0.5 固定阈值协议下如实报告，部署可用 dev 阈值调节；④ real-only 切片明显低于 synthetic（Recall 0.34–0.41 vs 1.0），提示模板学习风险，主论文需以 real-only 为核心（指南 §28.7）；⑤ 4 类 Macro-F1 仅 ~0.41，类型头容量不足；⑥ 部署量化（INT8/ONNX）未做；⑦ zero-shot 下界已按《实验三后续修改方案》补充 Base-1.5B 生成式版本（§16.9：Macro-F1 0.3584、FPR 0.9611、0 元本地运行），随机头（500 子集 0.4191）与未训练基座（0.3584）均远低于训练后模型（SoftDistill 0.9032），能力提升链成立；4 类 Macro-F1 仍低（0.08–0.41），类型判别容量不足。
 
 ---
 
@@ -367,6 +376,8 @@ experiments/exp3_agent_distillation_ablation/
 | Neural-SoftDistill | 2,235（基础清单） | 0.8849 | 0.8094 | 0.0404 | 0.9532 | 0.7795 | 0.8859 | 0.4132 |
 | Neural-FullDistill | 6,235（含 4,000 扩展） | 0.8648 | 0.8207 | 0.0918 | 0.9535 | 0.7326 | 0.8653 | 0.4072 |
 
+> Base-1.5B-ZeroShot（生成式下界）与 500 子集能力链见 §16.9（0.5 阈值协议一致）。
+
 ### 16.4 蒸馏机制（指南 §27.3，test）
 | 设置 | Soft | Pair | 扩展数据 | ΔMacro-F1 (vs Gold) | ΔRecall | ΔFPR |
 |---|---:|---:|---:|---:|---:|---:|
@@ -394,3 +405,22 @@ experiments/exp3_agent_distillation_ablation/
 - **Neural-Gold**：模型磁盘 154.8 MB（LoRA+头，基座另存）、batch=8 P50 1606.9 ms/条、P95 2756.6 ms/条、吞吐 0.74 条/s（CPU）
 - **Neural-SoftDistill**：模型磁盘 154.8 MB（LoRA+头，基座另存）、batch=8 P50 1604.0 ms/条、P95 2773.4 ms/条、吞吐 0.72 条/s（CPU）
 - **Neural-FullDistill**：模型磁盘 154.8 MB（LoRA+头，基座另存）、batch=8 P50 1600.3 ms/条、P95 2750.5 ms/条、吞吐 0.73 条/s（CPU）
+
+### 16.9 Base-1.5B Zero-shot baseline（《实验三后续修改方案》，2026-08-07）
+
+- **动机**：Neural-ZeroShot 是随机分类头下界，不能代表未训练 DeepSeek-R1-Distill-Qwen-1.5B 的真实能力；新增 **Base-1.5B-ZeroShot**：基座原版权重、无 LoRA、无训练、无分类头，生成式输出四类标签（safe / fraud_assistance / refusal_failure / over_refusal）。
+- **设置**：固定随机 **500 条** test 子集（seed=20260804，`subset_ids.json` 可复现）；**Temperature=0**（greedy）、**max_new_tokens=32**；输入为 `User Query / Assistant Response` + 四类判别指令；主标签与风险分数由四类标签续写概率（长度归一化 logprob，`risk = 1 − P(safe)`）给出，与神经学生 0.5 阈值协议完全同构；生成文本同时记录（直接解析率 24.8%，未解析样本按续写概率判定并标记 fallback）。
+- **能力提升链**（同一 500 条子集、全部同口径重算，`base_chain_500.csv`）：
+
+| Model | N | Acc | Prec | Recall | Macro-F1 | FPR | AUPRC | MCC | 4类F1 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Base-1.5B-ZeroShot | 500 | 0.4860 | 0.4854 | 0.9588 | 0.3584 | 0.9611 | 0.5008 | -0.0057 | 0.0834 |
+| Neural-ZeroShot（随机分类头） | 500 | 0.4280 | 0.4326 | 0.5679 | 0.4191 | 0.7043 | 0.4200 | -0.1418 | 0.1795 |
+| Neural-Gold | 500 | 0.8800 | 0.9103 | 0.8354 | 0.8794 | 0.0778 | 0.9512 | 0.7617 | 0.4172 |
+| Neural-SoftDistill | 500 | 0.9040 | 0.9621 | 0.8354 | 0.9032 | 0.0311 | 0.9626 | 0.8139 | 0.4122 |
+| Neural-FullDistill | 500 | 0.8740 | 0.8814 | 0.8560 | 0.8738 | 0.1089 | 0.9586 | 0.7479 | 0.4092 |
+
+- **解读**：未训练 1.5B 基座几乎把所有响应判为 unsafe（Recall 0.9588 / FPR 0.9611、MCC≈0、AUROC 0.4785≈随机），Macro-F1 仅 0.3584；训练后 Gold / SoftDistill 提升至 0.8794 / 0.9032（SoftDistill 相对 Gold **+0.0238**、FPR 相对下降 60%），**Base Model → Trained Student 能力提升链成立**（验收标准达成）。Random Head 的 F1（0.4191）略高于 Base（0.3584）但 MCC 更低（−0.1418 vs −0.0057），两者均为无判别能力下界，不具可比意义。
+- **成本与部署**：本地 CPU 推理，**0 元 API**；单条 P50 20.9s / P95 112.4s（1.5B fp32，含四类续写打分），生成式下界不用于部署。
+- **Final Student 接口**：`--setting final_student` 已加入 `scripts/train_exp3_students.py`（配方暂同 soft_distill）与 `scripts/run_exp3_neural_stages.py` 阶段表，待后续指令执行重训。
+- **产物**：`outputs/neural_student/base_zeroshot/`（`subset_ids.json`、`predictions_test.jsonl`、`base_zeroshot_metrics.json`）、`base_chain_500.csv/.json`、`figures/fig9_student_capability_chain.png`。

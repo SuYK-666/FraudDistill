@@ -81,6 +81,7 @@ data/teacher_signals/fraudr1_qwen_teacher.jsonl
 | 实验 | 说明 | 报告 |
 |---|---|---|
 | Exp2 跨工作对比（最终平衡诊断集） | 10,813 行平衡响应级诊断集（Fraud-R1/OR-Bench/DNA/Aegis，正负约 1:1）；四基准统一评估与门槛判定，全部 PASS；基线同数据集重评 | [EXP2_BALANCED_FINAL_REPORT_20260807.md](experiments/exp2_prior_work_comparison/EXP2_BALANCED_FINAL_REPORT_20260807.md) |
+| Exp3 增强多Agent与蒸馏消融 | 6,400 行三块数据；T0–T6 Teacher 消融（Full MAT 0.9016）、组件贡献、Student 蒸馏链与 1.5B 神经学生（SoftDistill 0.8849）；Base-1.5B Zero-shot 下界（2026-08-07 更新） | [EXP3_ENHANCED_AGENT_DISTILLATION_REPORT.md](experiments/exp3_agent_distillation_ablation/EXP3_ENHANCED_AGENT_DISTILLATION_REPORT.md) |
 
 ## 项目结构
 

@@ -38,6 +38,9 @@ STAGES = {
     # low-label stages scale epochs up so step counts stay comparable.
     "gold": (["--setting", "gold", "--epochs", "2"], None, None),
     "soft_distill": (["--setting", "soft_distill", "--epochs", "2"], None, None),
+    # final_student: reserved interface for the Final Student retrain (follow-up
+    # guide); same recipe as soft_distill until the retrain recipe is finalized.
+    "final_student": (["--setting", "final_student", "--epochs", "2"], None, None),
     # max_steps counts optimizer steps: 2236 micro-batches / 16 accum = 140
     "full_distill": (["--setting", "full_distill", "--epochs", "1", "--max-steps", "140"], None,
                      "data/prepared/exp3_neural_student/train_manifest_expanded.jsonl"),
