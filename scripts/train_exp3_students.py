@@ -439,12 +439,13 @@ def main_neural(args) -> None:
                 encoding="utf-8")
             print("SMOKE OK (5 steps)", flush=True)
             return
-        test_m = evaluate_neural_full(model, test_loader, device, args.architecture, loss_fn)
-        print("TEST:", json.dumps(test_m, ensure_ascii=False), flush=True)
+        # Official test is NOT run here: guide 20/44 requires a single test run
+        # with the dev-selected checkpoint and frozen calibration, executed by
+        # scripts/evaluate_final_student.py after checkpoint selection.
         save_checkpoint(model, tokenizer, run_dir / "final", args.architecture)
         (run_dir / "final_distill_metrics.json").write_text(
             json.dumps({"setting": "final_distill", "architecture": args.architecture, "seed": args.seed,
-                        "rows": len(train_examples), "test": test_m,
+                        "rows": len(train_examples), "test": "skipped (official test via evaluate_final_student.py)",
                         "history": history, "wall_seconds": round(time.time() - t0, 1),
                         "class_weights": [round(w, 3) for w in cw]}, ensure_ascii=False, indent=2),
             encoding="utf-8")
