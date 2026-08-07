@@ -138,10 +138,20 @@ def build_neural_student(config: NeuralStudentConfig, freeze_base: bool = False,
         raise ValueError(f"unknown architecture: {config.architecture}")
 
     if config.use_lora:
+        # Guide 2.2 (final student): the classification head must live in
+        # modules_to_save so it is persisted with the adapter; PEFT exposes
+        # the SEQ_CLS head as "score" and maps the user-facing "classifier"
+        # name as well. Single PEFT wrap only.
+        modules_to_save = list(getattr(config, "modules_to_save", None) or ["classifier", "score"])
         lora_cfg = LoraConfig(
             r=config.lora_r, lora_alpha=config.lora_alpha, lora_dropout=config.lora_dropout,
-            target_modules=config.target_modules, bias="none", task_type="SEQ_CLS")
+            target_modules=config.target_modules, modules_to_save=modules_to_save,
+            bias="none", task_type="SEQ_CLS")
         model = get_peft_model(model, lora_cfg)
+        # hard gate (guide 2.2): classification head must be persisted with the adapter
+        pc = model.peft_config[model.active_adapter]
+        assert any("classifier" in str(m) or "score" in str(m) for m in pc.modules_to_save), \
+            "classifier must be in modules_to_save"
     if freeze_base:
         for name, p in model.named_parameters():
             if "lora" not in name and "score" not in name and "head" not in name:

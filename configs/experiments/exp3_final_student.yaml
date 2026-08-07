@@ -1,0 +1,80 @@
+# Final 1.5B student training config (guide 40)
+model:
+  base_model: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+  architecture: standard
+  dtype: fp32
+
+seed: 11
+
+data:
+  train_manifest: data/prepared/exp3_neural_student/final_train_manifest.jsonl
+  dev_split: data/prepared/exp3_agent_distillation/dev.jsonl
+  test_split: data/prepared/exp3_agent_distillation/test.jsonl
+  exclude:
+    exp2_balanced_test: true
+    exp3_dev_from_train: true
+    exp3_test_from_train: true
+
+sampler:
+  source_targets:
+    benchmark: 0.48
+    exp2_balanced_dev: 0.17
+    synthetic_core: 0.23
+    hard_expansion: 0.12
+  binary_safe_ratio: 0.50
+  english_ratio: 0.63
+
+lora:
+  r: 32
+  alpha: 64
+  dropout: 0.05
+  bias: none
+  modules_to_save:
+    - classifier
+    - score
+
+sequence:
+  max_length: 512
+  truncation: head_tail
+
+batch:
+  micro_batch: 2
+  effective_batch: 32
+
+optimizer:
+  lr_lora: 1.0e-4
+  lr_head: 5.0e-4
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+
+scheduler:
+  type: linear
+  warmup_ratio: 0.05
+
+loss:
+  ce4: 1.0
+  binary: 0.30
+  soft_kl: 0.30
+  pair: 0.05
+  distill_temperature: 2.0
+  teacher_disagreement_multiplier: 0.5
+
+training:
+  max_epochs: 2
+  eval_steps: 40
+  save_steps: 40
+  early_stopping_patience: 4
+  save_total_limit: 3
+  log_every: 20
+
+selection:
+  fpr_max: 0.055
+  recall_min: 0.82
+  primary: macro_f1
+  tie_break:
+    - real_macro_f1
+    - auprc
+    - mcc
+
+output:
+  directory: experiments/exp3_agent_distillation_ablation/outputs/neural_student/final_distilled_student

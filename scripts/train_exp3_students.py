@@ -315,7 +315,9 @@ def main_neural(args) -> None:
     from frauddistill.student.model import NeuralStudentConfig, build_neural_student
     from frauddistill.student.losses import FraudDistillLoss
     from frauddistill.student.collator import neural_collate
-    from frauddistill.student.trainer import train_neural, evaluate_neural, save_checkpoint
+    from frauddistill.student.trainer import train_neural, train_neural_final, evaluate_neural, evaluate_neural_full, save_checkpoint
+    from frauddistill.student.losses import FinalDistillLoss
+    from torch.utils.data import WeightedRandomSampler
     from transformers import AutoTokenizer
 
     out_root = Path(args.out_root or (OUT_ROOT / "neural_student"))
@@ -348,7 +350,7 @@ def main_neural(args) -> None:
 
     train_examples = build_neural_examples(manifest, max_length=args.max_length,
                                            use_teacher_soft=(args.setting != "gold"),
-                                           use_pairwise=(args.setting == "full_distill"))
+                                           use_pairwise=(args.setting in ("full_distill", "final_distill")))
     dev_all = build_neural_examples(with_teacher(dev_rows), max_length=args.max_length,
                                     use_teacher_soft=True, use_pairwise=False)
     if args.eval_subset and len(dev_all) > args.eval_subset:
@@ -377,16 +379,76 @@ def main_neural(args) -> None:
 
     cfg = NeuralStudentConfig(model_name=args.model_name, architecture=args.architecture,
                               max_length=args.max_length, lora_r=args.lora_r, lora_alpha=args.lora_alpha * 2)
-    loss_fn = FraudDistillLoss(lambda_gold={"gold": 1.0, "soft_distill": 0.75, "full_distill": 0.65, "final_student": 0.75}[args.setting],
-                               lambda_soft={"gold": 0.0, "soft_distill": 0.25, "full_distill": 0.25, "final_student": 0.25}[args.setting],
-                               lambda_pair={"gold": 0.0, "soft_distill": 0.0, "full_distill": 0.10, "final_student": 0.0}[args.setting],
-                               temperature=args.temperature, pair_margin=args.pair_margin)
+    if args.setting != "final_distill":
+        loss_fn = FraudDistillLoss(lambda_gold={"gold": 1.0, "soft_distill": 0.75, "full_distill": 0.65, "final_student": 0.75}[args.setting],
+                                   lambda_soft={"gold": 0.0, "soft_distill": 0.25, "full_distill": 0.25, "final_student": 0.25}[args.setting],
+                                   lambda_pair={"gold": 0.0, "soft_distill": 0.0, "full_distill": 0.10, "final_student": 0.0}[args.setting],
+                                   temperature=args.temperature, pair_margin=args.pair_margin)
+    else:
+        loss_fn = None
 
     def collate(batch): return neural_collate(batch, tokenizer, max_length=args.max_length, architecture=args.architecture)
 
     eval_batch = max(args.micro_batch * 8, 16)
     dev_loader = DataLoader(SimpleDataset(dev_examples), batch_size=eval_batch, shuffle=False, collate_fn=collate)
     test_loader = DataLoader(SimpleDataset(test_examples), batch_size=eval_batch, shuffle=False, collate_fn=collate)
+
+    if args.setting == "final_distill":
+        # Final student (guide 14, 49): source-aware WeightedRandomSampler +
+        # FinalDistillLoss (gold CE + binary + MAT soft KL + light pair).
+        # Guide 10/14: lora r=32 alpha=64 dropout=0.05 (NOT the legacy *2).
+        cfg = NeuralStudentConfig(model_name=args.model_name, architecture=args.architecture,
+                                  max_length=args.max_length, lora_r=args.lora_r,
+                                  lora_alpha=args.lora_alpha, lora_dropout=0.05)
+        from collections import Counter as _Counter
+        src_counts = _Counter(ex.get("source_bucket", "") for ex in train_examples)
+        print(f"[final_distill] train rows={len(train_examples)} buckets={dict(src_counts)}", flush=True)
+        weights = [max(float(ex["sample_weight"]), 1e-9) for ex in train_examples]
+        sampler = WeightedRandomSampler(weights, num_samples=len(train_examples),
+                                        replacement=True, generator=torch.Generator().manual_seed(args.seed))
+        train_loader = DataLoader(SimpleDataset(train_examples), batch_size=args.micro_batch,
+                                  sampler=sampler, collate_fn=collate)
+        # class weights: 1/sqrt(count), normalize mean=1, clip [0.75, 1.50] (guide 13)
+        cls_counts = _Counter(ex["gold_type_id"] for ex in train_examples)
+        cw = [1.0 / max(float(cls_counts[c]) ** 0.5, 1e-9) for c in range(4)]
+        cw_mean = sum(cw) / 4.0
+        cw = [min(max(w / cw_mean, 0.75), 1.50) for w in cw]
+        print(f"[final_distill] class_weights={[round(w, 3) for w in cw]}", flush=True)
+        loss_fn = FinalDistillLoss(lambda_binary=0.30, lambda_kl=0.30, lambda_pair=0.05,
+                                   temperature=2.0, pair_margin=args.pair_margin,
+                                   class_weights=cw)
+        model = build_neural_student(cfg, freeze_base=False, device=device)
+        t0 = time.time()
+        run_dir = out_root / f"final_distilled_student"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        best_state, history = train_neural_final(
+            model, train_loader, dev_loader, loss_fn, tokenizer,
+            epochs=args.epochs, lr_lora=args.lr_lora, lr_head=args.lr_head,
+            grad_accum=max(1, args.effective_batch // args.micro_batch),
+            eval_steps=args.eval_steps, save_steps=args.eval_steps,
+            patience=args.patience, seed=args.seed, out_dir=run_dir,
+            device=device, architecture=args.architecture, resume=args.resume,
+            max_steps=args.max_steps)
+        print(f"training wall time: {time.time() - t0:.0f}s", flush=True)
+        if args.max_steps is not None and args.max_steps <= 10:
+            # smoke mode: verify training loop + checkpoint save, skip full test
+            save_checkpoint(model, tokenizer, run_dir / "final_smoke", args.architecture)
+            (run_dir / "smoke_ok.json").write_text(
+                json.dumps({"setting": "final_distill", "seed": args.seed, "steps": args.max_steps,
+                            "wall_seconds": round(time.time() - t0, 1)}, ensure_ascii=False, indent=2),
+                encoding="utf-8")
+            print("SMOKE OK (5 steps)", flush=True)
+            return
+        test_m = evaluate_neural_full(model, test_loader, device, args.architecture, loss_fn)
+        print("TEST:", json.dumps(test_m, ensure_ascii=False), flush=True)
+        save_checkpoint(model, tokenizer, run_dir / "final", args.architecture)
+        (run_dir / "final_distill_metrics.json").write_text(
+            json.dumps({"setting": "final_distill", "architecture": args.architecture, "seed": args.seed,
+                        "rows": len(train_examples), "test": test_m,
+                        "history": history, "wall_seconds": round(time.time() - t0, 1),
+                        "class_weights": [round(w, 3) for w in cw]}, ensure_ascii=False, indent=2),
+            encoding="utf-8")
+        return
 
     if args.eval_only:
         model = build_neural_student(cfg, freeze_base=True, device=device)
@@ -461,7 +523,7 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--backend", default="linear", choices=["linear", "neural"])
-    ap.add_argument("--setting", default="full_distill", choices=["gold", "soft_distill", "full_distill", "final_student"])
+    ap.add_argument("--setting", default="full_distill", choices=["gold", "soft_distill", "full_distill", "final_student", "final_distill"])
     ap.add_argument("--architecture", default="standard", choices=["standard", "interaction"])
     ap.add_argument("--model-name", default="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B")
     ap.add_argument("--manifest", default="data/prepared/exp3_neural_student/train_manifest.jsonl")

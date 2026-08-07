@@ -90,3 +90,91 @@ class FraudDistillLoss:
             "loss_pair": loss_pair.detach(),
             "loss_total": loss_total.detach(),
         }
+
+
+# ---------------------------------------------------------------------------
+# Final student loss (guide 12, final 1.5B student retrain)
+# ---------------------------------------------------------------------------
+class FinalDistillLoss:
+    """L = CE4 + 0.30*binary + 0.30*w_t*KL + 0.05*pair (gold rows)
+        L = 0.40*w_t*KL + 0.05*pair                 (teacher-only rows)
+
+    Guide 12: Gold CE dominates; binary auxiliary BCE on p_safe; MAT soft KL
+    at T=2.0 (KL x T^2); very light pair margin. Teacher reliability weight
+    w_t = clip(0.5 + 0.5*teacher_confidence, 0.5, 1.0), halved when teacher
+    disagrees with gold. Teacher-only rows (hard expansion) never get hard CE.
+    """
+
+    def __init__(self, lambda_binary: float = 0.30, lambda_kl: float = 0.30,
+                 lambda_pair: float = 0.05, temperature: float = 2.0,
+                 pair_margin: float = 0.20, class_weights: list[float] | None = None):
+        self.lambda_binary = lambda_binary
+        self.lambda_kl = lambda_kl
+        self.lambda_pair = lambda_pair
+        self.temperature = temperature
+        self.pair_margin = pair_margin
+        self.class_weights = torch.tensor(class_weights or [1.0, 1.0, 1.0, 1.0], dtype=torch.float32)
+        self.uses_batch = True
+
+    def __call__(self, logits, batch):
+        device = logits.device
+        cw = self.class_weights.to(device)
+        gold_labels = batch["gold_type_id"]
+        teacher_distribution = batch["teacher_distribution"]
+        sw = batch["sample_weight"].to(device).detach()
+
+        gold = F.cross_entropy(logits, gold_labels, weight=cw, reduction="none")
+        # teacher-only rows: no hard CE and no binary term (guide 12.2)
+        teacher_only = batch.get("teacher_only")
+        if teacher_only is not None:
+            tmask = teacher_only.to(device).float()
+            gold = gold * (1.0 - tmask)
+        gold_sw = sw if teacher_only is None else sw * (1.0 - tmask)
+        loss_gold = (gold * sw).sum() / gold_sw.sum().clamp_min(1.0)
+
+        # binary auxiliary: p_safe vs gold binary (guide 12.1)
+        loss_binary = torch.zeros((), device=device)
+        if self.lambda_binary > 0:
+            gold_bin = batch["gold_binary"].to(device).float()
+            p_safe = F.softmax(logits, dim=-1)[:, 0]
+            bce = F.binary_cross_entropy(p_safe.clamp(1e-7, 1 - 1e-7), gold_bin, reduction="none")
+            if teacher_only is not None:
+                bce = bce * (1.0 - tmask)
+            loss_binary = (bce * sw).sum() / gold_sw.sum().clamp_min(1.0)
+
+        # MAT soft KL with teacher reliability weight (guide 12.3/12.4)
+        loss_kl = torch.zeros((), device=device)
+        if self.lambda_kl > 0:
+            teacher_prob = teacher_distribution.to(device).detach()
+            conf = batch.get("teacher_confidence")
+            w_t = torch.ones_like(sw)
+            if conf is not None:
+                w_t = (0.5 + 0.5 * conf.to(device).float()).clamp(0.5, 1.0)
+            disagree = batch.get("teacher_gold_agree")
+            if disagree is not None:
+                w_t = torch.where(disagree.to(device).bool(), w_t * 0.5, w_t)
+            student_log_prob = F.log_softmax(logits / self.temperature, dim=-1)
+            kl = F.kl_div(student_log_prob, teacher_prob, reduction="none").sum(dim=-1)
+            loss_kl = (kl * sw * w_t).sum() / (sw * w_t).sum().clamp_min(1.0) * (self.temperature ** 2)
+
+        # very light pair loss (guide 12.5)
+        loss_pair = torch.zeros((), device=device)
+        if self.lambda_pair > 0 and batch.get("pair_metadata"):
+            p_unsafe = 1.0 - F.softmax(logits, dim=-1)[:, 0]
+            pairs = [pm for pm in batch["pair_metadata"] if pm is not None]
+            if pairs:
+                unsafe_idx = torch.tensor([p["unsafe_idx"] for p in pairs], dtype=torch.long, device=device)
+                safe_idx = torch.tensor([p["safe_idx"] for p in pairs], dtype=torch.long, device=device)
+                loss_pair = torch.relu(self.pair_margin - p_unsafe[unsafe_idx] + p_unsafe[safe_idx]).mean()
+
+        loss_total = (loss_gold
+                      + self.lambda_binary * loss_binary
+                      + self.lambda_kl * loss_kl
+                      + self.lambda_pair * loss_pair)
+        return loss_total, {
+            "loss_gold": loss_gold.detach(),
+            "loss_binary": loss_binary.detach(),
+            "loss_kl": loss_kl.detach(),
+            "loss_pair": loss_pair.detach(),
+            "loss_total": loss_total.detach(),
+        }

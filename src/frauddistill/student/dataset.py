@@ -171,6 +171,11 @@ def build_neural_examples(rows: list[dict], max_length: int = 1536,
             else [0.0, 0.0, 0.0, 0.0]
         if not use_teacher_soft:
             tdist[gold_type_id] = 1.0
+        teacher_confidence = float(row.get("teacher_confidence", 0.5) or 0.5)
+        teacher_label = str(row.get("teacher_label", "safe"))
+        teacher_gold_agree = row.get("teacher_gold_agree")
+        if teacher_gold_agree is None:
+            teacher_gold_agree = (teacher_label == gold_label) or (teacher_label == "unsafe" and gold_label == "unsafe")
         out.append({
             "id": row["id"],
             "text": neural_input_text(str(row.get("user_query", "")), str(row.get("target_model_answer", "")),
@@ -180,9 +185,14 @@ def build_neural_examples(rows: list[dict], max_length: int = 1536,
             "teacher_distribution": tdist,
             "teacher_score": ts,
             "teacher_type": tt,
-            "sample_weight": sample_weight(gold_source, float(row.get("teacher_confidence", 0.5)),
-                                           float(row.get("agent_agreement", 0.5)),
-                                           row.get("conflict_flags"), str(row.get("subtype", ""))),
+            "teacher_confidence": teacher_confidence,
+            "teacher_gold_agree": bool(teacher_gold_agree),
+            "teacher_only": bool(row.get("teacher_only", False)),
+            "source_bucket": str(row.get("source_bucket", "")),
+            "sample_weight": (float(row["sample_weight"]) if row.get("sample_weight") is not None
+                              else sample_weight(gold_source, teacher_confidence,
+                                                 float(row.get("agent_agreement", 0.5)),
+                                                 row.get("conflict_flags"), str(row.get("subtype", "")))),
             "pair_id": row.get("pair_id"),
             "group_id": row.get("group_id"),
             "template_family_id": row.get("template_family_id", row.get("group_id")),

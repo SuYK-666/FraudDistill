@@ -86,6 +86,10 @@ def neural_collate(batch, tokenizer, max_length=None, architecture="standard"):
         "sources": [ex.get("source", "") for ex in batch],
         "subtypes": [ex.get("subtype", "") for ex in batch],
         "languages": [ex.get("language", "") for ex in batch],
+        "gold_binary": torch.tensor([1 if ex["gold_label"] == "unsafe" else 0 for ex in batch], dtype=torch.long),
+        "teacher_confidence": torch.tensor([float(ex.get("teacher_confidence") if ex.get("teacher_confidence") is not None else 0.5) for ex in batch], dtype=torch.float32),
+        "teacher_gold_agree": torch.tensor([bool(ex["teacher_gold_agree"]) if ex.get("teacher_gold_agree") is not None else True for ex in batch], dtype=torch.bool),
+        "teacher_only": torch.tensor([bool(ex.get("teacher_only", False)) for ex in batch], dtype=torch.bool),
     }
     if architecture == "interaction":
         qm, am = segment_masks(enc["input_ids"], tokenizer)
