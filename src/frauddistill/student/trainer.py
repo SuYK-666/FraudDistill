@@ -456,6 +456,7 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                           f" | src={srcs} teacher_only={to_n}", flush=True)
                     running = {k: 0.0 for k in running}
                     _steps_since_log = 0
+                    _prev_running = dict(running)
                 if global_step > 0 and global_step % save_steps == 0:
                     if out_dir:
                         ck_path = out_dir / f"checkpoint-{global_step}"
