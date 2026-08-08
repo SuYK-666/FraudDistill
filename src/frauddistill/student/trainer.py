@@ -387,6 +387,7 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
         model.train()
         running = {"loss_gold": 0.0, "loss_binary": 0.0, "loss_kl": 0.0, "loss_pair": 0.0, "loss_total": 0.0}
         _steps_since_log = 0
+        _prev_running = {k: 0.0 for k in running}
         for step, batch in enumerate(train_loader):
             if epoch == start_epoch and step < start_step:
                 continue
@@ -418,6 +419,18 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                 _steps_since_log += 1
                 pbar.update(1)
                 pbar.set_postfix({k: f"{v / max(_steps_since_log, 1):.4f}" for k, v in running.items()})
+                _lr0 = optimizer.param_groups[0]["lr"]
+                _lr1 = optimizer.param_groups[1]["lr"] if len(optimizer.param_groups) > 1 else _lr0
+                step_comp = {k: running[k] - _prev_running.get(k, 0.0) for k in running}
+                _prev_running = dict(running)
+                if out_dir:
+                    with (out_dir / "step_log.jsonl").open("a", encoding="utf-8") as _sf:
+                        _sf.write(json.dumps({
+                            "global_step": global_step, "epoch": epoch + 1, "micro_step": step + 1,
+                            **{k: round(float(v), 4) for k, v in step_comp.items()},
+                            "grad_norm": round(float(gnorm), 4),
+                            "lr_lora": round(float(_lr0), 8), "lr_head": round(float(_lr1), 8),
+                            "ts": round(time.time(), 2)}, ensure_ascii=False) + "\n")
                 if max_steps is not None and global_step >= max_steps:
                     print(f"max_steps reached ({max_steps}); stopping", flush=True)
                     if best_state:
@@ -441,14 +454,6 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                           f" | grad={float(gnorm):.4f} lr_lora={lr0:.2e} lr_head={lr1:.2e}"
                           f" | safe={safe_n}/{len(batch.get('gold_binary', []))} en={en_n}"
                           f" | src={srcs} teacher_only={to_n}", flush=True)
-                    if out_dir:
-                        with (out_dir / "step_log.jsonl").open("a", encoding="utf-8") as _sf:
-                            _sf.write(json.dumps({
-                                "global_step": global_step, "epoch": epoch + 1, "micro_step": step + 1,
-                                **{k: round(v / max(_steps_since_log, 1), 4) for k, v in running.items()},
-                                "grad_norm": round(float(gnorm), 4),
-                                "lr_lora": round(lr0, 8), "lr_head": round(lr1, 8),
-                                "ts": round(time.time(), 2)}, ensure_ascii=False) + "\n")
                     running = {k: 0.0 for k in running}
                     _steps_since_log = 0
                 if global_step > 0 and global_step % save_steps == 0:
