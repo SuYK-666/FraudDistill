@@ -74,6 +74,8 @@ def main() -> None:
     ap.add_argument("--model", required=True, choices=list(MODELS))
     ap.add_argument("--gguf", default=None)
     ap.add_argument("--n-prompts", type=int, default=165)
+    ap.add_argument("--max-prompts", type=int, default=0,
+                    help="cap prompts actually generated (0=all)")
     ap.add_argument("--max-q-chars", type=int, default=1000)
     ap.add_argument("--server-port", type=int, default=0)
     ap.add_argument("--smoke", type=int, default=0)
@@ -90,6 +92,8 @@ def main() -> None:
         REPO / "data" / "prepared" / "e4e5_v2" / "fraudr1_unseen_prompts.jsonl", n=args.n_prompts)]
     if args.smoke:
         prompts = prompts[: args.smoke]
+    if args.max_prompts:
+        prompts = prompts[: args.max_prompts]
     out_dir = REPO / "data" / "prepared" / "e4e5_v2" / "generated_u3"
     out_dir.mkdir(parents=True, exist_ok=True)
     chat_path = out_dir / f"{args.model}_chat.jsonl"
