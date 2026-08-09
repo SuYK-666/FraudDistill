@@ -38,7 +38,7 @@ def load_u1(out_dir: Path) -> list[dict]:
     rows = []
     for m in U1_MODELS:
         for c in U1_CATS:
-            for mode in ("chat", "cont"):
+            for mode in ("chat", "cont", "sys_chat"):
                 p = out_dir / "generated_u1" / f"{m}_{c}_{mode}.jsonl"
                 gen = read_jsonl(p)
                 rows += generated_candidates(
@@ -49,7 +49,7 @@ def load_u1(out_dir: Path) -> list[dict]:
 def load_u3(out_dir: Path) -> list[dict]:
     rows = []
     for m in U3_MODELS:
-        for mode in ("chat", "cont"):
+        for mode in ("chat", "cont", "sys_chat"):
             p = out_dir / "generated_u3" / f"{m}_{mode}.jsonl"
             gen = read_jsonl(p)
             rows += generated_candidates(gen, "U3_target_style", m, m)
@@ -78,7 +78,7 @@ def main() -> None:
     lbl = Counter(r["gold_label"] for r in cands)
     print(f"[panel] gold labels after G1: {dict(lbl)}")
 
-    # ---- G2 blind judge for ambiguous ----
+    # ---- G2 blind judge for ambiguous (batched) ----
     if args.g2:
         from frauddistill.e4e5_v2.gold_mapper import judge_with_model
         import torch
@@ -87,17 +87,29 @@ def main() -> None:
         tok = AutoTokenizer.from_pretrained(judge_ckpt)
         model = AutoModelForCausalLM.from_pretrained(judge_ckpt, torch_dtype=torch.bfloat16)
         model.eval()
+        if tok.pad_token is None:
+            tok.pad_token = tok.eos_token
 
-        def predict_fn(prompt: str) -> str:
-            inp = tok(prompt, return_tensors="pt", truncation=True, max_length=1536)
-            with torch.no_grad():
-                out = model.generate(**inp, max_new_tokens=160, do_sample=False, temperature=None, top_p=None)
-            return tok.decode(out[0][inp["input_ids"].shape[1]:], skip_special_tokens=True)
+        def batched_predict(prompts: list[str], batch_size: int = 8, max_new: int = 160) -> list[str]:
+            outs = []
+            for i in range(0, len(prompts), batch_size):
+                chunk = prompts[i:i + batch_size]
+                enc = tok(chunk, return_tensors="pt", padding=True, truncation=True, max_length=1400)
+                with torch.no_grad():
+                    gen = model.generate(**enc, max_new_tokens=max_new, do_sample=False)
+                for k, g in enumerate(gen):
+                    outs.append(tok.decode(g[enc["input_ids"][k].shape[0]:], skip_special_tokens=True))
+            return outs
 
+        from frauddistill.e4e5_v2.gold_mapper import JUDGE_PROMPT
         ambiguous = [r for r in cands if not r.get("gold_label")]
-        print(f"[panel] G2 judging {len(ambiguous)} ambiguous rows")
-        for i, r in enumerate(ambiguous):
-            j = judge_with_model(predict_fn, r["user_query"], r["target_model_answer"])
+        print(f"[panel] G2 judging {len(ambiguous)} ambiguous rows (batched)")
+        prompts = [JUDGE_PROMPT.format(query=str(r.get("user_query") or "")[:2500],
+                                       answer=str(r.get("target_model_answer") or "")[:2500])
+                   for r in ambiguous]
+        raws = batched_predict(prompts)
+        for r, raw in zip(ambiguous, raws):
+            j = judge_with_model(lambda x, raw=raw: raw, r["user_query"], r["target_model_answer"])
             if j["gold_label"]:
                 r["gold_label"] = j["gold_label"]
                 r["gold_type"] = j["gold_type"]
@@ -108,8 +120,6 @@ def main() -> None:
                 r["gold_type"] = "safe" if r["gold_label"] == "safe" else "fraud_assistance"
                 r["gold_source"] = "fallback_heuristic"
                 r["metadata"]["g2"] = j
-            if (i + 1) % 50 == 0:
-                print(f"[panel] G2 {i+1}/{len(ambiguous)} done", flush=True)
         del model, tok
         import gc; gc.collect()
 

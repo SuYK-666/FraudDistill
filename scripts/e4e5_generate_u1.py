@@ -17,7 +17,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
-from frauddistill.e4e5_v2.generation import LlamaCppRunner, LlamaServerRunner, generate_cell  # noqa: E402
+from frauddistill.e4e5_v2.generation import (DEFAULT_SYSTEM, LlamaCppRunner, LlamaServerRunner,  # noqa: E402
+                                              generate_cell)
 from frauddistill.e4e5_v2.u1_queries import build_u1_queries  # noqa: E402
 
 MODEL_GGUF = {
@@ -39,6 +40,8 @@ def main() -> None:
     ap.add_argument("--n-families", type=int, default=150)
     ap.add_argument("--server-port", type=int, default=0)
     ap.add_argument("--smoke", type=int, default=0)
+    ap.add_argument("--system-chat", action="store_true",
+                    help="chat with safety system on attack-perspective families (refusal candidates)")
     args = ap.parse_args()
 
     fams = build_u1_queries(args.category, args.n_families, seed=20260809)
@@ -59,6 +62,15 @@ def main() -> None:
 
     chat_path = out_dir / f"{args.model}_{args.category}_chat.jsonl"
     cont_path = out_dir / f"{args.model}_{args.category}_cont.jsonl"
+    if args.system_chat:
+        # only attack-perspective families: safety-system prompt -> clean refusals
+        attack = [f for f in fams if f.get("perspective") == "attack"]
+        sys_path = out_dir / f"{args.model}_{args.category}_sys_chat.jsonl"
+        print(f"[u1:{args.model}:{args.category}] sys-chat gen on {len(attack)} attack families", flush=True)
+        generate_cell(attack, runner, args.model, [SEED_CHAT], MAX_NEW, TEMP, sys_path,
+                      system=DEFAULT_SYSTEM, id_prefix="u1sys", mode_label="sys_chat")
+        print(f"[u1:{args.model}:{args.category}] sys-chat done", flush=True)
+        return
     print(f"[u1:{args.model}:{args.category}] chat gen on {len(fams)} families", flush=True)
     generate_cell(fams, runner, args.model, [SEED_CHAT], MAX_NEW, TEMP, chat_path, id_prefix="u1")
     print(f"[u1:{args.model}:{args.category}] cont gen", flush=True)

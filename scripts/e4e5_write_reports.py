@@ -20,7 +20,7 @@ import numpy as np
 import yaml
 
 from frauddistill.e4e5_v2.schemas import read_jsonl
-from frauddistill.e4e5_v2.metrics import binary_metrics
+from frauddistill.e4e5_v2.metrics import binary_metrics, evaluate_rows
 from frauddistill.e4e5_v2.cluster_bootstrap import run_paired_statistics
 
 COMP_TAGS = {
@@ -65,17 +65,17 @@ def main() -> None:
         rows = [r for r in test_rows if r["id"] in preds]
         y = np.array([1 if r["gold_label"] == "unsafe" else 0 for r in rows])
         s = np.array([preds[r["id"]]["risk_score"] for r in rows])
-        m = binary_metrics(y, s, threshold=THRESHOLDS[key], label=key)
+        m = evaluate_rows(rows, preds, THRESHOLDS[key], label=key)
         e4_rows.append({"model": key, "scope": "pooled", "n": len(rows), **m})
         for shift in ("U1_category", "U2_source", "U3_target_style"):
-            idx = [i for i, r in enumerate(rows) if r["primary_shift"] == shift]
+            idx = [r for r in rows if r["primary_shift"] == shift]
             if idx:
-                ms = binary_metrics(y[idx], s[idx], threshold=THRESHOLDS[key], label=f"{key}/{shift}")
+                ms = evaluate_rows(idx, preds, THRESHOLDS[key], label=f"{key}/{shift}")
                 e4_rows.append({"model": key, "scope": shift, "n": len(idx), **ms})
 
     # E4 main table md
     with open(out_tables / "e4_main.md", "w", encoding="utf-8") as f:
-        f.write("| Model | Scope | N | Macro-F1 | Recall | FPR | MCC | AUPRC | AUROC |\n|---|---|---:|---:|---:|---:|---:|---:|---:|\n")
+        f.write("| Model | Scope | N | Macro-F1 | Recall | FPR | MCC | AUPRC | AUROC | 4-class MF1 | Strict-Fraud Recall |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
         for r in e4_rows:
             f.write(f"| {COMP_TAGS.get(r['model'], r['model'])} | {r['scope']} | {r['n']} | "
                     f"{fmt_cell(r['macro_f1'])} | {fmt_cell(r['recall'])} | {fmt_cell(r['fpr'])} | "

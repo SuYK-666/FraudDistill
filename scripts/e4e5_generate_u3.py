@@ -18,7 +18,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
-from frauddistill.e4e5_v2.generation import LlamaCppRunner, LlamaServerRunner, generate_cell  # noqa: E402
+from frauddistill.e4e5_v2.generation import (DEFAULT_SYSTEM, LlamaCppRunner, LlamaServerRunner,  # noqa: E402
+                                              generate_cell)
 from frauddistill.e4e5_v2.schemas import read_jsonl, write_jsonl  # noqa: E402
 
 MODELS = {
@@ -76,6 +77,10 @@ def main() -> None:
     ap.add_argument("--max-q-chars", type=int, default=1000)
     ap.add_argument("--server-port", type=int, default=0)
     ap.add_argument("--smoke", type=int, default=0)
+    ap.add_argument("--chat-seeds", default="7,17,42", help="comma list of chat seeds")
+    ap.add_argument("--skip-chat", action="store_true", help="only run continuation phase")
+    ap.add_argument("--skip-cont", action="store_true", help="only run chat phase")
+    ap.add_argument("--system-chat", action="store_true", help="chat with safety system (refusal candidates)")
     args = ap.parse_args()
 
     gguf = Path(args.gguf) if args.gguf else REPO / "data" / "gguf" / MODELS[args.model]
@@ -95,15 +100,25 @@ def main() -> None:
             sys.exit(2)
     else:
         runner = LlamaCppRunner(REPO / "third_party" / "llama_cpp", gguf, args.model, threads=14)
+    chat_seeds = [int(x) for x in args.chat_seeds.split(",") if x.strip()]
     t0 = time.time()
-    print(f"[u3:{args.model}] generating chat x{len(SEEDS_CHAT)} on {len(prompts)} prompts", flush=True)
-    generate_cell(prompts, runner, args.model, SEEDS_CHAT, MAX_NEW, TEMP, chat_path, id_prefix="u3")
-    print(f"[u3:{args.model}] chat done in {time.time()-t0:.0f}s", flush=True)
+    if not args.skip_chat:
+        print(f"[u3:{args.model}] generating chat x{len(chat_seeds)} on {len(prompts)} prompts", flush=True)
+        generate_cell(prompts, runner, args.model, chat_seeds, MAX_NEW, TEMP, chat_path, id_prefix="u3")
+        print(f"[u3:{args.model}] chat done in {time.time()-t0:.0f}s", flush=True)
+    if args.system_chat:
+        t0 = time.time()
+        sys_path = out_dir / f"{args.model}_sys_chat.jsonl"
+        print(f"[u3:{args.model}] generating system-chat x{len(chat_seeds)} (refusal candidates)", flush=True)
+        generate_cell(prompts, runner, args.model, chat_seeds, MAX_NEW, TEMP, sys_path,
+                      system=DEFAULT_SYSTEM, id_prefix="u3sys", mode_label="sys_chat")
+        print(f"[u3:{args.model}] system-chat done in {time.time()-t0:.0f}s", flush=True)
     t0 = time.time()
-    print(f"[u3:{args.model}] generating continuation x{len(SEEDS_CONT)}", flush=True)
-    generate_cell(prompts, runner, args.model, SEEDS_CONT, MAX_NEW, TEMP, cont_path,
-                  continuation=CONT_PREFIX, id_prefix="u3")
-    print(f"[u3:{args.model}] cont done in {time.time()-t0:.0f}s", flush=True)
+    if not args.skip_cont:
+        print(f"[u3:{args.model}] generating continuation x{len(SEEDS_CONT)}", flush=True)
+        generate_cell(prompts, runner, args.model, SEEDS_CONT, MAX_NEW, TEMP, cont_path,
+                      continuation=CONT_PREFIX, id_prefix="u3")
+        print(f"[u3:{args.model}] cont done in {time.time()-t0:.0f}s", flush=True)
 
 
 if __name__ == "__main__":

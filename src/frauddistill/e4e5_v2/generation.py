@@ -208,8 +208,10 @@ class LlamaServerRunner:
 def generate_cell(rows: list[dict], runner: LlamaCppRunner, model_key: str, seeds: list[int],
                   max_new_tokens: int, temperature: float, out_path: Path,
                   system: str | None = None, continuation: str | None = None,
-                  id_prefix: str = "gen") -> list[dict]:
+                  id_prefix: str = "gen", mode_label: str | None = None) -> list[dict]:
     """rows: prompt rows {id, user_query, family_id, ...}. Resumable."""
+    if mode_label is None:
+        mode_label = "cont" if continuation else "chat"
     out = []
     existing = {}
     if out_path.exists():
@@ -222,7 +224,7 @@ def generate_cell(rows: list[dict], runner: LlamaCppRunner, model_key: str, seed
     try:
         for i, r in enumerate(rows):
             for seed in seeds:
-                key = (r["id"], seed, "cont" if continuation else "chat")
+                key = (r["id"], seed, mode_label)
                 if key in existing:
                     out.append(existing[key])
                     n_done += 1
@@ -242,7 +244,7 @@ def generate_cell(rows: list[dict], runner: LlamaCppRunner, model_key: str, seed
                     "target_model": model_key,
                     "family_id": r.get("family_id") or r["id"],
                     "seed": seed,
-                    "mode": "cont" if continuation else "chat",
+                    "mode": mode_label,
                     "language": r.get("language", "zh"),
                     "fraud_category": r.get("fraud_category", ""),
                     "perspective": r.get("perspective", ""),
