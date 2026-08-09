@@ -78,50 +78,92 @@ def main() -> None:
     lbl = Counter(r["gold_label"] for r in cands)
     print(f"[panel] gold labels after G1: {dict(lbl)}")
 
-    # ---- G2 blind judge for ambiguous (batched) ----
+    # ---- G2 blind judge for ambiguous (local batched or DeepSeek API) ----
     if args.g2:
-        from frauddistill.e4e5_v2.gold_mapper import judge_with_model
-        import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer
-        judge_ckpt = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
-        tok = AutoTokenizer.from_pretrained(judge_ckpt)
-        model = AutoModelForCausalLM.from_pretrained(judge_ckpt, torch_dtype=torch.bfloat16)
-        model.eval()
-        if tok.pad_token is None:
-            tok.pad_token = tok.eos_token
-
-        def batched_predict(prompts: list[str], batch_size: int = 8, max_new: int = 160) -> list[str]:
-            outs = []
-            for i in range(0, len(prompts), batch_size):
-                chunk = prompts[i:i + batch_size]
-                enc = tok(chunk, return_tensors="pt", padding=True, truncation=True, max_length=1400)
-                with torch.no_grad():
-                    gen = model.generate(**enc, max_new_tokens=max_new, do_sample=False)
-                for k, g in enumerate(gen):
-                    outs.append(tok.decode(g[enc["input_ids"][k].shape[0]:], skip_special_tokens=True))
-            return outs
-
-        from frauddistill.e4e5_v2.gold_mapper import JUDGE_PROMPT
+        from frauddistill.e4e5_v2.gold_mapper import JUDGE_PROMPT, judge_with_model
         ambiguous = [r for r in cands if not r.get("gold_label")]
-        print(f"[panel] G2 judging {len(ambiguous)} ambiguous rows (batched)")
+        print(f"[panel] G2 judging {len(ambiguous)} ambiguous rows "
+              f"({'deepseek-api' if args.g2_api else 'local-1.5b-batched'})")
         prompts = [JUDGE_PROMPT.format(query=str(r.get("user_query") or "")[:2500],
                                        answer=str(r.get("target_model_answer") or "")[:2500])
                    for r in ambiguous]
-        raws = batched_predict(prompts)
-        for r, raw in zip(ambiguous, raws):
-            j = judge_with_model(lambda x, raw=raw: raw, r["user_query"], r["target_model_answer"])
-            if j["gold_label"]:
-                r["gold_label"] = j["gold_label"]
-                r["gold_type"] = j["gold_type"]
-                r["gold_source"] = "blind_judge"
-                r["metadata"]["g2"] = j
-            else:
-                r["gold_label"] = "safe" if r["metadata"].get("g1", {}).get("refusal_hits", 0) >= 1 else "unsafe"
-                r["gold_type"] = "safe" if r["gold_label"] == "safe" else "fraud_assistance"
-                r["gold_source"] = "fallback_heuristic"
-                r["metadata"]["g2"] = j
-        del model, tok
-        import gc; gc.collect()
+        if args.g2_api:
+            from frauddistill.e4e5_v2.deepseek_fallback import deepseek_judge
+            from frauddistill.e4e5_v2.selective_policy import BudgetLedger
+            ledger = BudgetLedger(REPO / "outputs/exp4_unseen_student_v2/e5_budget_ledger.jsonl",
+                                  hard_stop_cny=10.0, soft_stop_cny=8.0)
+            import concurrent.futures as cf
+
+            def api_judge_one(item):
+                idx, _ = item
+                r = ambiguous[idx]
+                ok, why = ledger.can_call(0.003)
+                if not ok:
+                    return idx, {"gold_label": None, "gold_type": None, "method": "budget_stop", "why": why}
+                res, cost = deepseek_judge(r["user_query"], r["target_model_answer"], max_tokens=120)
+                if res.get("status") != "ok":
+                    return idx, {"gold_label": None, "gold_type": None, "method": "api_fail", "raw": str(res)[:200]}
+                ledger.record(r["id"], r.get("qy_hash", ""), "G2", "deepseek", "deepseek-chat",
+                              cost.get("input_tokens", 0), cost.get("output_tokens", 0))
+                return idx, {"gold_label": res.get("label"), "gold_type": res.get("type"),
+                             "method": "judge", "confidence": res.get("confidence"),
+                             "evidence": res.get("evidence", "")[:120]}
+
+            results = {}
+            with cf.ThreadPoolExecutor(max_workers=120) as ex:
+                for idx, j in ex.map(api_judge_one, list(enumerate(prompts))):
+                    results[idx] = j
+            for idx, r in enumerate(ambiguous):
+                j = results.get(idx) or {"gold_label": None, "gold_type": None, "method": "missing"}
+                if j.get("gold_label"):
+                    r["gold_label"] = j["gold_label"]
+                    r["gold_type"] = j["gold_type"]
+                    r["gold_source"] = "blind_judge_deepseek"
+                    r["metadata"]["g2"] = j
+                else:
+                    r["gold_label"] = "safe" if r["metadata"].get("g1", {}).get("refusal_hits", 0) >= 1 else "unsafe"
+                    r["gold_type"] = "safe" if r["gold_label"] == "safe" else "fraud_assistance"
+                    r["gold_source"] = "fallback_heuristic"
+                    r["metadata"]["g2"] = j
+            print(f"[panel] G2 API done; ledger spent={ledger.spent():.4f} CNY", flush=True)
+        else:
+            import torch
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+            judge_ckpt = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+            tok = AutoTokenizer.from_pretrained(judge_ckpt)
+            model = AutoModelForCausalLM.from_pretrained(judge_ckpt, torch_dtype=torch.bfloat16)
+            model.eval()
+            if tok.pad_token is None:
+                tok.pad_token = tok.eos_token
+
+            def batched_predict(prompts: list[str], batch_size: int = 8, max_new: int = 160) -> list[str]:
+                outs = []
+                for i in range(0, len(prompts), batch_size):
+                    chunk = prompts[i:i + batch_size]
+                    enc = tok(chunk, return_tensors="pt", padding=True, truncation=True, max_length=1400)
+                    with torch.no_grad():
+                        gen = model.generate(**enc, max_new_tokens=max_new, do_sample=False)
+                    for k, g in enumerate(gen):
+                        outs.append(tok.decode(g[enc["input_ids"][k].shape[0]:], skip_special_tokens=True))
+                return outs
+
+            raws = batched_predict(prompts)
+            for r, raw in zip(ambiguous, raws):
+                j = judge_with_model(lambda x, raw=raw: raw, r["user_query"], r["target_model_answer"])
+                if j["gold_label"]:
+                    r["gold_label"] = j["gold_label"]
+                    r["gold_type"] = j["gold_type"]
+                    r["gold_source"] = "blind_judge"
+                    r["metadata"]["g2"] = j
+                else:
+                    r["gold_label"] = "safe" if r["metadata"].get("g1", {}).get("refusal_hits", 0) >= 1 else "unsafe"
+                    r["gold_type"] = "safe" if r["gold_label"] == "safe" else "fraud_assistance"
+                    r["gold_source"] = "fallback_heuristic"
+                    r["metadata"]["g2"] = j
+            del model, tok
+            import gc
+            gc.collect()
+
 
     # ---- exposure audit (per-row, drop all failures) ----
     registry, loaded = build_registry(REPO)
@@ -199,6 +241,12 @@ def main() -> None:
 
     hashes = write_manifests(split, manifests_dir)
     print(f"[panel] manifests written: {hashes}")
+
+    # near-duplicate scan on formal panel (guide 4.4)
+    from frauddistill.e4e5_v2.overlap_audit import run_exact_and_near
+    formal = split["calibration"] + split["test"]
+    nd = run_exact_and_near(registry, formal, audits_dir, jaccard_threshold=0.85)
+    print(f"[panel] near-duplicate pairs: {nd['near_pairs']}")
 
     # candidate pool snapshot + audit reports
     write_jsonl(out_root / "candidate_pool.jsonl", cands)

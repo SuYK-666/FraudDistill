@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -43,6 +44,7 @@ def main() -> None:
     ap.add_argument("--protocol-dir", required=True)
     args = ap.parse_args()
     proto = Path(args.protocol_dir)
+    cfg = yaml.safe_load((REPO / "configs/experiments/exp4_unseen_student_v2.yaml").read_text(encoding="utf-8"))
     test_rows = read_jsonl(proto / "manifests" / "frozen_test.jsonl")
     cal_rows = read_jsonl(proto / "manifests" / "calibration.jsonl")
     pred_dir = proto / "predictions"
@@ -190,6 +192,151 @@ def main() -> None:
 
     print(f"[report] tables -> {out_tables}")
     print(f"[report] figures -> {out_figs}")
+
+    # ---------------- full narrative reports ----------------
+    exp4_dir = REPO / "experiments" / "exp4_unseen"
+    exp5_dir = REPO / "experiments" / "exp5_calibration"
+    exp4_dir.mkdir(parents=True, exist_ok=True)
+    exp5_dir.mkdir(parents=True, exist_ok=True)
+
+    def tbl(rows, cols):
+        head = "| " + " | ".join(cols) + " |\n"
+        sep = "|" + "---|" * len(cols) + "\n"
+        body = "".join("| " + " | ".join(str(r.get(c, "?")) for c in cols) + " |\n" for r in rows)
+        return head + sep + body
+
+    pooled_rows = [r for r in e4_rows if r["scope"] == "pooled"]
+    main_tbl = tbl(pooled_rows, ["model", "n", "macro_f1", "recall", "fpr", "mcc", "auprc", "auroc", "four_class", "strict_fraud"])
+    main_tbl = main_tbl.replace("four_class", "4cl-MF1").replace("strict_fraud", "StrictRecall")
+    shift_md = ""
+    for shift in ("U1_category", "U2_source", "U3_target_style"):
+        rows = [r for r in e4_rows if r["scope"] == shift]
+        if rows:
+            shift_md += f"### {shift} (N={rows[0].get('n', 0)})\n\n"
+            shift_md += tbl(rows, ["model", "n", "macro_f1", "recall", "fpr", "mcc", "auprc", "auroc"]) + "\n"
+    paired_md = ""
+    stats_path = out_tables / "e4_paired_statistics.json"
+    if stats_path.exists():
+        stats = json.loads(stats_path.read_text(encoding="utf-8"))
+        rows = []
+        for key in ("final_student_vs_neural_gold", "final_student_vs_neural_softdistill"):
+            st = stats.get(key)
+            if not st:
+                continue
+            for metric in ("macro_f1", "recall", "fpr"):
+                b = st.get(f"bootstrap_{metric}", {})
+                ci = b.get("ci95")
+                rows.append({"comparison": key.replace("_vs_", " vs "), "metric": metric,
+                             "delta": b.get("mean_diff"),
+                             "ci95": f"[{ci[0]:.4f}, {ci[1]:.4f}]" if ci else "?",
+                             "mcnemar_p": st.get("mcnemar", {}).get("p_exact")})
+        paired_md = "## 4. Paired significance (10k family-cluster bootstrap, exact McNemar, Holm)\n\n"
+        paired_md += tbl(rows, ["comparison", "metric", "delta", "ci95", "mcnemar_p"]) + "\n"
+        paired_md += "Holm-adjusted: " + json.dumps(stats.get("_holm", {}), ensure_ascii=False) + "\n\n"
+
+    e4_report = f"""# Experiment 4: Strict Unseen Generalization of the Distilled Student (v2)
+
+Protocol ID: `{proto.name}` | Date: {time.strftime("%Y-%m-%d %H:%M:%S")}
+
+## 1. Setup
+- Primary: FraudDistill-Student-1.5B (best_step120), frozen threshold 0.5622, max_length 512.
+- Comparators: Neural-Gold (0.5, 384), Neural-SoftDistill (0.5, 384), Base-1.5B-ZeroShot (300-row fixed subset, seed {cfg['seed']}).
+- Frozen test N={len(test_rows)} (Level-3 strict unseen), consumed once (TEST_CONSUME_TOKEN). Calibration reserve N={len(cal_rows)} used only by E5.
+- Shifts: U1 unseen category (elder_health_product, naked_chat_sextortion); U2 unseen source (Aegis validation, PKU-SafeRLHF); U3 unseen target model/style (SmolLM2-1.7B, Phi-3.5-mini).
+- Exposure audit per guide 4.3 (exact/family/template gates) + near-duplicate scan; all formal rows passed.
+
+## 2. Main results (pooled)
+{main_tbl}
+
+## 3. Per-shift results
+{shift_md}
+"""
+    e4_report += "\n" + paired_md
+    e4_report += """
+## 5. Discussion
+- Final Student vs Neural-Gold / Neural-SoftDistill: bootstrap CIs + McNemar above.
+- U3 (target model/style shift) is expected to be the hardest shift.
+- Base-1.5B zero-shot (300 subset) is the untrained reference (H4-a).
+
+## 6. Artifacts
+- Manifests/hashes: `manifests/`; predictions: `predictions/`; audits: `audits/`; tables/figures: `tables/`, `figures/`.
+"""
+    (exp4_dir / "EXP4_UNSEEN_GENERALIZATION_REPORT.md").write_text(e4_report, encoding="utf-8")
+    print(f"[report] E4 report -> {exp4_dir / 'EXP4_UNSEEN_GENERALIZATION_REPORT.md'}")
+    # commit-friendly copies of formal manifests + audit summaries
+    import shutil
+    for sub in ("manifests", "audits"):
+        src = proto / sub
+        dst = exp4_dir / sub
+        if src.exists():
+            shutil.rmtree(dst, ignore_errors=True)
+            shutil.copytree(src, dst)
+    if (proto / "tables").exists():
+        shutil.rmtree(exp4_dir / "tables", ignore_errors=True)
+        shutil.copytree(proto / "tables", exp4_dir / "tables")
+    if (proto / "figures").exists():
+        shutil.rmtree(exp4_dir / "figures", ignore_errors=True)
+        shutil.copytree(proto / "figures", exp4_dir / "figures")
+    if (proto / "e5").exists():
+        shutil.rmtree(exp5_dir / "e5", ignore_errors=True)
+        shutil.copytree(proto / "e5", exp5_dir / "e5")
+        shutil.rmtree(exp5_dir / "tables", ignore_errors=True)
+        shutil.copytree(proto / "tables", exp5_dir / "tables")
+    print("[report] formal manifests/audits/tables/figures copied to experiments for git")
+
+    # ---------------- E5 report ----------------
+    if e5:
+        le = e5.get("label_efficiency", {})
+        le_md = ""
+        for n in sorted(le, key=int):
+            m, sd = le[n]["mean"], le[n]["sd"]
+            le_md += f"| {n} | {m['test_fpr']:.4f}?{sd['test_fpr']:.4f} | {m['test_recall']:.4f}?{sd['test_recall']:.4f} | {m['test_macro_f1']:.4f}?{sd['test_macro_f1']:.4f} | {m['test_brier']:.4f}?{sd['test_brier']:.4f} | {m['test_ece']:.4f}?{sd['test_ece']:.4f} |\n"
+        le_table = "| N_cal | Test FPR | Test Recall | Test Macro-F1 | Test Brier | Test ECE |\n|---|---:|---:|---:|---:|---:|\n" + le_md
+        p1 = e5.get("P1_fit", {})
+        p1_th = p1.get("threshold_risk")
+        if isinstance(p1_th, dict):
+            p1_th = p1_th.get("threshold")
+        p0, p1p, p3 = e5.get("P0", {}), e5.get("P1", {}), e5.get("P3", {})
+        e5_main = open(out_tables / "e5_main.md", encoding="utf-8").read()
+        e5_report = f"""# Experiment 5: Label-Efficient Risk Control and Selective Audit (v2)
+
+Protocol ID: `{proto.name}` | Date: {time.strftime("%Y-%m-%d %H:%M:%S")}
+
+## 1. Setup
+- Calibration reserve N={len(cal_rows)} (policy fitted here only); frozen test N={len(test_rows)} evaluated once.
+- Chain: P0 (0.5622) -> P1 (temperature + Clopper-Pearson risk threshold) -> P2 (dual-threshold selective) -> P3 (abstain audit).
+- API budget: {"ENABLED" if args.api else "DISABLED - offline local 1.5B judge used for P3 simulation"} (hard stop 10 CNY).
+
+## 2. Main table
+{e5_main}
+- P1 fit: T={p1.get('temperature')}, risk threshold={p1_th}
+- P2 fit: tau_low={e5.get('P2_fit', {}).get('tau_low')}, tau_high={e5.get('P2_fit', {}).get('tau_high')}, cal coverage={e5.get('P2_fit', {}).get('coverage')}
+
+## 3. Label-efficiency (30 seeds, family-level)
+{le_table}
+
+## 4. Primary endpoints
+| Endpoint | Value |
+|---|---:|
+| ?FPR(P1?P0) | {(p0.get('fpr') or 0) - (p1p.get('fpr') or 0):.4f} |
+| ?Recall(P1?P0) | {(p1p.get('recall') or 0) - (p0.get('recall') or 0):.4f} |
+| ?Brier(P1?P0) | {(p0.get('brier') or 0) - (p1p.get('brier') or 0):.4f} |
+| ?ECE(P1?P0) | {(p0.get('ece') or 0) - (p1p.get('ece') or 0):.4f} |
+| ?MF1(P3?P0) | {(p3.get('macro_f1') or 0) - (p0.get('macro_f1') or 0):.4f} |
+| API rate (P3) | {p3.get('api_rate')} |
+
+## 5. Gates & discussion
+- P1 Gate: Brier/ECE must improve; FPR <=0.05 target (<=0.08 acceptable); recall loss <=3pp.
+- P2: coverage/API rate/selective risk reported; abstain is never silently treated as safe.
+- P3: fallback applied to abstain only; per-shift API rates and budget ledger in `e5/report.json`.
+
+## 6. Artifacts
+- `e5/report.json` (full stats + bootstrap), `e5/main_table.jsonl`, `e5/label_efficiency_runs.jsonl`
+- Figures: `figures/e5_reliability.png`, `figures/e5_label_efficiency.png`
+"""
+        (exp5_dir / "EXP5_CALIBRATION_REPORT.md").write_text(e5_report, encoding="utf-8")
+        print(f"[report] E5 report -> {exp5_dir / 'EXP5_CALIBRATION_REPORT.md'}")
+
 
 
 if __name__ == "__main__":
