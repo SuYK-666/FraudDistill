@@ -40,7 +40,8 @@ def load_checkpoint(ckpt_dir: Path, architecture: str = "standard", max_length: 
 
 
 def predict_scores(model, tokenizer, rows: list[dict], max_length: int = 512,
-                   architecture: str = "standard", micro_batch: int = 8, with_logits: bool = False):
+                   architecture: str = "standard", micro_batch: int = 8, with_logits: bool = False,
+                   progress_path: Path | None = None, tag: str = ""):
     """Rows need user_query/target_model_answer/id. Returns preds + logits."""
     exs = build_neural_examples(rows, max_length=max_length, use_teacher_soft=True, use_pairwise=False)
 
@@ -51,8 +52,10 @@ def predict_scores(model, tokenizer, rows: list[dict], max_length: int = 512,
     loader = DataLoader(D(), batch_size=micro_batch, shuffle=False,
                         collate_fn=lambda b: neural_collate(b, tokenizer, max_length=max_length, architecture=architecture))
     preds, logits_list = [], []
+    t0 = time.time()
+    n_batches = (len(exs) + micro_batch - 1) // micro_batch
     with torch.no_grad():
-        for batch in loader:
+        for bi, batch in enumerate(loader):
             kw = {}
             if batch.get("query_mask") is not None:
                 kw["query_mask"] = batch["query_mask"]
@@ -67,6 +70,16 @@ def predict_scores(model, tokenizer, rows: list[dict], max_length: int = 512,
                 preds.append({"id": rid, "label": "unsafe" if risk >= 0.5 else "safe",
                               "risk_type": max(type_probs, key=type_probs.get),
                               "risk_score": round(risk, 4), "type_probabilities": type_probs})
+            if progress_path is not None and (bi % 20 == 0 or bi == n_batches - 1):
+                done = min(len(preds), len(exs))
+                row = {"tag": tag, "rows_done": done, "rows_total": len(exs),
+                       "batches_done": bi + 1, "batches_total": n_batches,
+                       "elapsed_s": round(time.time() - t0, 1),
+                       "rows_per_s": round(done / max(time.time() - t0, 1e-6), 3),
+                       "ts": time.strftime("%Y-%m-%dT%H:%M:%S")}
+                progress_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(progress_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(row, ensure_ascii=False) + "\n")
     return preds, logits_list
 
 
@@ -74,7 +87,9 @@ def run_inference(rows: list[dict], ckpt_dir: Path, out_path: Path, threshold: f
                   max_length: int = 512, micro_batch: int = 8, tag: str = "") -> dict:
     t0 = time.time()
     model, tokenizer = load_checkpoint(ckpt_dir, max_length=max_length)
-    preds, _ = predict_scores(model, tokenizer, rows, max_length=max_length, micro_batch=micro_batch)
+    progress_path = out_path.parent / "inference_progress.jsonl"
+    preds, _ = predict_scores(model, tokenizer, rows, max_length=max_length, micro_batch=micro_batch,
+                              progress_path=progress_path, tag=tag)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         for p in preds:
