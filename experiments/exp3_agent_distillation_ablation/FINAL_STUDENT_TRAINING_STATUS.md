@@ -1,24 +1,30 @@
-# 最终 1.5B 学生模型训练 — 进行状态（2026-08-08 19:53 更新）
+# 最终 1.5B 学生模型训练 — 完成状态（2026-08-09）
 
-## 当前状态：训练中（第 3 次启动，从 step 160 恢复）
-- **进程**：训练 PID 21432（19:44:38 启动），watchdog PID 22836。
-- **恢复点**：`resume.pt`（step 160/296，epoch 2 内 micro-step 87）→ 已确认恢复并正常推进（step 161-163 loss 波动正常）。
-- **剩余**：~133 步 × ~3 min ≈ 6.7 小时 → 预计 2026-08-09 02:30 左右完成训练；随后 watchdog 自动执行：dev 选点（fast 300→top-3 全量）→ 阈值校准（FPR≤0.05 & recall≥0.82）→ reload checksum（128 条 ≤1e-5）→ 正式 test（单次冻结阈值）。
+## 训练（已完成）
+- 配方：scripts/train_exp3_students.py --setting final_distill，seed 11，LoRA r=32/alpha=64 + head（modules_to_save），2 epochs / 296 步，训练池 4,747 行；wall ≈ 8.0h（含 3 次断电续训，resume 确定性重放验证通过）。
+- 训练中 dev（300 子集 @0.5）：step 40 MF1 0.8397 -> step 120 0.9123 -> step 200 0.9126（best）-> step 280 0.9118 -> epoch2 末 0.9085；loss 收敛正常。
+- 最佳 checkpoint：best_step120（两阶段 dev 选点：fast 300 -> top-3 全量 dev，FPR<=0.055 & recall>=0.82 下最大 MF1）。
 
-## 已完成进度（54%+）
-| 评估点 | MF1 | Recall | FPR | AUPRC | MCC |
-|---|---:|---:|---:|---:|---:|
-| step 40 | 0.8397 | 0.8824 | 0.1951 | 0.9262 | 0.6843 |
-| step 80 | 0.8863 | 0.9118 | 0.1341 | 0.9616 | 0.7745 |
-| step 120（best） | 0.9123 | 0.8897 | 0.0671 | 0.9733 | 0.8250 |
-| epoch1 结束 | 0.8995 | 0.9118 | 0.1098 | - | - |
-| step 160 | 0.9094 | 0.9118 | 0.0915 | 0.9675 | 0.8189 |
+## 官方验收（已完成，产物在 outputs/neural_student/final_distilled_student/）
+- 冻结阈值：0.5622（dev：MF1 0.9115 / FPR 0.0421 / Recall 0.8623）。
+- Reload checksum：128 样本 max logit diff 0.0 -> PASS（修复了 legacy 加载路径的 PeftModel 双重包裹 bug，score head 未加载问题）。
+- 正式 test（n=1,262，单次冻结阈值）：
 
-- Best（step 120）：Acc 0.9133、Real-only MF1 0.7797、Synthetic 0.9924
-- Gate 差距：FPR 0.067 vs ≤0.050（epoch 2 若持续不改善，patience=4 自动早停）
-- 断点续训无损已验证（step 61-66 确定性重放逐位一致）
+| 指标 | 结果 | Hard Gate | 目标 |
+|---|---:|---:|---:|
+| Macro-F1 | 0.9135 | >=0.885 PASS | >=0.900 PASS |
+| Accuracy | 0.9136 | >=0.885 PASS | >=0.900 PASS |
+| Recall | 0.8853 | >=0.81 PASS | >=0.84 PASS |
+| FPR | 0.0591 | <=0.050 FAIL（差 0.9pp） | <=0.040 FAIL |
+| AUPRC | 0.9717 | >=0.950 PASS | >=0.960 PASS |
+| MCC | 0.8282 | >=0.780 PASS | >=0.800 PASS |
+| Real-only MF1 | 0.7913 | >=0.740 PASS | >=0.780 PASS |
+| Synthetic MF1 | 0.9938 | >=0.950 PASS | 0.95-0.99 达标 |
+| 4-class MF1 | 0.4657 | >=0.430 PASS | >=0.480 FAIL |
 
-## 完成后
-1. watchdog 自动跑完选点/校准/reload/正式 test（产物在 run dir）
-2. `python scripts/finalize_exp3_final_student.py`（打包 §28 产物 + 报告 §16.10 + Gate 判定）
-3. 更新报告摘要与 §16.9；commit + push GitHub
+- 机制切片：direct recall 0.9812 / trust 1.0 / leakage 0.9667 / clean-refusal FPR 0.0105 / hard-safe FPR 0.0 / over-refusal 0.9333 / context-flip pair acc 0.9474。
+- 对比 Neural-SoftDistill：MF1 +0.0286、Recall +0.0759、Real-only +0.1018、4-class +0.0525、MCC +0.0487、AUPRC +0.0185；FPR +0.0187。
+- 结论：8/9 Hard Gate 通过（仅 FPR 一项未达 <=0.050）；按指南 §25 单模型原则不进行二次训练，论文 Student 回退 Neural-SoftDistill；FraudDistill-Student-1.5B 权重与全部验收产物完整保留，供复现/部署决策使用。
+
+## 产物清单
+training_config.json / training_state.json / data_manifest.json / data_audit.json / best_checkpoint.json / calibration.json / dev_metrics.json / reload_checksum.json / test_metrics.json / slice_metrics.json / gate_result.json / model_card.md / test_eval/（predictions_test.jsonl）+ best_step120 等 checkpoint 目录（adapter_config.json + adapter_model.safetensors）

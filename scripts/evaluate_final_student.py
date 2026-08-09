@@ -340,15 +340,19 @@ def main():
         model1, tok = load_checkpoint(ckpt, args.architecture, args.max_length)
         _, logits1 = predict_scores(model1, tok, rows, args.max_length, args.architecture,
                                     micro_batch=args.micro_batch, with_logits=True)
-        # path 2: build with LoRA then load adapter (legacy path)
+        # path 2: build with LoRA (training-time structure) then load the adapter
+        # NOTE: PeftModel.from_pretrained on an already-wrapped PeftModel would
+        # double-wrap it: modules_to_save keys (score/classifier) shift and the
+        # trained classification head silently fails to load (random head ->
+        # O(1e1) logit diffs). Use load_adapter to overwrite in place instead.
         tokenizer = AutoTokenizer.from_pretrained(ckpt)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
-        from peft import LoraConfig, PeftModel, get_peft_model
+        from peft import LoraConfig, get_peft_model
         cfg = NeuralStudentConfig(model_name=BASE_MODEL, architecture=args.architecture,
                                   max_length=args.max_length, lora_r=32, lora_alpha=64, use_lora=True)
         model2 = build_neural_student(cfg, freeze_base=True)
-        model2 = PeftModel.from_pretrained(model2, str(ckpt))
+        model2.load_adapter(str(ckpt), adapter_name="default")
         model2.eval()
         _, logits2 = predict_scores(model2, tok, rows, args.max_length, args.architecture,
                                     micro_batch=args.micro_batch, with_logits=True)
