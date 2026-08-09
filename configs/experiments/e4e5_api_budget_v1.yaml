@@ -1,0 +1,12 @@
+api_budget:
+  enabled_by_default: false
+  provider: deepseek
+  soft_stop_cny: 8.0
+  hard_stop_cny: 10.0
+  hard_stop_includes_retries: true
+  allow_other_providers: false
+  allocation:
+    u3_generation: 4.0
+    gold_adjudication: 2.0
+    p3_audit: 3.0
+    retry_reserve: 1.0

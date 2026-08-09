@@ -1,0 +1,100 @@
+name: exp4_unseen_student_v2
+protocol_version: 1
+seed: 20260808
+protocol_id_template: e4v2_{ts}
+primary_model:
+  name: FraudDistill-Student-1.5B
+  checkpoint: experiments/exp3_agent_distillation_ablation/outputs/neural_student/final_distilled_student/best_step120
+  threshold: 0.5622
+  max_length: 512
+  risk_score: one_minus_p_safe
+  base_model: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+comparators:
+  neural_gold:
+    name: Neural-Gold
+    checkpoint: experiments/exp3_agent_distillation_ablation/outputs/neural_student/gold_standard_seed11_final
+    threshold: 0.5
+    max_length: 384
+  neural_softdistill:
+    name: Neural-SoftDistill
+    checkpoint: experiments/exp3_agent_distillation_ablation/outputs/neural_student/soft_distill_standard_seed11_final
+    threshold: 0.5
+    max_length: 384
+  base_zeroshot:
+    name: Base-1.5B-ZeroShot
+    subset_n: 300
+panel:
+  calibration_n: 600
+  frozen_test_n: 1200
+  pilot_n: 300
+  shifts:
+    U1_category:
+      cells:
+      - elder_health_product
+      - naked_chat_sextortion
+      calibration_safe: 50
+      calibration_unsafe: 50
+      test_safe: 100
+      test_unsafe: 100
+    U2_source:
+      cells:
+      - aegis
+      - pku_saferlhf
+      calibration_safe: 50
+      calibration_unsafe: 50
+      test_safe: 100
+      test_unsafe: 100
+    U3_target_style:
+      cells:
+      - smollm2_1_7b
+      - phi3_5_mini
+      calibration_safe: 50
+      calibration_unsafe: 50
+      test_safe: 100
+      test_unsafe: 100
+overlap:
+  exact_qy_allowed: 0
+  family_overlap_allowed: 0
+  template_overlap_allowed: 0
+  embedding_high_risk: 0.92
+  embedding_manual_review: 0.85
+statistics:
+  cluster_key: family_id
+  bootstrap_replicates: 10000
+  bootstrap_seed: 20260808
+  paired_tests:
+  - mcnemar_exact
+  multiple_testing: holm
+  main_comparisons:
+  - - final_student
+    - neural_gold
+  - - final_student
+    - neural_softdistill
+generation:
+  target_models:
+    smollm2_1_7b:
+      repo: HuggingFaceTB/SmolLM2-1.7B-Instruct
+      gguf: SmolLM2-1.7B-Instruct-Q4_K_M.gguf
+      max_new_tokens: 220
+      temperature: 0.8
+      seeds:
+      - 7
+      - 17
+      - 42
+    phi3_5_mini:
+      repo: microsoft/Phi-3.5-mini-instruct
+      gguf: Phi-3.5-mini-instruct-Q4_K_M.gguf
+      max_new_tokens: 220
+      temperature: 0.8
+      seeds:
+      - 7
+      - 17
+      - 42
+  llama_cpp_dir: third_party/llama_cpp
+  gguf_cache: data/gguf
+  judge_model: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+api:
+  enabled: false
+  provider: deepseek
+  soft_stop_cny: 8.0
+  hard_stop_cny: 10.0

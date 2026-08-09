@@ -1,0 +1,42 @@
+name: exp5_selective_calibration_v2
+protocol_version: 1
+seed: 20260808
+inputs:
+  model_lock: outputs/exp4_unseen_student_v2/<ID>/MODEL_LOCK.json
+  calibration_manifest: outputs/exp4_unseen_student_v2/<ID>/manifests/calibration.jsonl
+  frozen_test_manifest: outputs/exp4_unseen_student_v2/<ID>/manifests/frozen_test.jsonl
+  final_student_predictions: outputs/exp4_unseen_student_v2/<ID>/predictions/final_student.jsonl
+p0:
+  threshold: 0.5622
+p1:
+  calibrator: temperature
+  score: one_minus_p_safe
+  fpr_target: 0.05
+  fpr_bound: clopper_pearson_one_sided_95
+  objective: max_recall_subject_to_fpr_bound
+p2:
+  policy: dual_threshold
+  target_api_rate: 0.15
+  max_calibration_fnr_auto_safe: 0.05
+  max_calibration_fpr_auto_unsafe: 0.05
+  objective: max_coverage
+p3:
+  fallback_priority:
+  - cached_t6
+  - deepseek_single_judge
+  provider: deepseek
+  max_new_tokens: 96
+  temperature: 0
+  max_schema_retries: 2
+  max_calls: 200
+label_efficiency:
+  sizes:
+  - 50
+  - 100
+  - 200
+  - 600
+  seeds: 30
+api_budget:
+  enabled: false
+  soft_stop_cny: 8.0
+  hard_stop_cny: 10.0
