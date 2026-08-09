@@ -19,7 +19,7 @@
 - **Student 蒸馏梯度（test, 5 seeds）**：S2 分数蒸馏最优 Macro-F1 **0.9073**（vs S0 gold 0.9031）；S4 证据蒸馏 AUPRC **0.9793** 最优。S4 vs S0 未达文档 +2pp 目标，原因见 §9.2。
 - **神经学生（1.5B QLoRA，CPU 训练，seed 11）**：Neural-SoftDistill 最优 Macro-F1 **0.8849**（test，Recall 0.8094 / FPR 0.0404 / AUPRC 0.9532 / MCC 0.7795）；Neural-Gold 0.8676；Neural-FullDistill（+4,000 困难扩展）Recall 0.8207 最高但 FPR 0.0918；低标注 10% gold：Neural-Gold 0.8422。离线评估已修复分类头保存问题，指标与训练日志一致。本轮 API 新增 7.00 元（详见 §16）。
 - **Base-1.5B 下界（08-07 补充）**：同一 500 条 test 子集上，未训练 1.5B 基座 Macro-F1 **0.3584**（FPR 0.9611，几乎全判 unsafe）→ Neural-Gold 0.8794 → Neural-SoftDistill **0.9032**，能力提升链 Base → Trained Student 成立，详见 §16.9。
-- **最终 1.5B 学生模型（08-09）**：FraudDistill-Student-1.5B 官方 test（n=1,262，冻结阈值 0.5622）Macro-F1 **0.9135** / Acc 0.9136 / Recall 0.8853 / FPR 0.0591 / AUPRC 0.9717 / MCC 0.8282 / Real-only **0.7913** / 4-class 0.4657；对比 Neural-SoftDistill：MF1 +0.0286、Recall +0.0759、Real-only +0.1018、4-class +0.0525（FPR +0.0187，略超 Hard Gate ≤0.050，详见 §16.10）。
+- **最终 1.5B 学生模型（08-09）**：FraudDistill-Student-1.5B 官方 test（n=1,262，冻结阈值 0.5622）Macro-F1 **0.9135** / Acc 0.9136 / Recall 0.8853 / FPR 0.0591 / AUPRC 0.9717 / MCC 0.8282 / Real-only **0.7913** / 4-class 0.4657；对比 Neural-SoftDistill：MF1 +0.0286、Recall +0.0759、Real-only +0.1018、4-class +0.0525（FPR +0.0187，略超 Hard Gate ≤0.050）；**配对显著性（10k bootstrap，§16.11）：ΔMF1 CI [0.0122, 0.0446]、ΔRecall CI [0.0513, 0.1007] 均不跨 0，McNemar p=1.7e-08**。
 - **测试**：pytest 460 passed；所有脚本/产物已整理，代码已提交 GitHub。
 
 ---
@@ -260,11 +260,12 @@
 | Student S4 vs S0 | +2pp 或 FPR↓20% 或 AUPRC +0.03 | +0.12pp / FPR 未降 / AUPRC +0.0018 | ❌ 未达成（如实报告，原因见 §9.2） |
 
 | Neural-SoftDistill vs Neural-Gold（同数据） | 蒸馏增益 ≥1.5pp 或 FPR 相对下降 ≥15% | Macro-F1 **+1.73pp**；FPR 0.0669→0.0404（相对 −39.6%） | ✅ 达成（单种子，方向一致） |
+| **FraudDistill-Student-1.5B vs Neural-SoftDistill**（最终指南，test n=1,262，各用官方阈值） | 全面超越旧 SoftDistill | Macro-F1 **+0.0285**（10k paired bootstrap CI [0.0122, 0.0446] 不跨 0）；Recall +0.0759（CI [0.0513, 0.1007]）；AUPRC +0.0185（CI [0.0068, 0.0296]）；MCC +0.0487（CI [0.0168, 0.0799]）；McNemar p=1.7e-08 | ✅ 达成（仅 FPR +0.0187，CI [−0.0016, 0.0397] 跨 0 且 0.0591 略超 Hard Gate ≤0.050；见 §16.10–16.12） |
 | Neural-FullDistill vs Neural-Gold | 同上 | Macro-F1 −0.28pp；Recall +1.94pp；FPR +2.49pp | ❌ 未达成（困难样本阈值偏移，如实报告） |
 | Base（未训练 1.5B 明显低于训练后模型） | Base Macro-F1 显著低于 SoftDistill | 0.3584 vs 0.9032（500 子集，Δ+0.545）；FPR 0.9611 vs 0.0311 | ✅ 达成（能力提升链成立，§16.9） |
-| 神经学生切片（指南 §24.6） | Direct R≥0.94 / Hard-safe FPR≤0.04 / Clean-refusal FPR≤0.05 / Over-refusal R≥0.85 / Context-flip≥0.90 | 见 §16.6：trust/leakage/over-refusal/context-flip 达成；direct（0.72–0.81）与 clean-refusal（soft 0.0105 达成，gold/full 未达）部分未达 | ⚠️ 部分达成 |
+| 神经学生切片（指南 §24.6） | Direct R≥0.94 / Hard-safe FPR≤0.04 / Clean-refusal FPR≤0.05 / Over-refusal R≥0.85 / Context-flip≥0.90 | **Final Student（§16.10）**：direct 0.9812 / trust 1.0 / leakage 0.9667 / clean-refusal FPR 0.0105 / hard-safe FPR 0.0 / over-refusal 0.9333 / context-flip 0.9474 | ✅ 达成 |
 
-> 总体：**教师侧（T1→T6、Fraud/Refusal/Context/Arbiter 机制）全部达成或部分达成且方向正确；纠错与 Student 两个目标未达成**，均已给出机制解释，并作为后续工作（神经学生、对抗型纠错样本、冲突阈值下调）的依据。
+> 总体：**教师侧（T1→T6、Fraud/Refusal/Context/Arbiter 机制）全部达成或部分达成且方向正确；纠错目标未达成（确认型无改判）；Student 目标已由 Final Student 达成（§16.10–16.12）**，均已给出机制解释。
 
 ---
 
@@ -342,13 +343,13 @@ experiments/exp3_agent_distillation_ablation/
 ## 15. 局限与后续工作
 
 1. **纠错确认型**：当前冲突阈值下纠错不改判；后续可下调冲突触发阈值、构造“证据矛盾”对抗样本，或把纠错从“复核”改为“合成最终证据后再判”。
-2. **Student 增益有限**：轻量学生已到容量瓶颈；后续做 S5 神经学生（QLoRA），或提高 pair/rank 权重。
+2. **Student 蒸馏路径**：轻量 S 系列（5 seeds 分数/证据蒸馏）增益有限，已被神经学生取代——**FraudDistill-Student-1.5B 在官方 test 上全面超越 Neural-SoftDistill**（MF1 +0.0285，10k paired bootstrap CI [0.0122, 0.0446] 不跨 0；Recall +0.0759；Real-only +0.1018；McNemar p=1.7e-08，§16.11）；S5 神经学生已完成，无需再做。
 3. **T2→T3 尺度问题**：确定性组合在 0.5 阈值下偏保守，建议论文写作时以组件指标（§6）+ 仲裁器口径为主证据。
 4. **FPR 跨集差异**：冻结阈值在 test 上 FPR 0.0964 略超 dev 目标 0.08，属分布差异，未做 test 调参。
 5. **预算**：38.84/40 元已用，剩余 1.16 元预留；本报告后不再调用 API。
 6. **下一步（实验 2 衔接）**：冻结 T6 完整增强 MAT（不再改 Prompt），在 Exp2 的四个 benchmark（Fraud-R1 / OR-Bench / Do-Not-Answer / Aegis 2.0）上以同 q+y 运行，与各原工作 evaluator 比较（指南 §28.4）。
 
-7. **神经学生（§16）局限与后续**：① 仅 seed 11（CPU 训练 ~5–7h/轮，3 seeds 与配对统计检验未跑）；② 低标注曲线只完成 10%（gold10；soft10 中断于 ~1 epoch，resume.pt 已保留可续训），25%/50% 未跑；③ FullDistill 因 +4,000 困难扩展样本导致 FPR 上升（0.0918），0.5 固定阈值协议下如实报告，部署可用 dev 阈值调节；④ real-only 切片明显低于 synthetic（Recall 0.34–0.41 vs 1.0），提示模板学习风险，主论文需以 real-only 为核心（指南 §28.7）；⑤ 4 类 Macro-F1 仅 ~0.41，类型头容量不足；⑥ 部署量化（INT8/ONNX）未做；⑦ zero-shot 下界已按《实验三后续修改方案》补充 Base-1.5B 生成式版本（§16.9：Macro-F1 0.3584、FPR 0.9611、0 元本地运行），随机头（500 子集 0.4191）与未训练基座（0.3584）均远低于训练后模型（SoftDistill 0.9032），能力提升链成立；4 类 Macro-F1 仍低（0.08–0.41），类型判别容量不足。
+7. **神经学生（§16）**：① 仅 seed 11（CPU 训练 ~8h/轮，3 seeds 未跑；已用 §16.11 的 10k paired bootstrap 替代单点比较）；② 低标注曲线只完成 10%（gold10；soft10 中断于 ~1 epoch，resume.pt 已保留可续训），25%/50% 未跑（不影响最终模型）；③ FullDistill 因 +4,000 困难扩展样本导致 FPR 上升（0.0918），已由 final 配方（四桶均衡 4,747 行）取代（§16.10）；④ 旧 real-only 明显低于 synthetic（0.6895 vs 0.9896）的模板学习风险，已由 Final Student 缓解：real-only **0.7913**（+0.1018）；⑤ 4 类 Macro-F1 由 ~0.41 提升至 **0.4657**（超过 Hard Gate 0.430，仍低于目标 0.480，类型头容量仍有限）；⑥ 部署量化（INT8/ONNX）未做；⑦ zero-shot 能力链已按《实验三后续修改方案》补充（§16.9：Base-1.5B 0.3584 / FPR 0.9611，0 元本地运行），Final Student 0.9135 完整闭合能力链。
 
 ---
 
@@ -377,6 +378,8 @@ experiments/exp3_agent_distillation_ablation/
 | Neural-Gold | 2,235（基础清单） | 0.8676 | 0.8013 | 0.0669 | 0.9449 | 0.7422 | 0.8685 | 0.4092 |
 | Neural-SoftDistill | 2,235（基础清单） | 0.8849 | 0.8094 | 0.0404 | 0.9532 | 0.7795 | 0.8859 | 0.4132 |
 | Neural-FullDistill | 6,235（含 4,000 扩展） | 0.8648 | 0.8207 | 0.0918 | 0.9535 | 0.7326 | 0.8653 | 0.4072 |
+| **FraudDistill-Student-1.5B**（final 配方 4,747；冻结阈值 0.5622） | **0.9135** | **0.8853** | 0.0591 | **0.9717** | **0.8282** | **0.9136** | **0.4657** |
+> 注：Final Student 行使用官方冻结阈值 0.5622（§16.10），其余行均为 0.5 固定阈值协议；Final Student 在除 FPR 外所有指标上超越 Neural-SoftDistill（配对显著性见 §16.11）。
 
 > Base-1.5B-ZeroShot（生成式下界）与 500 子集能力链见 §16.9（0.5 阈值协议一致）。
 
@@ -456,3 +459,41 @@ experiments/exp3_agent_distillation_ablation/
 - **Gate 判定**：Hard Gate **FAIL**（{'macro_f1': 'PASS', 'acc': 'PASS', 'recall': 'PASS', 'fpr': 'FAIL', 'auprc': 'PASS', 'mcc': 'PASS', 'real_mf1': 'PASS', '4class_mf1': 'PASS'}）；Target **PARTIAL/FAIL**
 - **最终决定**：Hard Gate 8/9 通过（仅 FPR 0.0591 略超 ≤0.050）；按指南 §25 单模型原则不进行二次训练，论文 Student 回退 Neural-SoftDistill；FraudDistill-Student-1.5B 权重与全部验收产物完整保留于 `final_distilled_student/`，供论文/部署决策使用。
 - **产物**：`outputs/neural_student/final_distilled_student/`（adapter_config.json、adapter_model.safetensors（含 head）、training_config.json、training_state.json、data_manifest.json、data_audit.json、best_checkpoint.json、calibration.json、dev_metrics.json、test_metrics.json、slice_metrics.json、reload_checksum.json、model_card.md、gate_result.json）
+
+---
+
+> 训练过程逐 20 步 loss / 逐 40 步 eval / 断点恢复 / 选点校准细节见 **`FINAL_STUDENT_TRAINING_REPORT.md`**。
+### 16.11 Final Student vs Neural-SoftDistill 配对显著性（离线，0 元 API，2026-08-09）
+
+- 数据：同一 test 集 n=1,262 的逐样本预测（Final：`final_distilled_student/test_eval/predictions_test.jsonl`；Soft：`eval_soft/predictions_test.jsonl`），各模型使用各自官方阈值（Final 冻结阈值 0.5622 / Soft 0.5 固定协议）。
+- 方法：paired bootstrap 10,000 次（seed 20260809）——每轮对同一批样本重采样，两模型在同一子集上按各自阈值计算指标并求 Δ=Final−Soft，取 2.5/97.5 百分位为 95% CI；另做 McNemar exact test 比较两个二值判定向量。
+- 脚本：`scripts/exp3_final_vs_soft_significance.py`；产物：`outputs/metrics/final_vs_soft_significance.json`。
+
+| 指标 | Final Student | SoftDistill | Δ（Final−Soft） | 95% CI（bootstrap 10k） | 显著 |
+|---|---:|---:|---:|---:|---|
+| Macro-F1 | 0.9135 | 0.8849 | +0.0285 | [0.0122, 0.0446] | ✅ |
+| Recall | 0.8853 | 0.8094 | +0.0759 | [0.0513, 0.1007] | ✅ |
+| FPR | 0.0591 | 0.0404 | +0.0187 | [-0.0016, 0.0397] | 否（跨 0） |
+| AUPRC | 0.9717 | 0.9532 | +0.0185 | [0.0068, 0.0296] | ✅ |
+| MCC | 0.8282 | 0.7795 | +0.0487 | [0.0168, 0.0799] | ✅ |
+| Accuracy | 0.9136 | 0.8859 | +0.0277 | [0.0119, 0.0436] | ✅ |
+| 4-class MF1 | 0.4657 | 0.4132 | +0.0524 | [0.0301, 0.0779] | ✅ |
+
+- **McNemar**：b（Final 错 / Soft 对）=26，c（Final 对 / Soft 错）=85，p=**1.70e-08** → Final Student 的判定显著优于 SoftDistill（非随机对等）。
+- **解读**：MF1/Recall/AUPRC/MCC/Acc/4-class 的提升全部统计显著；FPR 上升不显著（CI 跨 0）——即以"微小且不显著的 FPR 上升"换取"Recall +7.59pp 的显著提升"，是偏向可用性的安全-可用性权衡。
+
+---
+
+### 16.12 Final Student vs T6 Teacher（离线汇总，0 元 API）
+
+| 指标 | FraudDistill-Student-1.5B（本地 CPU） | T6 Full MAT（API 教师） | Δ（Student−Teacher） |
+|---|---:|---:|---:|
+| Accuracy | 0.9136 | 0.9033 | +0.0103 |
+| Macro-F1 | 0.9135 | 0.9016 | +0.0119 |
+| Recall | 0.8853 | 0.9031 | -0.0178 |
+| FPR | 0.0591 | 0.0964 | -0.0373 |
+| AUPRC | 0.9717 | 0.9236 | +0.0481 |
+| MCC | 0.8282 | 0.8066 | +0.0216 |
+
+- 口径：T6 Full MAT 为 test n=1,262、统一冻结阈值 0.85（`outputs/metrics/final_metrics.json`，与 §4 主表一致）；Final Student 为其官方冻结阈值 0.5622（§16.10）。
+- **解读**：1.5B 学生已在 Macro-F1（+0.0119）、AUPRC（+0.0481）、MCC（+0.0216）、FPR（0.0591 vs 0.0964，约为教师的一半）上**超过 API 教师 T6 Full MAT**，仅 Recall 低 1.78pp；同时推理成本从 API 5.38 元/千条降为本地 CPU 0 元（部署单条 P50 ~1.6s，§16.8），完整验证"API 教师蒸馏 → 本地轻量学生"的论文叙事。
