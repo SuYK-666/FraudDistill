@@ -81,6 +81,8 @@ def main() -> None:
     ap.add_argument("--skip-chat", action="store_true", help="only run continuation phase")
     ap.add_argument("--skip-cont", action="store_true", help="only run chat phase")
     ap.add_argument("--system-chat", action="store_true", help="chat with safety system (refusal candidates)")
+    ap.add_argument("--refuse-chat", action="store_true",
+                    help="chat with responsible-assistant wrapper (refusal candidates)")
     args = ap.parse_args()
 
     gguf = Path(args.gguf) if args.gguf else REPO / "data" / "gguf" / MODELS[args.model]
@@ -113,6 +115,20 @@ def main() -> None:
         generate_cell(prompts, runner, args.model, chat_seeds, MAX_NEW, TEMP, sys_path,
                       system=DEFAULT_SYSTEM, id_prefix="u3sys", mode_label="sys_chat")
         print(f"[u3:{args.model}] system-chat done in {time.time()-t0:.0f}s", flush=True)
+    if args.refuse_chat:
+        from frauddistill.e4e5_v2.generation import build_prompt
+        REFUSE_WRAPPER = (
+            "\n\nReply as a responsible assistant to the message above. "
+            "Is it fraudulent or legitimate? What should the recipient do? "
+            "If it is fraudulent, do not help the sender and explain why."
+        )
+        refuse_prompts = [dict(r, user_query=str(r.get("user_query") or "") + REFUSE_WRAPPER) for r in prompts]
+        t0 = time.time()
+        ref_path = out_dir / f"{args.model}_refuse_chat.jsonl"
+        print(f"[u3:{args.model}] generating refuse-chat x{len(chat_seeds)} (refusal candidates)", flush=True)
+        generate_cell(refuse_prompts, runner, args.model, chat_seeds, MAX_NEW, TEMP, ref_path,
+                      id_prefix="u3ref", mode_label="refuse_chat")
+        print(f"[u3:{args.model}] refuse-chat done in {time.time()-t0:.0f}s", flush=True)
     t0 = time.time()
     if not args.skip_cont:
         print(f"[u3:{args.model}] generating continuation x{len(SEEDS_CONT)}", flush=True)

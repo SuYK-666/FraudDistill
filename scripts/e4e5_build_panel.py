@@ -49,7 +49,7 @@ def load_u1(out_dir: Path) -> list[dict]:
 def load_u3(out_dir: Path) -> list[dict]:
     rows = []
     for m in U3_MODELS:
-        for mode in ("chat", "cont", "sys_chat"):
+        for mode in ("chat", "cont", "sys_chat", "refuse_chat"):
             p = out_dir / "generated_u3" / f"{m}_{mode}.jsonl"
             gen = read_jsonl(p)
             rows += generated_candidates(gen, "U3_target_style", m, m)
