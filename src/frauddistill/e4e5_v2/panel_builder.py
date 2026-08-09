@@ -194,19 +194,23 @@ def split_panel(candidates: list[dict], cfg: dict, seed: int = 20260809) -> dict
                     test_rows.extend(take)
                 need[lbl] -= len(take)
             used_fams.add(fam)
-        # fill remaining needs from SAME-CELL surplus only (family-atomic)
+        # fill remaining needs from SAME-CELL surplus only; per-label partial
+        # take allowed (a family is never split across cal/test, but rows of a
+        # used family that are not needed may be left out of the formal panel)
         for split_name, need in (("cal", need_cal), ("test", need_test)):
             while sum(need.values()) > 0:
                 fit_fam = None
                 for f, frows in surplus.items():
                     counts = Counter(r["gold_label"] for r in frows)
-                    if all(need.get(lbl, 0) >= counts.get(lbl, 0) for lbl in ("safe", "unsafe")):
+                    if any(need.get(lbl, 0) > 0 and counts.get(lbl, 0) > 0 for lbl in ("safe", "unsafe")):
                         fit_fam = f
                         break
                 if fit_fam is None:
                     break
                 frows = surplus.pop(fit_fam)
                 for lbl in ("safe", "unsafe"):
+                    if need.get(lbl, 0) <= 0:
+                        continue
                     take = [r for r in frows if r["gold_label"] == lbl][: need[lbl]]
                     if split_name == "cal":
                         cal_rows.extend(take)

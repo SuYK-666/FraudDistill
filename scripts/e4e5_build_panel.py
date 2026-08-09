@@ -27,7 +27,7 @@ from frauddistill.e4e5_v2.model_registry import (
 )
 from frauddistill.e4e5_v2.schemas import read_jsonl, write_jsonl
 
-U1_MODELS = ["qwen2_5_7b", "llama3_1_8b"]
+U1_MODELS = ["qwen2_5_7b", "llama3_1_8b", "deepseek_chat"]
 U1_CATS = ["elder_health_product", "naked_chat_sextortion"]
 U3_MODELS = ["smollm2_1_7b", "phi3_5_mini"]
 U2_AEGIS = REPO / "data/raw/aegis/validation.json"
@@ -59,6 +59,7 @@ def load_u3(out_dir: Path) -> list[dict]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--g2", action="store_true", help="run local blind judge (G2) on ambiguous rows")
+    ap.add_argument("--g2-api", action="store_true", help="use DeepSeek API (120 concurrent) for G2")
     ap.add_argument("--out", default=None, help="output root (default: outputs/exp4_unseen_student_v2/e4v2_<ts>)")
     args = ap.parse_args()
 
@@ -79,7 +80,7 @@ def main() -> None:
     print(f"[panel] gold labels after G1: {dict(lbl)}")
 
     # ---- G2 blind judge for ambiguous (local batched or DeepSeek API) ----
-    if args.g2:
+    if args.g2 or args.g2_api:
         from frauddistill.e4e5_v2.gold_mapper import JUDGE_PROMPT, judge_with_model
         ambiguous = [r for r in cands if not r.get("gold_label")]
         print(f"[panel] G2 judging {len(ambiguous)} ambiguous rows "
@@ -104,7 +105,8 @@ def main() -> None:
                 if res.get("status") != "ok":
                     return idx, {"gold_label": None, "gold_type": None, "method": "api_fail", "raw": str(res)[:200]}
                 ledger.record(r["id"], r.get("qy_hash", ""), "G2", "deepseek", "deepseek-chat",
-                              cost.get("input_tokens", 0), cost.get("output_tokens", 0))
+                              cost.get("input_tokens", 0), cost.get("output_tokens", 0),
+                              cost.get("estimated_cost_cny", 0.0))
                 return idx, {"gold_label": res.get("label"), "gold_type": res.get("type"),
                              "method": "judge", "confidence": res.get("confidence"),
                              "evidence": res.get("evidence", "")[:120]}

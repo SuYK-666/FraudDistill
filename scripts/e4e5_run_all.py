@@ -47,6 +47,8 @@ def main() -> None:
         cmd = [PY, "scripts/e4e5_build_panel.py", "--out", str(proto)]
         if args.g2:
             cmd.append("--g2")
+        if args.api:
+            cmd.append("--g2-api")
         run(cmd, "panel")
 
     run([PY, "scripts/e4e5_run_inference.py", "--protocol-dir", str(proto)]
