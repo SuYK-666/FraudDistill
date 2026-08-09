@@ -14,6 +14,8 @@ import sys
 import time
 from pathlib import Path
 
+from tqdm import tqdm
+
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "src"))
@@ -127,7 +129,8 @@ def main() -> None:
     n_ok = n_empty = 0
     with open(out_path, "a", encoding="utf-8") as f:
         with cf.ThreadPoolExecutor(max_workers=args.workers) as ex:
-            for i, rec in enumerate(ex.map(gen_one, todo)):
+            for i, rec in enumerate(tqdm(ex.map(gen_one, todo), total=len(todo), desc=f"api-u1 {args.category}/{args.mode}",
+                                         unit="row", mininterval=1.0, ncols=100)):
                 f.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 f.flush()
                 if rec["generation_status"] == "ok":
@@ -135,8 +138,8 @@ def main() -> None:
                 else:
                     n_empty += 1
                 if (i + 1) % 50 == 0:
-                    print(f"[api-u1] {i+1}/{len(todo)} ok={n_ok} empty={n_empty} elapsed={time.time()-t0:.0f}s", flush=True)
-    print(f"[api-u1] done: ok={n_ok} empty={n_empty} in {time.time()-t0:.0f}s -> {out_path}", flush=True)
+                    print(f"\n[api-u1] {i+1}/{len(todo)} ok={n_ok} empty={n_empty} elapsed={time.time()-t0:.0f}s", flush=True)
+    print(f"\n[api-u1] done: ok={n_ok} empty={n_empty} in {time.time()-t0:.0f}s -> {out_path}", flush=True)
 
 
 if __name__ == "__main__":
