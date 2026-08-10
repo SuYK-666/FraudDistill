@@ -115,8 +115,10 @@ e1_v4:
   cv_folds: 5
   neural:
     model_name: xlm-roberta-base
-    max_length: 384
-    epochs: 3
+    max_length: 320
+    q_cap: 128
+    y_cap: 190
+    epochs: 2
     batch_size: 8
     grad_accum: 4
     lr_lora: 2.0e-5

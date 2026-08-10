@@ -25,13 +25,17 @@ def _text(mode: str, q: str, y: str, wrong_q: str | None = None) -> str:
 
 
 class NeuralJointDetector:
-    def __init__(self, mode: str, model_name: str = "xlm-roberta-base", max_length: int = 256, seed: int = 13):
+    def __init__(self, mode: str, model_name: str = "xlm-roberta-base", max_length: int = 256, seed: int = 13,
+                 q_cap: int | None = None, y_cap: int | None = None):
         if mode not in ("q_only", "y_only", "q_y", "wrong_q_y"):
             raise ValueError(f"unknown neural mode: {mode}")
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
         self.mode = mode
         self.model_name = model_name
-        self.max_length = max_length
+        self.max_length = int(max_length)
+        self.joint = mode in ("q_y", "wrong_q_y")
+        self.q_cap = int(q_cap) if q_cap and self.joint else int(max_length)
+        self.y_cap = int(y_cap) if y_cap and self.joint else int(max_length)
         self.seed = seed
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
@@ -40,6 +44,23 @@ class NeuralJointDetector:
         self.fitted = False
 
     def _encode(self, rows: list[dict[str, Any]], wrong_q_map: dict[str, str] | None = None):
+        if self.joint:
+            all_ids: list[list[int]] = []
+            for r in rows:
+                wq = wrong_q_map.get(r.get("response_id", "")) if wrong_q_map else None
+                q = wq or str(r.get("q_private") or "")
+                y = str(r.get("y_private") or "")
+                qi = self.tokenizer(q, add_special_tokens=False, max_length=self.q_cap, truncation=True).input_ids
+                yi = self.tokenizer(y, add_special_tokens=False, max_length=self.y_cap, truncation=True).input_ids
+                ids = [self.tokenizer.bos_token_id] + qi + [self.tokenizer.sep_token_id] + yi + [self.tokenizer.sep_token_id]
+                all_ids.append(ids[: self.max_length])
+            max_len = max(len(x) for x in all_ids) if all_ids else 0
+            input_ids = torch.full((len(all_ids), max_len), self.tokenizer.pad_token_id, dtype=torch.long)
+            attention = torch.zeros_like(input_ids)
+            for i, ids in enumerate(all_ids):
+                input_ids[i, : len(ids)] = torch.tensor(ids, dtype=torch.long)
+                attention[i, : len(ids)] = 1
+            return {"input_ids": input_ids, "attention_mask": attention}
         texts = []
         for r in rows:
             wq = wrong_q_map.get(r.get("response_id", "")) if wrong_q_map else None
@@ -119,7 +140,8 @@ class NeuralJointDetector:
 
 def run_neural_seed(dev, cal, anchor, mode: str, seed: int, cfg, wrong_q_map=None, out_dir=None) -> dict[str, Any]:
     neural = cfg["e1_v4"]["neural"]
-    det = NeuralJointDetector(mode, model_name=neural["model_name"], max_length=int(neural["max_length"]), seed=seed)
+    det = NeuralJointDetector(mode, model_name=neural["model_name"], max_length=int(neural["max_length"]), seed=seed,
+                              q_cap=int(neural.get("q_cap", 0)) or None, y_cap=int(neural.get("y_cap", 0)) or None)
     d_rows, d_labels = panel_rows_to_eval(dev)
     c_rows, _ = panel_rows_to_eval(cal)
     a_rows, _ = panel_rows_to_eval(anchor)
@@ -132,5 +154,6 @@ def run_neural_seed(dev, cal, anchor, mode: str, seed: int, cfg, wrong_q_map=Non
     m = metrics_at_threshold(a_rows, anchor_scores, det.threshold)
     result = {"mode": mode, "seed": seed, "threshold": det.threshold, "anchor": m, "fit": fit_info}
     if out_dir:
+        det.model.half()  # fp16 storage keeps disk usage ~560MB/model (CPU inference only)
         det.save(out_dir / "models" / f"{mode}_seed{seed}")
     return result
