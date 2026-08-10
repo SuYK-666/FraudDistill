@@ -1,0 +1,161 @@
+# -*- coding: utf-8 -*-
+# E1-FINAL-TRIAD-v4: relational ablation with matched B1/B2/B3 panel.
+experiment:
+  protocol: E1-FINAL-TRIAD-v4-Relational-Ablation
+  seed: 20260810
+  baseline_commit: a690d5d
+  note: "v4: B1 context-critical/y-matched 2000 (构造对, 双Gold), B2 response-critical/q-matched 2000, B3 context-stable 2000; A7500 完全冻结且不进入 B; C=A7500 独立回放."
+
+data:
+  output_dir: data/prepared/e1_final_triad_v4
+  public_report_dir: reports/e1_final_triad_v4
+  v32_dir: data/prepared/e1_final_triad_v32
+  v31_dir: data/prepared/e1_final_triad_v31
+  fraudr1_raw_prompts: data/raw/fraudr1/prompts.jsonl
+  aegis_refusals: data/raw/aegis/refusals_train.json
+  v4_budget_ledger: data/prepared/e1_final_triad_v4/E1_V4_BUDGET_LEDGER.jsonl
+
+api:
+  user_requested_total_concurrency: 120
+  effective_qwen_concurrency: 60
+  effective_deepseek_concurrency: 60
+  effective_adjudicator_concurrency: 30
+  budget_check_interval_calls: 200
+
+models:
+  target_qwen_v31:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body:
+      enable_thinking: false
+  target_deepseek_v31:
+    provider: deepseek
+    model: deepseek-v4-flash
+    extra_body:
+      thinking:
+        type: disabled
+  gold_qwen_v31:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body:
+      enable_thinking: false
+  gold_deepseek_v31:
+    provider: deepseek
+    model: deepseek-v4-pro
+    api_surface: chat_completions
+    extra_body:
+      thinking:
+        type: disabled
+  adjudicator_qwen_v31:
+    provider: qwen
+    model: qwen3.7-max-2026-05-20
+    extra_body:
+      enable_thinking: false
+  gen_qwen:
+    provider: qwen
+    model: qwen3.7-plus-2026-05-26
+    extra_body:
+      enable_thinking: false
+  gen_deepseek:
+    provider: deepseek
+    model: deepseek-v4-flash
+    extra_body:
+      thinking:
+        type: disabled
+
+budget:
+  hard_stop_total_cny: 100
+  qwen_soft_stop_cny: 50
+  qwen_hard_stop_cny: 60
+  deepseek_soft_stop_cny: 50
+  deepseek_hard_stop_cny: 60
+  v4_new_spend_hard_stop_cny: 100
+
+generation:
+  temperature: 0.6
+  top_p: 0.9
+  max_tokens: 1024
+  timeout_seconds: 180
+
+gold:
+  temperature: 0.0
+  max_tokens: 1024
+  timeout_seconds: 180
+  judge_a_provider: qwen
+  judge_b_provider: deepseek
+  adjudicator_provider: qwen
+  quality:
+    min_completion_rate: 0.995
+    min_valid_schema_rate: 0.99
+    min_binary_agreement: 0.9
+    max_uncertain_rate: 0.1
+    max_unresolved_disagreement: 0
+
+e1_v4:
+  protocol: E1-FINAL-TRIAD-v4-Relational-Ablation
+  target_rows: 6000
+  target_positive: 3000
+  target_negative: 3000
+  strata:
+    b1_context_critical_y_matched: 2000
+    b2_response_critical_q_matched: 2000
+    b3_context_stable_natural: 2000
+  b1_pairs: 1000
+  b2_pairs: 1000
+  b1_generate_y_extra: 300
+  b2_neg_need_generate: 400
+  split_frac:
+    model_dev: 0.6
+    calibration: 0.2
+    anchor: 0.2
+  detector_C: 1.0
+  max_features: 60000
+  cv_folds: 5
+  neural:
+    model_name: xlm-roberta-base
+    max_length: 384
+    epochs: 3
+    batch_size: 8
+    grad_accum: 4
+    lr_lora: 2.0e-5
+    lr_head: 5.0e-4
+    warmup_steps: 40
+    eval_steps: 80
+    patience: 4
+    seed: 11
+  seeds: [13, 17, 23, 42, 20260810]
+  bootstrap_iterations: 10000
+  cluster_bootstrap_iterations: 10000
+  q_renderer:
+    en: "I just received the following message:\n\n"
+    zh: "我刚收到如下消息：\n\n"
+
+statistics:
+  seeds: [13, 17, 23, 42, 20260810]
+  bootstrap_iterations: 10000
+  cluster_bootstrap_iterations: 10000
+
+pricing_cny_per_million_tokens:
+  qwen:
+    qwen3.7-plus-2026-05-26:
+      input: 2.0
+      output: 8.0
+    qwen3.7-max-2026-05-20:
+      input: 4.0
+      output: 16.0
+    qwen-plus:
+      input: 2.0
+      output: 8.0
+    qwen-max:
+      input: 4.0
+      output: 16.0
+  deepseek:
+    deepseek-v4-flash:
+      input: 1.0
+      output: 4.0
+    deepseek-v4-pro:
+      input: 2.0
+      output: 8.0
+    deepseek-chat:
+      input: 1.0
+      output: 4.0
