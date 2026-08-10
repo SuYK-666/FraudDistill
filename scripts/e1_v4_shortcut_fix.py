@@ -690,12 +690,250 @@ def phase_reassemble(cfg, args) -> dict[str, Any]:
     return {"status": "REASSEMBLED", "audit": audit}
 
 
+# ---------------------------------------------------------------- repair phases
+
+
+def _content_vote_index() -> dict[str, dict[str, dict[str, Any]]]:
+    """Content-keyed (q,y) vote index over votes + adjudication."""
+    out: dict[str, dict[str, dict[str, Any]]] = {}
+    for path in [OUT_DIR / "E1_V4_GOLD_VOTES.jsonl", OUT_DIR / "E1_V4_GOLD_ADJUDICATION.jsonl"]:
+        for r in read_jsonl(path):
+            q = r.get("q_private") or ""
+            y = r.get("y_private") or ""
+            v = parse_vote(r)
+            if v is None or not q or not y:
+                continue
+            key = sha_text(norm(q) + "\x00" + norm(y))
+            out.setdefault(key, {})[r.get("judge")] = v
+    return out
+
+
+def _content_resolved(key: str, content_index) -> tuple[int | None, str]:
+    from frauddistill.e1_final_v4.assemble import resolved_from_vv
+    vv = content_index.get(key) or {}
+    return resolved_from_vv(vv)
+
+
+def phase_repair_gen(cfg, args) -> dict[str, Any]:
+    """Generate ~40 fresh diverse en benign queries for retry candidates."""
+    rows = panel_rows()
+    b1_benign = [r for r in rows if r["stratum"] == "b1_context_critical_y_matched" and int(r["gold_central"]) == 0]
+    used = {norm(strip_benign_prefix(r["q_private"])) for r in b1_benign}
+    for a in read_jsonl(OUT_DIR / "E1_V4_B1_BENIGN_V2_ASSIGNMENTS.jsonl"):
+        used.add(norm(strip_benign_prefix(a["q_private"])))
+    m = read_json(OUT_DIR / "E1_V4_TASK_MANIFEST.json")
+    en_pool_items = [it for it in m["b1_q_pool"] if it["language"] == "en"]
+    rng = random.Random(int(cfg["experiment"]["seed"]) + 5)
+    rng.shuffle(en_pool_items)
+    tasks = []
+    for i, it in enumerate(en_pool_items[:40]):
+        rid = f"E1-V4-QBENIGN3-{i:04d}"
+        gm = cfg["models"]["gen_qwen"]
+        tasks.append({
+            "response_id": rid, "task_kind": "b1_qbenign_v3", "target_provider": gm["provider"],
+            "requested_target_model": gm["model"], "extra_body": gm.get("extra_body", {}),
+            "q_private": benign_topic_v2_prompt(it["q_private"], "en", i + 100),
+            "language": "en", "pair_q": it["q_private"],
+            "temperature": cfg["generation"]["temperature"], "top_p": cfg["generation"]["top_p"],
+            "max_tokens": 256, "timeout_seconds": cfg["generation"]["timeout_seconds"],
+            "phase": "E1-v4-gen-qbenign3", "status": "PENDING_API",
+        })
+    write_jsonl(OUT_DIR / "E1_V4_GEN_QBENIGN3_TASKS.jsonl", tasks)
+    result = execute_tasks(
+        tasks, output_path=OUT_DIR / "E1_V4_GEN_QBENIGN3_RESULTS.jsonl", ledger_path=OUT_DIR / "E1_V4_BUDGET_LEDGER.jsonl",
+        limits=limits_for(cfg), run_api=args.run_api, confirm_budget=args.confirm_budget, git_clean=git_clean(),
+        limit=args.limit, concurrency_by_provider=concurrency_for(cfg), pricing=cfg.get("pricing_cny_per_million_tokens"))
+    return {"n_tasks": len(tasks), "result": result}
+
+
+def _free_benign_pool() -> dict[str, list[str]]:
+    """All distinct benign q texts not used by the current panel or any assignment."""
+    used = set()
+    for r in panel_rows():
+        if r["stratum"] == "b1_context_critical_y_matched" and int(r["gold_central"]) == 0:
+            used.add(norm(strip_benign_prefix(r["q_private"])))
+    for path in ["E1_V4_B1_BENIGN_V2_ASSIGNMENTS.jsonl", "E1_V4_B1_BENIGN_V3_ASSIGNMENTS.jsonl"]:
+        fp = OUT_DIR / path
+        if fp.exists():
+            for a in read_jsonl(fp):
+                used.add(norm(strip_benign_prefix(a["q_private"])))
+    m = read_json(OUT_DIR / "E1_V4_TASK_MANIFEST.json")
+    idx_lang = {i: it["language"] for i, it in enumerate(m["b1_q_pool"])}
+    free: dict[str, list[str]] = {"zh": [], "en": []}
+    seen = set()
+    for r in read_jsonl(OUT_DIR / "E1_V4_GEN_QBENIGN_RESULTS.jsonl"):
+        if r.get("status") != "ok":
+            continue
+        mt = re.match(r"E1-V4-B1-Y-(\d+)-QBENIGN", r.get("response_id", ""))
+        if not mt:
+            continue
+        lang = idx_lang.get(int(mt.group(1)))
+        q = (r.get("text") or "").strip()
+        if not lang or not q or norm(q) in used or norm(q) in seen:
+            continue
+        seen.add(norm(q))
+        free[lang].append(q)
+    for path, phase in [("E1_V4_GEN_QBENIGN2_RESULTS.jsonl", "en"), ("E1_V4_GEN_QBENIGN3_RESULTS.jsonl", "en")]:
+        fp = OUT_DIR / path
+        if not fp.exists():
+            continue
+        for r in read_jsonl(fp):
+            q = (r.get("text") or "").strip()
+            if r.get("status") == "ok" and q and norm(q) not in used and norm(q) not in seen:
+                seen.add(norm(q))
+                free[phase].append(q)
+    return free
+
+
+def build_benign_retry_assignments(cfg) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Retry candidates for benign pairs whose v2 replacement was golded 1."""
+    v1 = read_jsonl(OUT_DIR / "E1_V4_PANEL_ALL_v1_6000.jsonl")
+    v1_by_rid = {r["response_id"]: r for r in v1}
+    v2 = read_jsonl(OUT_DIR / "E1_V4_B1_BENIGN_V2_ASSIGNMENTS.jsonl")
+    content_index = _content_vote_index()
+    failed_v2 = []
+    for a in v2:
+        key = sha_text(norm(a["q_private"]) + "\x00" + norm(a["y_private"]))
+        lab, _ = _content_resolved(key, content_index)
+        if lab != 0:
+            failed_v2.append(a)
+    print(f"[repair] benign v2 failed={len(failed_v2)}", flush=True)
+    free = _free_benign_pool()
+    rng = random.Random(int(cfg["experiment"]["seed"]) + 6)
+    for lang in free:
+        rng.shuffle(free[lang])
+    # en pairs get 1 candidate this round; zh pairs get 2 (larger spare pool)
+    assignments = []
+    stats = collections.Counter()
+    for a in sorted(failed_v2, key=lambda x: x["response_id"]):
+        lang = a["language"]
+        n_try = 2 if lang == "zh" else 1
+        for _ in range(n_try):
+            if not free[lang]:
+                break
+            q_text = free[lang].pop(0)
+            rid = a["response_id"].replace("-V2", "-V3")
+            row = dict(a)
+            row["response_id"] = rid
+            row["q_private"] = render_benign_q(lang, q_text)
+            row["benign_source"] = "retry_pool"
+            row["retry"] = True
+            row["original_response_id"] = a["response_id"][:-3]
+            assignments.append(row)
+            stats[lang] += 1
+    write_jsonl(OUT_DIR / "E1_V4_B1_BENIGN_V3_ASSIGNMENTS.jsonl", assignments)
+    return assignments, dict(stats)
+
+
+def phase_repair_gold(cfg, args) -> dict[str, Any]:
+    assignments, stats = build_benign_retry_assignments(cfg)
+    print(f"[repair-gold] retry assignments={len(assignments)} stats={stats}", flush=True)
+    tasks = []
+    for a in assignments:
+        row = _row_for_gold(a["response_id"], a["q_private"], a["y_private"], a["language"], a["canonical_case_id"],
+                            a["stratum"], a["family_id"], a["pair_id"], a["provenance"])
+        for judge in ["judge_a", "judge_b"]:
+            from frauddistill.e1_final_v4.gold import gold_judge_task
+            tasks.append(gold_judge_task(row, judge, cfg, "E1-v4-gold-benignv3"))
+    write_jsonl(OUT_DIR / "E1_V4_GOLD_TASKS_BENIGNV3.jsonl", tasks)
+    result = execute_json_tasks(
+        tasks, output_path=OUT_DIR / "E1_V4_GOLD_VOTES.jsonl", ledger_path=OUT_DIR / "E1_V4_BUDGET_LEDGER.jsonl",
+        limits=limits_for(cfg), run_api=args.run_api, confirm_budget=args.confirm_budget, git_clean=git_clean(),
+        limit=args.limit, concurrency_by_provider=concurrency_for(cfg), pricing=cfg.get("pricing_cny_per_million_tokens"))
+    return {"n_tasks": len(tasks), "result": result}
+
+
+def phase_repair_reassemble(cfg, args) -> dict[str, Any]:
+    """Final reassemble: content-key resolution; restore original rows as fallback."""
+    v1 = read_jsonl(OUT_DIR / "E1_V4_PANEL_ALL_v1_6000.jsonl")
+    content_index = _content_vote_index()
+    neg_assign = read_jsonl(OUT_DIR / "E1_V4_NEG_V2_ASSIGNMENTS.jsonl")
+    ben2 = read_jsonl(OUT_DIR / "E1_V4_B1_BENIGN_V2_ASSIGNMENTS.jsonl")
+    ben3 = read_jsonl(OUT_DIR / "E1_V4_B1_BENIGN_V3_ASSIGNMENTS.jsonl") if (OUT_DIR / "E1_V4_B1_BENIGN_V3_ASSIGNMENTS.jsonl").exists() else []
+
+    def resolve(a):
+        key = sha_text(norm(a["q_private"]) + "\x00" + norm(a["y_private"]))
+        lab, method = _content_resolved(key, content_index)
+        return lab, method
+
+    neg_ok_ids = set()
+    neg_fail = []
+    for a in neg_assign:
+        lab, _ = resolve(a)
+        if lab == 0:
+            neg_ok_ids.add(a["response_id"])
+        else:
+            neg_fail.append(a["response_id"])
+
+    # benign: prefer v3 (retry) > v2; one passing candidate per pair
+    benign_by_pair: dict[str, dict[str, Any]] = {}
+    for a in list(ben2) + list(ben3):
+        lab, _ = resolve(a)
+        if lab != 0:
+            continue
+        cur = benign_by_pair.get(a["pair_id"])
+        if cur is None or a["response_id"].endswith("-V3"):
+            benign_by_pair[a["pair_id"]] = a
+
+    v2_old_map = {}
+    for a in neg_assign:
+        v2_old_map[a["response_id"].removesuffix("-NEG2")] = a
+    ben_pairs = {a["pair_id"] for a in list(ben2) + list(ben3)}
+
+    keep = []
+    n_restored_neg = 0
+    n_restored_benign = 0
+    for r in v1:
+        if r["response_id"] in v2_old_map:
+            a = v2_old_map[r["response_id"]]
+            if a["response_id"] in neg_ok_ids:
+                keep.append({**r, "response_id": a["response_id"], "q_private": a["q_private"], "y_private": a["y_private"],
+                             "provenance": a["provenance"], "gold_method": "double_agree"})
+            else:
+                keep.append(r)
+                n_restored_neg += 1
+            continue
+        if r["pair_id"] in ben_pairs and r["stratum"] == "b1_context_critical_y_matched" and int(r["gold_central"]) == 0:
+            rep = benign_by_pair.get(r["pair_id"])
+            if rep is not None:
+                keep.append({**r, "response_id": rep["response_id"], "q_private": rep["q_private"], "y_private": rep["y_private"],
+                             "gold_method": "double_agree", "benign_source": rep.get("benign_source")})
+            else:
+                keep.append(r)
+                n_restored_benign += 1
+            continue
+        keep.append(r)
+
+    counts = collections.Counter(r["stratum"] for r in keep)
+    labels = collections.Counter(int(r["gold_central"]) for r in keep)
+    langs = collections.Counter(r["language"] for r in keep)
+    prov = collections.Counter(r["provenance"] for r in keep)
+    qc = collections.Counter(norm(strip_benign_prefix(r["q_private"])) for r in keep if r["stratum"] == "b1_context_critical_y_matched" and int(r["gold_central"]) == 0)
+    benign_dup_q_rows = sum(1 for v in qc.values() if v > 1)
+    audit = {
+        "n_rows": len(keep), "by_stratum": dict(counts), "by_label": dict(labels), "by_language": dict(langs),
+        "by_provenance": dict(prov), "neg_v2_ok": len(neg_ok_ids), "neg_v2_fail": neg_fail,
+        "benign_v2_ok": sum(1 for a in ben2 if a["pair_id"] in benign_by_pair and not a["response_id"].endswith("-V3")),
+        "benign_v3_ok": sum(1 for a in ben3 if a["pair_id"] in benign_by_pair),
+        "benign_restored_original": n_restored_benign,
+        "neg_restored_original": n_restored_neg,
+        "benign_dup_q_rows": benign_dup_q_rows,
+    }
+    write_jsonl(OUT_DIR / "E1_V4_PANEL_ALL.jsonl", keep)
+    write_json(OUT_DIR / "E1_V4_PANEL_AUDIT.json", audit)
+    print(json.dumps(audit, ensure_ascii=False), flush=True)
+    return {"status": "REASSEMBLED_V3", "audit": audit}
+
+
 PHASES = {
     "gen-defensive": phase_gen_defensive,
     "gen-benign": phase_gen_benign,
     "gold": phase_gold,
     "adjudicate": phase_adjudicate,
     "reassemble": phase_reassemble,
+    "repair-gen": phase_repair_gen,
+    "repair-gold": phase_repair_gold,
+    "repair-reassemble": phase_repair_reassemble,
 }
 
 
