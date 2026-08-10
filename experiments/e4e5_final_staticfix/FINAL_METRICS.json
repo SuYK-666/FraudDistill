@@ -1,6 +1,6 @@
 {
   "protocol_dir": "outputs\\exp4_unseen_student_v2\\e4v2_FINAL",
-  "commit": "86e348dd67df9f4277575dfa3589779f3080d882",
+  "commit": "2ffbf9b4c4e0b06500c34621727258ed72bbc0c7",
   "seed": 20260808,
   "replicates": 10000,
   "thresholds": {

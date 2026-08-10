@@ -1,6 +1,6 @@
 # E4/E5 Final Summary (frozen static-fix)
 
-> 2026-08-10 · commit `86e348dd67df9f4277575dfa3589779f3080d882` · offline recompute, zero new API calls
+> 2026-08-10 · commit `2ffbf9b4c4e0b06500c34621727258ed72bbc0c7` · offline recompute, zero new API calls
 > Frozen manifests: test **1200 / 557 families**, calibration **600 / 243 families**;
 > predictions filtered by manifest-ID join (1425/686 cached rows excluded).
 > Gold: dual-judge (DeepSeek+Qwen), raw agreement 0.8733, κ 0.7485

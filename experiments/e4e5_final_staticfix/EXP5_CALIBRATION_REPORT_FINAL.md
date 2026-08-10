@@ -1,6 +1,6 @@
 # EXP5 — Calibration & Selective Audit (FINAL static-fix version)
 
-> Frozen offline pass · 2026-08-10 · commit `86e348dd67df9f4277575dfa3589779f3080d882` · zero new API calls
+> Frozen offline pass · 2026-08-10 · commit `2ffbf9b4c4e0b06500c34621727258ed72bbc0c7` · zero new API calls
 > Scope: P0 (frozen student), P1 (temperature calibration), P2 (selective abstention),
 > P3 (score-ambiguity selective audit with cached DeepSeek decisions).
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from collections import Counter, defaultdict
@@ -94,7 +95,8 @@ def main() -> int:
     u1 = [r for r in test_rows if r["primary_shift"] == "U1_category"]
     u2 = [r for r in test_rows if r["primary_shift"] == "U2_source"]
     audit["u1"] = {"n": len(u1),
-                   "n_question_mark_suffix": sum(1 for r in u1 if "?????" in (r.get("user_query") or ""))}
+                   "n_question_mark_suffix": sum(1 for r in u1
+                                                 if re.search(r"\?{3,}\s*$", r.get("user_query") or ""))}
     audit["u2"] = {"n": len(u2), "source": dict(Counter(r.get("source") for r in u2)),
                    "fraud_category": dict(Counter(r.get("fraud_category") for r in u2))}
 

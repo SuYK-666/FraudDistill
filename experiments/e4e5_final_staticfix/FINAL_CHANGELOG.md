@@ -1,7 +1,7 @@
 # FINAL_CHANGELOG — E4/E5 Static Fix (frozen)
 
 Date: 2026-08-10 (static offline pass; no new API calls, no new annotation, no test-driven tuning)
-Code commit: `86e348dd67df9f4277575dfa3589779f3080d882`
+Code commit: `2ffbf9b4c4e0b06500c34621727258ed72bbc0c7`
 Source protocol dir: `outputs\exp4_unseen_student_v2\e4v2_FINAL`
 Seed: 20260808 | Bootstrap replicates: 10000
 

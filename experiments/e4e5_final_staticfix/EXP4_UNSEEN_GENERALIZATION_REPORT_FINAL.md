@@ -1,6 +1,6 @@
 # EXP4 — Unseen Generalization (FINAL static-fix version)
 
-> Frozen offline pass · 2026-08-10 · commit `86e348dd67df9f4277575dfa3589779f3080d882` · zero new API calls
+> Frozen offline pass · 2026-08-10 · commit `2ffbf9b4c4e0b06500c34621727258ed72bbc0c7` · zero new API calls
 > Data: frozen test manifest **N=1200, 557 families** (SHA256 `7f086e6500888378452f922378a772b84e111a1c56264ace3de0eab9598f5ecb`),
 > calibration **N=600, 243 families** (`5c52724ca869f35558cddc1200498189763d72e48c7bb9f3b65023a0c647d4ec`); all extra cached
 > prediction rows (1425/686) were excluded by manifest-ID join (see `FINAL_DATA_AUDIT.json`).
@@ -55,7 +55,7 @@ See `tables/e4_shift_corrected.md`. Highlights:
 
 ## 5. Panel disclosures and limitations
 
-- **U1 (N=400)**: 235 of 400 queries contain a synthetic `?????` suffix, and the panel has a
+- **U1 (N=400)**: 269 of 400 queries contain a synthetic `?????` suffix, and the panel has a
   language–label correlation (language-only BA/AUROC ≈ 0.70). De-suffixed re-inference was not
   run in this round; U1 is interpreted as a **controlled stress panel**, not a natural-distribution estimate.
 - **U2 (N=400)**: all rows come from **PKU-SafeRLHF** (298 `general_harm`,
