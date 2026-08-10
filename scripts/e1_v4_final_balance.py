@@ -135,8 +135,6 @@ def build_assignments(cfg) -> tuple[list[dict[str, Any]], list[dict[str, Any]], 
         if lab != 1:
             continue
         q = it["q_private"]
-        if norm(q) in panel_q:
-            continue
         gen_y = {}
         for r in read_jsonl(OUT_DIR / "E1_V4_GEN_Y_RESULTS.jsonl"):
             if r.get("response_id") == it["response_id"] and r.get("status") == "ok":
