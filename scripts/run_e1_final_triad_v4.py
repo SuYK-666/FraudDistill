@@ -134,6 +134,12 @@ def phase_b_gen_y(cfg: dict[str, Any], args) -> dict[str, Any]:
     out_dir = rel(cfg["data"]["output_dir"])
     tasks = read_jsonl(out_dir / "E1_V4_GEN_Y_TASKS.jsonl")
     ref_tasks = read_jsonl(out_dir / "E1_V4_GEN_REFUSAL_TASKS.jsonl")
+    if args.pilot:
+        b1 = [t for t in tasks if t.get("task_kind") == "b1_y"]
+        n = min(args.pilot, len(b1))
+        idxs = sorted({round(i * (len(b1) - 1) / max(1, n - 1)) for i in range(n)})
+        tasks = [b1[i] for i in idxs]
+        ref_tasks = []
     total = len(tasks) + len(ref_tasks)
     done = 0
     def monitor(r):
@@ -155,7 +161,7 @@ def phase_b_gen_y(cfg: dict[str, Any], args) -> dict[str, Any]:
 def phase_b_gen_qbenign(cfg: dict[str, Any], args) -> dict[str, Any]:
     from frauddistill.e1_final_v4.assemble import build_qbenign_tasks
     out_dir = rel(cfg["data"]["output_dir"])
-    n = build_qbenign_tasks(cfg, out_dir)
+    n = build_qbenign_tasks(cfg, out_dir, pilot_n=args.pilot)
     tasks = read_jsonl(out_dir / "E1_V4_GEN_QBENIGN_TASKS.jsonl")
     result = execute_tasks(
         tasks, output_path=out_dir / "E1_V4_GEN_QBENIGN_RESULTS.jsonl", ledger_path=rel(cfg["data"]["v4_budget_ledger"]),

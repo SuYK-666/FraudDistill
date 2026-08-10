@@ -10,7 +10,7 @@ from typing import Any
 
 from frauddistill.e1_final_v3.io import read_json, read_jsonl, sha_text, write_json, write_jsonl
 from frauddistill.e1_final_v4.gold import central_label, parse_vote
-from frauddistill.e1_final_v4.panel import _gold_task, _row_for_gold, benign_message_prompt, build_v32_gold_index, sd_pair_canonical
+from frauddistill.e1_final_v4.panel import _gold_task, _row_for_gold, benign_topic_prompt, build_v32_gold_index, sd_pair_canonical
 
 
 def _gen_index(results_path) -> dict[str, str]:
@@ -38,11 +38,16 @@ def _aegis_refusals(aegis_path) -> list[dict[str, Any]]:
     return out
 
 
-def build_qbenign_tasks(cfg: dict[str, Any], out_dir) -> int:
+def build_qbenign_tasks(cfg: dict[str, Any], out_dir, pilot_n: int | None = None) -> int:
     manifest = read_json(out_dir / "E1_V4_TASK_MANIFEST.json")
     gen_y = _gen_index(out_dir / "E1_V4_GEN_Y_RESULTS.jsonl")
     tasks = []
-    for item in manifest["b1_q_pool"]:
+    pool = manifest["b1_q_pool"]
+    if pilot_n is not None:
+        n = min(pilot_n, len(pool))
+        idxs = sorted({round(i * (len(pool) - 1) / max(1, n - 1)) for i in range(n)})
+        pool = [pool[i] for i in idxs]
+    for item in pool:
         rid = item["response_id"]
         if not gen_y.get(rid):
             continue
@@ -53,7 +58,7 @@ def build_qbenign_tasks(cfg: dict[str, Any], out_dir) -> int:
             "target_provider": m["provider"],
             "requested_target_model": m["model"],
             "extra_body": m.get("extra_body", {}),
-            "q_private": benign_message_prompt(item["q_private"], item["language"]),
+            "q_private": benign_topic_prompt(item["q_private"], item["language"]),
             "temperature": cfg["generation"]["temperature"],
             "top_p": cfg["generation"]["top_p"],
             "max_tokens": 768,

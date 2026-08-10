@@ -104,6 +104,8 @@ e1_v4:
   b2_pairs: 1000
   b1_generate_y_extra: 300
   b2_neg_need_generate: 400
+  b1_pool_n: 2000
+  b1_real_pairs_n: 20
   split_frac:
     model_dev: 0.6
     calibration: 0.2
