@@ -486,7 +486,7 @@ def build_assignments(cfg) -> tuple[list[dict[str, Any]], dict[str, Any]]:
             if not y or not (120 <= len(y) <= 700):
                 stats["no_primary_defensive"] += 1
                 continue
-            assignments.append({**r, "response_id": rid, "y_private": y, "provenance": "generated_defensive",
+            assignments.append({**r, "response_id": rid, "old_response_id": old, "y_private": y, "provenance": "generated_defensive",
                                 "source": "generated_defensive", "variant": variant, "primary": True})
             stats["generated"] += 1
         else:  # en b3 -> real aegis long safe
@@ -495,7 +495,7 @@ def build_assignments(cfg) -> tuple[list[dict[str, Any]], dict[str, Any]]:
                 continue
             y = aegis[aegis_used][1]
             aegis_used += 1
-            assignments.append({**r, "response_id": rid, "y_private": y, "provenance": "aegis_refusal",
+            assignments.append({**r, "response_id": rid, "old_response_id": old, "y_private": y, "provenance": "aegis_refusal",
                                 "source": "aegis_long", "variant": None, "primary": True})
             stats["aegis"] += 1
 
@@ -877,7 +877,7 @@ def phase_repair_reassemble(cfg, args) -> dict[str, Any]:
 
     v2_old_map = {}
     for a in neg_assign:
-        v2_old_map[a["response_id"].removesuffix("-NEG2")] = a
+        v2_old_map[a.get("old_response_id") or a["response_id"].removesuffix("-NEG2")] = a
     ben_pairs = {a["pair_id"] for a in list(ben2) + list(ben3)}
 
     keep = []
@@ -913,8 +913,8 @@ def phase_repair_reassemble(cfg, args) -> dict[str, Any]:
     audit = {
         "n_rows": len(keep), "by_stratum": dict(counts), "by_label": dict(labels), "by_language": dict(langs),
         "by_provenance": dict(prov), "neg_v2_ok": len(neg_ok_ids), "neg_v2_fail": neg_fail,
-        "benign_v2_ok": sum(1 for a in ben2 if a["pair_id"] in benign_by_pair and not a["response_id"].endswith("-V3")),
-        "benign_v3_ok": sum(1 for a in ben3 if a["pair_id"] in benign_by_pair),
+        "benign_v2_ok": sum(1 for a in ben2 if benign_by_pair.get(a["pair_id"]) is a),
+        "benign_v3_ok": sum(1 for a in ben3 if benign_by_pair.get(a["pair_id"]) is a),
         "benign_restored_original": n_restored_benign,
         "neg_restored_original": n_restored_neg,
         "benign_dup_q_rows": benign_dup_q_rows,
