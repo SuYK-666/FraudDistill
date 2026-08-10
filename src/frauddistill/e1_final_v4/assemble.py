@@ -112,6 +112,20 @@ def build_gold_tasks(cfg: dict[str, Any], out_dir, pilot_n: int | None = None) -
                 tasks.append(_gold_task(row, judge, cfg, "E1-v4-gold-b1"))
         counts["b1_pairs"] += 1
 
+    # ---- B1 real matched pairs (priority 1): re-judged with v4 gold
+    for rp in manifest.get("b1_real_pairs", []):
+        row = _row_for_gold(
+            f"E1-V4-REALPAIR-{rp['idx']:04d}-SCAM", rp["q_scam"], rp["y"], rp["language"], rp["case_scam"],
+            "b1_context_critical_y_matched", f"B1-REAL-{rp['idx']:04d}", f"B1R-{rp['idx']:04d}", "real_matched_v32")
+        for judge in ["judge_a", "judge_b"]:
+            tasks.append(_gold_task(row, judge, cfg, "E1-v4-gold-b1-real"))
+        row = _row_for_gold(
+            f"E1-V4-REALPAIR-{rp['idx']:04d}-BENIGN", rp["q_benign"], rp["y"], rp["language"], rp["case_benign"],
+            "b1_context_critical_y_matched", f"B1-REAL-{rp['idx']:04d}", f"B1R-{rp['idx']:04d}", "real_matched_v32")
+        for judge in ["judge_a", "judge_b"]:
+            tasks.append(_gold_task(row, judge, cfg, "E1-v4-gold-b1-real"))
+        counts["b1_real_pairs"] += 1
+
     # ---- B2
     aegis = _aegis_refusals(cfg["data"]["aegis_refusals"])
     rng = random.Random(int(cfg["experiment"]["seed"]))
@@ -257,6 +271,22 @@ def assemble_panel(cfg: dict[str, Any], out_dir) -> dict[str, Any]:
 
     # ---- B1
     b1_kept = 0
+    # real matched pairs first (priority 1)
+    for rp in manifest.get("b1_real_pairs", []):
+        if b1_kept >= 1000:
+            break
+        scam_lab, scam_m = resolved_label(f"E1-V4-REALPAIR-{rp['idx']:04d}-SCAM", votes, adj)
+        ben_lab, ben_m = resolved_label(f"E1-V4-REALPAIR-{rp['idx']:04d}-BENIGN", votes, adj)
+        if scam_lab == 1 and ben_lab == 0:
+            pair = f"B1R-{rp['idx']:04d}"
+            add(f"E1-V4-REALPAIR-{rp['idx']:04d}-SCAM", rp["q_scam"], rp["y"], rp["language"], rp["case_scam"],
+                "b1_context_critical_y_matched", f"B1-REAL-{rp['idx']:04d}", pair, "real_matched_v32", 1, scam_m)
+            add(f"E1-V4-REALPAIR-{rp['idx']:04d}-BENIGN", rp["q_benign"], rp["y"], rp["language"], rp["case_benign"],
+                "b1_context_critical_y_matched", f"B1-REAL-{rp['idx']:04d}", pair, "real_matched_v32", 0, ben_m)
+            b1_kept += 1
+        else:
+            dropped.append({"kind": "b1_real", "idx": rp["idx"], "scam": scam_lab, "benign": ben_lab})
+
     for i, item in enumerate(manifest["b1_q_pool"]):
         if b1_kept >= 1000:
             break
