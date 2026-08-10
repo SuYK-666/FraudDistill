@@ -41,6 +41,15 @@ def run_shard(shard: int, nshards: int, threads: int) -> None:
     seeds = cfg["e1_v4"]["seeds"]
     jobs = [(m, s) for m in MODES for s in seeds]
     mine = [j for i, j in enumerate(jobs) if i % nshards == shard]
+    # resume: skip jobs whose model checkpoint already exists on disk
+    resume = []
+    for m, s in mine:
+        meta = out_dir / "models" / f"{m}_seed{s}" / "meta.json"
+        if meta.exists():
+            print(f"[shard {shard}] skip {m}_seed{s} (checkpoint exists)", flush=True)
+            continue
+        resume.append((m, s))
+    mine = resume
     print(f"[shard {shard}/{nshards}] jobs: {mine}", flush=True)
     results: dict[str, list] = {}
     part_path = out_dir / f"E1_V4_TRAIN_PART_{shard}.json"

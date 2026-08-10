@@ -405,6 +405,15 @@ def phase_c_replay(cfg: dict[str, Any], args) -> dict[str, Any]:
     from frauddistill.e1_final_v4.detectors import NeuralJointDetector
     out_dir = rel(cfg["data"]["output_dir"])
     a_rows = read_jsonl(rel(cfg["data"]["v32_dir"]) / "E1_V32_REAL_POOL.jsonl")
+    # E1-C independence: exclude every canonical case that entered the B panel
+    # (guide section 10.2: case/family-level, not row-level).
+    b_rows = read_jsonl(out_dir / "E1_V4_PANEL_ALL.jsonl")
+    b_cases = {r.get("canonical_case_id") for r in b_rows if r.get("canonical_case_id")}
+    n_before = len(a_rows)
+    pos_before = sum(1 for r in a_rows if int(r.get("gold_central", 0) or 0) == 1)
+    a_rows = [r for r in a_rows if r.get("canonical_case_id") not in b_cases]
+    n_after = len(a_rows)
+    pos_after = sum(1 for r in a_rows if int(r.get("gold_central", 0) or 0) == 1)
     seeds = cfg["e1_v4"]["seeds"]
     predictors = {}
     for mode in ["q_y", "y_only"]:
@@ -421,7 +430,10 @@ def phase_c_replay(cfg: dict[str, Any], args) -> dict[str, Any]:
             per_seed.append((seed, lambda rows, d=det: d.predict_proba(rows), thr))
         predictors[mode] = per_seed
     result = c_report(cfg, out_dir, a_rows, predictors)
-    return {"status": "C_DONE", "aggregate": result["aggregate"]}
+    result["exclusion"] = {"b_cases": len(b_cases), "a_rows_before": n_before, "a_positives_before": pos_before,
+                           "a_rows_after_exclusion": n_after, "a_positives_after_exclusion": pos_after,
+                           "note": "C uses only canonical cases that never entered the B panel (case/family-level independence; guide 10.2)."}
+    return {"status": "C_DONE", "aggregate": result["aggregate"], "exclusion": result["exclusion"]}
 
 
 def phase_final_report(cfg: dict[str, Any], args) -> dict[str, Any]:
