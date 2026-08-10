@@ -36,7 +36,10 @@ PROV_COARSE = {
     "source_derived_open_control": "open_source",
     "aegis_refusal": "open_source",
     "real_matched_v32": "open_source",
+    "real_target_v32": "open_source",
 }
+
+PROV_COARSE_BIN = {"open_source": 1.0, "generated": 0.0}
 
 
 def _shortcut_auc(rows: list[dict[str, Any]], feature_fn, labels) -> float | None:
@@ -58,12 +61,13 @@ def _shortcut_auc(rows: list[dict[str, Any]], feature_fn, labels) -> float | Non
         return None
 
 
-def _numeric_length_auc(rows, labels) -> float | None:
+def _numeric_feature_auc(values: list[float], labels) -> float | None:
+    """Registered shortcut classifier: logistic regression on the raw feature value."""
     if len(set(labels)) < 2:
         return None
     try:
         from sklearn.model_selection import train_test_split
-        X = np.asarray([len(r.get("y_private") or "") for r in rows], dtype=float).reshape(-1, 1)
+        X = np.asarray(values, dtype=float).reshape(-1, 1)
         Xtr, Xte, ytr, yte = train_test_split(X, np.asarray(labels), test_size=0.3, stratify=labels, random_state=42)
         clf = LogisticRegression(max_iter=1000, class_weight="balanced")
         clf.fit(Xtr, ytr)
@@ -186,11 +190,15 @@ def run_audits(dev, cal, anc, out_dir) -> dict[str, Any]:
                 else:
                     y_seen.setdefault(ykey, (split_name, int(r["gold_central"])))
 
-    # shortcut AUCs
-    prov_coarse = _shortcut_auc(rows, lambda r: PROV_COARSE.get(str(r.get("provenance", "")), "other"), labels)
+    # shortcut AUCs: registered = numeric LR on the raw feature; string-Tfidf variants kept as diagnostics
+    prov_coarse_vals = [PROV_COARSE_BIN.get(PROV_COARSE.get(str(r.get("provenance", "")), "other"), 0.0) for r in rows]
+    prov_coarse = _numeric_feature_auc(prov_coarse_vals, labels)
+    prov_coarse_tfidf = _shortcut_auc(rows, lambda r: PROV_COARSE.get(str(r.get("provenance", "")), "other"), labels)
     prov_fine = _shortcut_auc(rows, lambda r: str(r.get("provenance", "")), labels)
-    len_auc = _shortcut_auc(rows, lambda r: str(len(r.get("y_private") or "")), labels)
-    len_auc_num = _numeric_length_auc(rows, labels)
+    len_vals = [float(len(r.get("y_private") or "")) for r in rows]
+    len_auc = _numeric_feature_auc(len_vals, labels)
+    len_log_auc = _numeric_feature_auc([np.log1p(v) for v in len_vals], labels)
+    len_tfidf = _shortcut_auc(rows, lambda r: str(len(r.get("y_private") or "")), labels)
     src_auc = _shortcut_auc(rows, lambda r: str(r.get("source_dataset", "")), labels)
 
     # pair completeness in critical strata (b1/b2 pairs with both labels present)
@@ -226,16 +234,18 @@ def run_audits(dev, cal, anc, out_dir) -> dict[str, Any]:
         "cross_split_near_dup_y_same_label": y_cross_same_label,
         "shortcut_auc": {
             "provenance_coarse": prov_coarse,
+            "provenance_coarse_tfidf_diagnostic": prov_coarse_tfidf,
             "provenance_fine_diagnostic": prov_fine,
             "length": len_auc,
-            "length_numeric_diagnostic": len_auc_num,
+            "length_log_diagnostic": len_log_auc,
+            "length_tfidf_diagnostic": len_tfidf,
             "source": src_auc,
         },
         "pair_completeness": pair_completeness,
         "q_in_both_classes": q_both,
         "q_total": len(q_lab),
         "gate": gate,
-        "amendment_note": "provenance shortcut audited on coarse real-vs-generated grouping (fine provenance encodes matched-pair construction); length audit panel-level Tfidf-on-length.",
+        "amendment_note": "registered shortcut classifiers: logistic regression on numeric y length (and log-length diagnostic) and on the coarse real-vs-generated provenance indicator; fine-grained provenance encodes matched-pair construction so it is reported diagnostic-only; string-Tfidf variants are diagnostics (they measure exact-length/provenance-string identity rather than the feature itself).",
     }
     write_json(out_dir / "E1_V4_SPLIT_AUDIT.json", audit)
     return audit
