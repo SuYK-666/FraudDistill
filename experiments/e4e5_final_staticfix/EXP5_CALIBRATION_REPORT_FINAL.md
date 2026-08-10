@@ -1,8 +1,12 @@
 # EXP5 — Calibration & Selective Audit (FINAL static-fix version)
 
-> Frozen offline pass · 2026-08-10 · commit `2ffbf9b4c4e0b06500c34621727258ed72bbc0c7` · zero new API calls
-> Scope: P0 (frozen student), P1 (temperature calibration), P2 (selective abstention),
-> P3 (score-ambiguity selective audit with cached DeepSeek decisions).
+> Frozen offline pass · 2026-08-10 · offline recompute · zero new API calls
+> Source experiment revision: `86e348d` · Static-fix implementation base: `2ffbf9b` · Artifact release tag: `e4e5-staticfix-v1`
+> Data: frozen test manifest **N=1200, 557 families** (canonical SHA256 `7f086e6500888378452f922378a772b84e111a1c56264ace3de0eab9598f5ecb`), calibration **N=600, 243 families** (`5c52724ca869f35558cddc1200498189763d72e48c7bb9f3b65023a0c647d4ec`); all extra cached prediction rows (1425/686) were excluded by manifest-ID join (see `FINAL_DATA_AUDIT.json`).
+> Labels are **dual-judge Gold** (DeepSeek+Qwen with adjudication); no human verification.
+
+Scope: P0 (frozen student), P1 (temperature calibration), P2 (selective abstention),
+P3 (score-ambiguity selective audit with cached DeepSeek decisions).
 
 ## 1. Main table (Eval N=1200, Cal N=600)
 
@@ -16,23 +20,35 @@
 - **P0** is the frozen operating point of the Final Student (`risk_score >= 0.5622`).
 - **P1** (temperature 5.0 + risk threshold 0.6106, fitted on
   calibration) is a **negative result**: it trades recall for lower FPR.
-  ΔMacro-F1(P1−P0) = -0.1042, ΔRecall = -0.1417,
-  ΔFPR = -0.0567, ΔBrier ≈ -0.1029,
-  ΔECE ≈ -0.1867 (new − baseline).
+  ΔMacro-F1(P1−P0) = −0.1042,
+  ΔRecall(P1−P0) = −0.1417,
+  ΔFPR(P1−P0) = −0.0567,
+  ΔBrier ≈ −0.1029,
+  ΔECE ≈ −0.1867 (new − baseline, unrounded values).
 - **P2** (all-safe selective abstention) is a degenerate negative result (coverage 1.0, no abstention).
 - **P3** is the primary reported operating point: **K=180 / 15% query rate** selected by the
   **score-ambiguity heuristic** (min |risk_score − 0.5|, from cached decisions), **not** a
   pre-registered optimum and **not** re-selected from test.
 
-## 2. P3 vs P0 (paired, 10,000 family-cluster replicates)
+## 2. P3 vs P0 and P1 vs P0 (paired, 10,000 family-cluster replicates)
 
-- Δmacro_f1 = +0.0917 (95% CI [0.0722, 0.1119], p<1e-19)  (ΔMacro-F1 point ≈ +0.0918)
-- Δf1_unsafe = +0.1446 (95% CI [0.1133, 0.1772], p<1e-19)  (ΔF1-unsafe ≈ +0.1448)
-- Δrecall = +0.1165 (95% CI [0.0903, 0.1433], p<1e-19)  (ΔRecall ≈ +0.1167)
-- Δfpr = -0.0167 (95% CI [-0.0287, -0.0051], p=0.0072)  (ΔFPR ≈ −0.0167)
-- Δmcc = +0.1456 (95% CI [0.1126, 0.1800], p<1e-19)  (ΔMCC ≈ +0.1458)
-- McNemar: b=5, c=85
-  (p<1e-19) — the cascade corrects 85 errors while introducing 5.
+Point estimates are full-sample values; CIs come from the family-cluster bootstrap (fixed seed).
+Empirical bootstrap p-values are not reported (10,000 replicates cannot resolve p below ~1e-4).
+
+| Comparison | Point estimate | Bootstrap 95% CI |
+|---|---:|---:|
+| ΔMacro-F1(P3−P0) | +0.0918 | [0.0722, 0.1119] |
+| ΔF1-unsafe(P3−P0) | +0.1448 | [0.1133, 0.1772] |
+| ΔRecall(P3−P0) | +0.1167 | [0.0903, 0.1433] |
+| ΔFPR(P3−P0) | −0.0167 | [−0.0287, −0.0051] |
+| ΔMCC(P3−P0) | +0.1457 | [0.1126, 0.1800] |
+| ΔMacro-F1(P1−P0) | −0.1042 | [−0.1286, −0.0792] |
+| ΔRecall(P1−P0) | −0.1417 | [−0.1712, −0.1123] |
+| ΔFPR(P1−P0) | −0.0567 | [−0.0780, −0.0375] |
+
+
+- **Exact McNemar test of paired correctness** (P3 vs P0): b=5, c=85,
+  p=7.53×10⁻²⁰ — the cascade corrects 85 errors while introducing 5.
 - Score-based AUROC/AUPRC are unchanged by the cascade by construction and are labeled
   **Student-score AUROC/AUPRC** in the sensitivity table.
 

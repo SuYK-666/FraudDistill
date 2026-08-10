@@ -1,7 +1,9 @@
 # FINAL_CHANGELOG — E4/E5 Static Fix (frozen)
 
 Date: 2026-08-10 (static offline pass; no new API calls, no new annotation, no test-driven tuning)
-Code commit: `2ffbf9b4c4e0b06500c34621727258ed72bbc0c7`
+Source experiment revision: `86e348dd67df9f4277575dfa3589779f3080d882`
+Static-fix implementation base: `2ffbf9b4c4e0b06500c34621727258ed72bbc0c7`
+Artifact release tag: `e4e5-staticfix-v1`
 Source protocol dir: `outputs\exp4_unseen_student_v2\e4v2_FINAL`
 Seed: 20260808 | Bootstrap replicates: 10000
 
@@ -10,10 +12,11 @@ Seed: 20260808 | Bootstrap replicates: 10000
 2. **Holm-Bonferroni**: corrected to cumulative max (was cumulative min). E4 two-comparison Holm-adjusted p now ≈ 0.2910.
 3. **McNemar**: p-value no longer rounded to 6 decimals (P3 vs P0 exact p = 7.53e-20, previously displayed as 0.0).
 4. **Bootstrap**: single-pass vectorized family-cluster bootstrap (10,000 replicates, fixed seed, family-level resampling, paired across models) covering Macro-F1, F1-unsafe, Recall, FPR, MCC (+AUROC/AUPRC for E4 model pairs).
-5. **Endpoint sign convention**: all Δ reported as new − baseline (e.g. ΔFPR(P1−P0) = −0.0566).
-6. **Data scope**: metrics computed only on frozen manifests (test 1200 / 557 families, cal 600 / 243 families); 1425/686 extra prediction rows excluded by manifest-ID join. Manifest SHA256 recorded in FINAL_DATA_AUDIT.json.
-7. **U1/U2 wording**: U2 fully PKU-SafeRLHF (298 general_harm / 102 financial_fraud); U1 269 `???`-suffix queries and language-label correlation disclosed as artifacts/limitations.
+5. **Endpoint sign convention**: all Δ reported as new − baseline (e.g. ΔFPR(P1−P0) = −0.0567, computed from unrounded values).
+6. **Data scope**: metrics computed only on frozen manifests (test 1200 / 557 families, cal 600 / 243 families); 1425/686 extra prediction rows excluded by manifest-ID join. Manifest SHA256 is the **canonical JSON-record hash** (`manifest_sha256`: `json.dumps(row, ensure_ascii=False, sort_keys=True)` + newline per row), matching the original experiment method; both manifests verify `sha256_match: true` in FINAL_DATA_AUDIT.json.
+7. **U1/U2 wording**: U2 fully PKU-SafeRLHF (298 general_harm / 102 financial_fraud); U1 269/400 queries carry a trailing run of >=3 `?` (regex `\?(3,)\s*$`) and a language-label correlation, disclosed as artifacts/limitations.
 8. **Gold**: quality summary recomputed on all 1800 records (raw agreement 0.8733, κ 0.7485, agreed 1572, third-opinion 180, deterministic 48); labeled `dual-judge Gold` (no human verification).
+8b. **Bootstrap reporting policy**: empirical bootstrap p-values from 10,000 replicates are not reported (resolution ~1e-4); bootstrap results are reported as point estimate + 95% CI only. Significance is assessed separately with exact McNemar tests of paired correctness plus Holm correction.
 9. **P3**: primary operating point K=180 / 15% API rate via score-ambiguity heuristic; K=60-600 sensitivity only; AUROC/AUPRC columns renamed to Student-score; API cost 600 rows ≈ ¥0.07, historical total ≈ ¥15.3 (original ¥10 hard cap disclosed as protocol deviation).
 10. **Base zero-shot** (300-row subset, all-unsafe) and 4-class metrics moved to appendix/limitations; no quantitative comparison against N=1200 rows.
 

@@ -1,8 +1,10 @@
 # E4/E5 Final Summary (frozen static-fix)
 
-> 2026-08-10 · commit `2ffbf9b4c4e0b06500c34621727258ed72bbc0c7` · offline recompute, zero new API calls
-> Frozen manifests: test **1200 / 557 families**, calibration **600 / 243 families**;
-> predictions filtered by manifest-ID join (1425/686 cached rows excluded).
+> 2026-08-10 · offline recompute · zero new API calls
+> Source experiment revision: `86e348d` · Static-fix implementation base: `2ffbf9b`
+> Artifact release tag: `e4e5-staticfix-v1`
+> Frozen manifests: test **1200 / 557 families**, calibration **600 / 243 families** (canonical JSON-record
+> SHA256, verified `sha256_match: true`); predictions filtered by manifest-ID join (1425/686 cached rows excluded).
 > Gold: dual-judge (DeepSeek+Qwen), raw agreement 0.8733, κ 0.7485
 > (agreed 1572 / third-opinion 180 / deterministic 48; no human verification).
 
@@ -25,17 +27,22 @@
 
 ## Key statistics (10,000 family-cluster bootstrap, seed 20260808)
 
-- P3 vs P0: ΔMacro-F1 +0.0917
-  (CI [0.0722, 0.1119]),
-  ΔF1-unsafe +0.1446,
-  ΔRecall +0.1165,
-  ΔFPR -0.0167,
-  ΔMCC +0.1456;
-  McNemar b=5, c=85, p=7.53×10⁻²⁰.
-- P1 vs P0 (negative result): ΔMacro-F1 -0.1041,
-  ΔRecall -0.1416,
-  ΔFPR -0.0566.
-- E4 model pairs: Holm-adjusted p = 0.2910 (both comparisons).
+Point estimates are full-sample values; CIs are family-cluster bootstrap 95% intervals.
+Empirical bootstrap p-values are not reported (10,000 replicates cannot resolve p below ~1e-4).
+
+- P3 vs P0: ΔMacro-F1 +0.0918 (95% CI [0.0722, 0.1119]),
+  ΔF1-unsafe +0.1448 (95% CI [0.1133, 0.1772]),
+  ΔRecall +0.1167 (95% CI [0.0903, 0.1433]),
+  ΔFPR −0.0167 (95% CI [−0.0287, −0.0051]),
+  ΔMCC +0.1457 (95% CI [0.1126, 0.1800]).
+- **Exact McNemar test of paired correctness** (P3 vs P0): b=5, c=85,
+  p=7.53×10⁻²⁰.
+- P1 vs P0 (negative result): ΔMacro-F1 −0.1042 (95% CI [−0.1286, −0.0792]),
+  ΔRecall −0.1417 (95% CI [−0.1712, −0.1123]),
+  ΔFPR −0.0567 (95% CI [−0.0780, −0.0375]).
+- E4 model pairs: family-cluster bootstrap CIs for the Macro-F1 differences included zero;
+  paired correctness differences were not significant under exact McNemar tests after Holm
+  correction (adjusted p = 0.2910 for both comparisons).
 
 ## Conclusion
 

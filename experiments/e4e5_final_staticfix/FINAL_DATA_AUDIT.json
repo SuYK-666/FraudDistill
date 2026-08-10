@@ -2,9 +2,10 @@
   "test": {
     "manifest_n": 1200,
     "families": 557,
-    "sha256": "1424512441a014a4664f982880511a4dd11268195e81c9676a6e7a1107dbe8ab",
+    "sha256": "7f086e6500888378452f922378a772b84e111a1c56264ace3de0eab9598f5ecb",
     "sha256_expected": "7f086e6500888378452f922378a772b84e111a1c56264ace3de0eab9598f5ecb",
-    "sha256_match": false,
+    "sha256_method": "canonical JSON-record SHA256 (manifest_sha256: json.dumps(row, ensure_ascii=False, sort_keys=True) + newline per row)",
+    "sha256_match": true,
     "gold_label": {
       "safe": 600,
       "unsafe": 600
@@ -18,9 +19,10 @@
   "calibration": {
     "manifest_n": 600,
     "families": 243,
-    "sha256": "42401fb75b8027c3bbae0bf426449ffc7709bea66218b373bab28bfcab445805",
+    "sha256": "5c52724ca869f35558cddc1200498189763d72e48c7bb9f3b65023a0c647d4ec",
     "sha256_expected": "5c52724ca869f35558cddc1200498189763d72e48c7bb9f3b65023a0c647d4ec",
-    "sha256_match": false,
+    "sha256_method": "canonical JSON-record SHA256 (manifest_sha256: json.dumps(row, ensure_ascii=False, sort_keys=True) + newline per row)",
+    "sha256_match": true,
     "gold_label": {
       "safe": 300,
       "unsafe": 300

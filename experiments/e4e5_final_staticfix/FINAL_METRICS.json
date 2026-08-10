@@ -1,6 +1,11 @@
 {
   "protocol_dir": "outputs\\exp4_unseen_student_v2\\e4v2_FINAL",
-  "commit": "2ffbf9b4c4e0b06500c34621727258ed72bbc0c7",
+  "revisions": {
+    "source_experiment": "86e348dd67df9f4277575dfa3589779f3080d882",
+    "static_fix_base": "2ffbf9b4c4e0b06500c34621727258ed72bbc0c7",
+    "release_tag": "e4e5-staticfix-v1",
+    "current_worktree": "1e5bd448fbe8f8f63fa43b0a4703630441de0c19"
+  },
   "seed": 20260808,
   "replicates": 10000,
   "thresholds": {

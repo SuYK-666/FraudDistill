@@ -7,7 +7,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import subprocess
@@ -24,6 +23,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from frauddistill.e4e5_v2.metrics import binary_metrics_raw, wilson_ci
+from frauddistill.e4e5_v2.schemas import manifest_sha256
 from frauddistill.e4e5_v2.cluster_bootstrap import (paired_cluster_bootstrap, exact_mcnemar, holm_correct)
 
 STUDENT_THR = 0.5622
@@ -35,10 +35,6 @@ REPLICATES = 10000
 
 def read_jsonl(p: Path) -> list[dict]:
     return [json.loads(l) for l in p.read_text(encoding="utf-8").splitlines() if l.strip()]
-
-
-def sha256_file(p: Path) -> str:
-    return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
 def git_head() -> str:
@@ -58,6 +54,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--protocol-dir", required=True)
     ap.add_argument("--out-dir", default="experiments/e4e5_final_staticfix")
+    ap.add_argument("--source-rev", default="86e348dd67df9f4277575dfa3589779f3080d882")
+    ap.add_argument("--fix-base", default="2ffbf9b4c4e0b06500c34621727258ed72bbc0c7")
+    ap.add_argument("--release-tag", default="e4e5-staticfix-v1")
     args = ap.parse_args()
     proto = Path(args.protocol_dir)
     out = REPO / args.out_dir
@@ -65,22 +64,32 @@ def main() -> int:
     (out / "figures").mkdir(parents=True, exist_ok=True)
 
     commit = git_head()
+    revisions = {"source_experiment": args.source_rev, "static_fix_base": args.fix_base,
+                 "release_tag": args.release_tag, "current_worktree": commit}
     # ---------------- manifests ----------------
     test_rows = read_jsonl(proto / "manifests" / "frozen_test.jsonl")
     cal_rows = read_jsonl(proto / "manifests" / "calibration.jsonl")
     hashes = json.loads((proto / "manifests" / "hashes.json").read_text(encoding="utf-8"))
-    test_sha = sha256_file(proto / "manifests" / "frozen_test.jsonl")
-    cal_sha = sha256_file(proto / "manifests" / "calibration.jsonl")
+    # Canonical manifest SHA256 (same method as the experiment: sort_keys JSON
+    # records + "\n" per row via schemas.manifest_sha256), NOT raw file bytes.
+    test_sha = manifest_sha256(test_rows)
+    cal_sha = manifest_sha256(cal_rows)
     test_sha_expected = hashes["frozen_test"]["sha256"]
     cal_sha_expected = hashes["calibration"]["sha256"]
     assert len(test_rows) == 1200 and len(set(r["family_id"] for r in test_rows)) == 557
     assert len(cal_rows) == 600 and len(set(r["family_id"] for r in cal_rows)) == 243
 
     # ---------------- data audit ----------------
-    audit = {"test": {"manifest_n": len(test_rows), "families": 557, "sha256": test_sha, "sha256_expected": test_sha_expected, "sha256_match": (test_sha == test_sha_expected),
+    audit = {"test": {"manifest_n": len(test_rows), "families": 557,
+                      "sha256": test_sha, "sha256_expected": test_sha_expected,
+                      "sha256_method": "canonical JSON-record SHA256 (manifest_sha256: json.dumps(row, ensure_ascii=False, sort_keys=True) + newline per row)",
+                      "sha256_match": (test_sha == test_sha_expected),
                       "gold_label": dict(Counter(r["gold_label"] for r in test_rows)),
                       "primary_shift": dict(Counter(r["primary_shift"] for r in test_rows))},
-             "calibration": {"manifest_n": len(cal_rows), "families": 243, "sha256": cal_sha, "sha256_expected": cal_sha_expected, "sha256_match": (cal_sha == cal_sha_expected),
+             "calibration": {"manifest_n": len(cal_rows), "families": 243,
+                             "sha256": cal_sha, "sha256_expected": cal_sha_expected,
+                             "sha256_method": "canonical JSON-record SHA256 (manifest_sha256: json.dumps(row, ensure_ascii=False, sort_keys=True) + newline per row)",
+                             "sha256_match": (cal_sha == cal_sha_expected),
                              "gold_label": dict(Counter(r["gold_label"] for r in cal_rows))}}
     t_id = {r["id"] for r in test_rows}; c_id = {r["id"] for r in cal_rows}
     audit["intersections"] = {
@@ -239,6 +248,13 @@ def main() -> int:
             paired[name] = {"bootstrap": boot, "mcnemar": mc, "n": 1200}
     pvals = [paired[n]["mcnemar"]["p_exact"] for n in comparisons]
     paired["_holm"] = holm_correct(pvals, list(comparisons))
+    # Bootstrap p-values are only empirical (resolution ~1/10000) and are not
+    # reported; keep CIs only.
+    for _name, _comp in paired.items():
+        if isinstance(_comp, dict) and "bootstrap" in _comp:
+            for _met in _comp["bootstrap"].values():
+                if isinstance(_met, dict):
+                    _met.pop("p_value_approx", None)
 
     # ---------------- gold quality (manifest-aligned 1800) ----------------
     # gold_v4_final.jsonl covers 1489 of the 1800 frozen-manifest ids; the
@@ -278,7 +294,7 @@ def main() -> int:
 
     # ---------------- JSON outputs ----------------
     metrics = {
-        "protocol_dir": str(proto), "commit": commit, "seed": SEED, "replicates": REPLICATES,
+        "protocol_dir": str(proto), "revisions": revisions, "seed": SEED, "replicates": REPLICATES,
         "thresholds": {"final_student": STUDENT_THR, "neural_gold": 0.5, "neural_softdistill": 0.5,
                        "P1": {"temperature": P1_TEMP, "threshold": P1_THR}},
         "e4": e4, "e5": e5, "p3": p3,
@@ -362,7 +378,9 @@ def main() -> int:
     cl = f"""# FINAL_CHANGELOG — E4/E5 Static Fix (frozen)
 
 Date: 2026-08-10 (static offline pass; no new API calls, no new annotation, no test-driven tuning)
-Code commit: `{commit}`
+Source experiment revision: `{args.source_rev}`
+Static-fix implementation base: `{args.fix_base}`
+Artifact release tag: `{args.release_tag}`
 Source protocol dir: `{args.protocol_dir}`
 Seed: {SEED} | Bootstrap replicates: {REPLICATES}
 
@@ -371,10 +389,11 @@ Seed: {SEED} | Bootstrap replicates: {REPLICATES}
 2. **Holm-Bonferroni**: corrected to cumulative max (was cumulative min). E4 two-comparison Holm-adjusted p now ≈ 0.2910.
 3. **McNemar**: p-value no longer rounded to 6 decimals (P3 vs P0 exact p = 7.53e-20, previously displayed as 0.0).
 4. **Bootstrap**: single-pass vectorized family-cluster bootstrap (10,000 replicates, fixed seed, family-level resampling, paired across models) covering Macro-F1, F1-unsafe, Recall, FPR, MCC (+AUROC/AUPRC for E4 model pairs).
-5. **Endpoint sign convention**: all Δ reported as new − baseline (e.g. ΔFPR(P1−P0) = −0.0566).
-6. **Data scope**: metrics computed only on frozen manifests (test 1200 / 557 families, cal 600 / 243 families); 1425/686 extra prediction rows excluded by manifest-ID join. Manifest SHA256 recorded in FINAL_DATA_AUDIT.json.
-7. **U1/U2 wording**: U2 fully PKU-SafeRLHF (298 general_harm / 102 financial_fraud); U1 269 `???`-suffix queries and language-label correlation disclosed as artifacts/limitations.
-8. **Gold**: quality summary recomputed on all 1800 records (raw agreement {gold_q['raw_agreement_rate']}, κ {gold_q['cohens_kappa']}, agreed {res.get('agreed')}, third-opinion {res.get('deepseek_third_opinion')}, deterministic {res.get('deterministic_arbiter')}); labeled `dual-judge Gold` (no human verification).
+5. **Endpoint sign convention**: all \u0394 reported as new \u2212 baseline (e.g. \u0394FPR(P1\u2212P0) = \u22120.0567, computed from unrounded values).
+6. **Data scope**: metrics computed only on frozen manifests (test 1200 / 557 families, cal 600 / 243 families); 1425/686 extra prediction rows excluded by manifest-ID join. Manifest SHA256 is the **canonical JSON-record hash** (`manifest_sha256`: `json.dumps(row, ensure_ascii=False, sort_keys=True)` + newline per row), matching the original experiment method; both manifests verify `sha256_match: true` in FINAL_DATA_AUDIT.json.
+7. **U1/U2 wording**: U2 fully PKU-SafeRLHF (298 general_harm / 102 financial_fraud); U1 269/400 queries carry a trailing run of >=3 `?` (regex `\\?{3,}\\s*$`) and a language-label correlation, disclosed as artifacts/limitations.
+8. **Gold**: quality summary recomputed on all 1800 records (raw agreement {gold_q['raw_agreement_rate']}, \u03ba {gold_q['cohens_kappa']}, agreed {res.get('agreed')}, third-opinion {res.get('deepseek_third_opinion')}, deterministic {res.get('deterministic_arbiter')}); labeled `dual-judge Gold` (no human verification).
+8b. **Bootstrap reporting policy**: empirical bootstrap p-values from 10,000 replicates are not reported (resolution ~1e-4); bootstrap results are reported as point estimate + 95% CI only. Significance is assessed separately with exact McNemar tests of paired correctness plus Holm correction.
 9. **P3**: primary operating point K=180 / 15% API rate via score-ambiguity heuristic; K=60-600 sensitivity only; AUROC/AUPRC columns renamed to Student-score; API cost 600 rows ≈ ¥0.07, historical total ≈ ¥15.3 (original ¥10 hard cap disclosed as protocol deviation).
 10. **Base zero-shot** (300-row subset, all-unsafe) and 4-class metrics moved to appendix/limitations; no quantitative comparison against N=1200 rows.
 
