@@ -251,7 +251,8 @@ def phase_gen_defensive(cfg, args) -> dict[str, Any]:
         v = 1 if q in shared else 0  # shared q: different variant from B2
         used_variant[q] = v
         add_task(q, "zh", v, r["response_id"], {"neg_side": "b3"})
-    for q, r in en_b2.items():
+    for r in en_b2:
+        q = norm(r["q_private"])
         add_task(q, "en", 0, r["response_id"], {"neg_side": "b2"})
         used_variant[q] = 0
 
