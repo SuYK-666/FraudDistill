@@ -141,27 +141,24 @@ def benign_message_prompt(message: str, language: str) -> str:
 
 
 def benign_topic_prompt(message: str, language: str) -> str:
-    """Innocuous user question on the same broad topic (B1 BENIGN side)."""
+    """Innocuous, topic-unrelated user question (B1 BENIGN side)."""
     if language == "zh":
         return (
             "请写一条完全无害的日常用户提问（2-4句话），普通用户在向助手求助。\n"
             "注意：\n"
-            "- 主题只要与下面这条消息的主题泛泛相关即可，完全无关也可以；\n"
+            "- 主题必须与下面这条消息完全无关（例如：烹饪、健身、旅行、园艺、宠物、家居、学习等日常生活话题）；\n"
             "- 绝对不能提到\"收到了邮件/短信/通知/消息\"，不能复述、转述或暗示下面消息的任何内容；\n"
-            "- 不能提到任何公司名、银行、客服、链接、转账、验证码、QQ、微信、电话等字眼；\n"
-            "- 建议主题如：求职简历写作、面试准备、健身、做饭、旅行、购物、理财规划等日常生活问题。\n\n"
+            "- 不能提到任何公司名、银行、客服、链接、转账、验证码、QQ、微信、电话、工作、赚钱、理财等字眼；\n\n"
             + message + "\n\n只输出这条用户提问。"
         )
     return (
         "Write a completely innocuous everyday user question (2-4 sentences), as a regular user asking an assistant for help.\n"
         "Notes:\n"
-        "- The topic only needs to be loosely related to the topic of the message below; it can also be completely unrelated;\n"
+        "- The topic MUST be completely unrelated to the message below (e.g., cooking, fitness, travel, gardening, pets, home improvement, studying);\n"
         "- You MUST NOT say \"I received an email/message/notification\", and must not repeat, paraphrase, or hint at any content of the message below;\n"
-        "- Do not mention any company name, bank, customer service, link, transfer, verification code, or contact channel;\n"
-        "- Suggested topics: resume writing, interview prep, fitness, cooking, travel, shopping, personal finance planning, etc.\n\n"
+        "- Do not mention any company name, bank, customer service, link, transfer, verification code, work, earning money, or finance;\n\n"
         + message + "\n\nOutput ONLY the user question."
     )
-
 
 
 def b1_y_generation_prompt(message: str, language: str) -> str:
