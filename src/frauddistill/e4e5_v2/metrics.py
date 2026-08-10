@@ -14,8 +14,14 @@ from sklearn.metrics import (accuracy_score, average_precision_score, balanced_a
 from .schemas import LABEL_TO_ID, UNSAFE_TYPES, write_jsonl
 
 
-def binary_metrics(y: np.ndarray, scores: np.ndarray, pred: np.ndarray | None = None,
-                   threshold: float | None = None, label: str = "") -> dict:
+def binary_metrics_raw(y: np.ndarray, scores: np.ndarray, pred: np.ndarray | None = None,
+                       threshold: float | None = None, label: str = "") -> dict:
+    """Binary metrics with UNROUNDED values (tables must be built from raw values).
+
+    macro_f1 = (f1_unsafe + f1_safe) / 2 (two-class macro average);
+    f1_unsafe = positive-class F1; AUROC/AUPRC only require gold to have both classes.
+    """
+    from sklearn.metrics import f1_score as sk_f1
     y = np.asarray(y, dtype=int)
     if pred is None:
         if threshold is None:
@@ -34,34 +40,50 @@ def binary_metrics(y: np.ndarray, scores: np.ndarray, pred: np.ndarray | None = 
     rec = tp / max(tp + fn, 1)
     spec = tn / max(tn + fp, 1)
     fpr = fp / max(tn + fp, 1)
-    mf1 = (2 * prec * rec / (prec + rec)) if (prec + rec) > 0 else 0.0
-    mcc = matthews_corrcoef(y, pred) if n > 1 else 0.0
-    acc = accuracy_score(y, pred)
-    bacc = balanced_accuracy_score(y, pred)
+    f1u = sk_f1(y, pred, pos_label=1, zero_division=0) if n else 0.0
+    f1s = sk_f1(y, pred, pos_label=0, zero_division=0) if n else 0.0
+    mf1 = float((f1u + f1s) / 2.0)
+    mcc = float(matthews_corrcoef(y, pred)) if n > 1 else 0.0
+    acc = float(accuracy_score(y, pred))
+    bacc = float(balanced_accuracy_score(y, pred))
     out = {
         "n": n, "n_positive": p, "n_negative": nn,
         "tp": tp, "fp": fp, "fn": fn, "tn": tn,
-        "precision": round(float(prec), 4),
-        "recall": round(float(rec), 4),
-        "specificity": round(float(spec), 4),
-        "fpr": round(float(fpr), 4),
-        "macro_f1": round(float(mf1), 4),
-        "accuracy": round(float(acc), 4),
-        "balanced_accuracy": round(float(bacc), 4),
-        "mcc": round(float(mcc), 4),
+        "precision": float(prec),
+        "recall": float(rec),
+        "specificity": float(spec),
+        "fpr": float(fpr),
+        "f1_unsafe": float(f1u),
+        "f1_safe": float(f1s),
+        "macro_f1": mf1,
+        "accuracy": acc,
+        "balanced_accuracy": bacc,
+        "mcc": mcc,
         "threshold": threshold,
         "label": label,
     }
-    if len(np.unique(y)) > 1 and len(np.unique(pred)) > 1:
+    if p > 0 and nn > 0:
         try:
-            out["auroc"] = round(float(roc_auc_score(y, np.asarray(scores, dtype=float))), 4)
+            out["auroc"] = float(roc_auc_score(y, np.asarray(scores, dtype=float)))
         except Exception:
             pass
-    if p > 0 and len(np.unique(y)) > 1:
+    if p > 0 and nn > 0:
         try:
-            out["auprc"] = round(float(average_precision_score(y, np.asarray(scores, dtype=float))), 4)
+            out["auprc"] = float(average_precision_score(y, np.asarray(scores, dtype=float)))
         except Exception:
             pass
+    return out
+
+
+def binary_metrics(y: np.ndarray, scores: np.ndarray, pred: np.ndarray | None = None,
+                   threshold: float | None = None, label: str = "") -> dict:
+    raw = binary_metrics_raw(y, scores, pred=pred, threshold=threshold, label=label)
+    out = {}
+    for k, v in raw.items():
+        if isinstance(v, float):
+            out[k] = round(v, 4)
+        else:
+            out[k] = v
     return out
 
 

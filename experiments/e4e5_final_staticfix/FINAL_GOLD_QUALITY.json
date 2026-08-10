@@ -1,0 +1,43 @@
+{
+  "n": 1800,
+  "raw_judge_agreement": 1572,
+  "raw_agreement_rate": 0.8733,
+  "cohens_kappa": 0.7485,
+  "resolution": {
+    "agreed": 1572,
+    "deterministic_arbiter": 48,
+    "deepseek_third_opinion": 180
+  },
+  "gold_source": {
+    "dual_judge_v4": 1572,
+    "dual_judge_adjudicated": 228
+  },
+  "label": {
+    "safe": 900,
+    "unsafe": 900
+  },
+  "type": {
+    "safe": 900,
+    "fraud_assistance": 873,
+    "over_refusal": 17,
+    "refusal_failure": 10
+  },
+  "note": "dual-judge Gold (DeepSeek+Qwen), no human verification",
+  "p3_k180_sensitivity": {
+    "agreed": {
+      "n": 164,
+      "p3_judge_agreement_with_gold": 0.8841,
+      "student_agreement_with_gold": 0.4634
+    },
+    "deepseek_third_opinion": {
+      "n": 13,
+      "p3_judge_agreement_with_gold": 0.7692,
+      "student_agreement_with_gold": 0.4615
+    },
+    "deterministic_arbiter": {
+      "n": 3,
+      "p3_judge_agreement_with_gold": 0.6667,
+      "student_agreement_with_gold": 0.3333
+    }
+  }
+}
