@@ -8,7 +8,7 @@ import json
 import random
 from typing import Any
 
-from frauddistill.e1_final_v3.io import read_json, read_jsonl, sha_text, write_json, write_jsonl
+from frauddistill.e1_final_v3.io import norm, read_json, read_jsonl, sha_text, write_json, write_jsonl
 from frauddistill.e1_final_v4.gold import central_label, parse_vote
 from frauddistill.e1_final_v4.panel import _gold_task, _row_for_gold, benign_topic_prompt, build_v32_gold_index, sd_pair_canonical
 
@@ -228,9 +228,70 @@ def _y_by_rid(votes_path) -> dict[str, str]:
     for r in read_jsonl(votes_path):
         rid = r.get("response_id")
         y = r.get("y_private")
+        if not y:
+            jp = r.get("judge_prompt") or ""
+            marker = "[TARGET RESPONSE]\n"
+            i = jp.find(marker)
+            if i >= 0:
+                y = jp[i + len(marker):]
+                j = y.find("\n\nDEFINITIONS")
+                if j >= 0:
+                    y = y[:j]
+                y = y.strip()
         if rid and y and rid not in out:
             out[rid] = y
     return out
+
+
+def _qy_from_prompt(prompt: str) -> tuple[str, str]:
+    q = y = ""
+    if not prompt:
+        return q, y
+    qm = "[USER QUERY]\n"
+    ym = "[TARGET RESPONSE]\n"
+    dm = "\n\nDEFINITIONS"
+    i = prompt.find(qm)
+    if i >= 0:
+        j = prompt.find(ym, i)
+        if j >= 0:
+            q = prompt[i + len(qm):j].strip()
+            k = prompt.find(dm, j)
+            y = prompt[j + len(ym):k if k >= 0 else None].strip() if k >= 0 else prompt[j + len(ym):].strip()
+    return q, y
+
+
+def build_content_vote_index(votes_path, adj_path) -> dict[str, dict[str, dict[str, Any]]]:
+    """Content-keyed (q,y) vote index: lets identical (q,y) rows share gold votes."""
+    out: dict[str, dict[str, dict[str, Any]]] = {}
+    for path in [votes_path, adj_path]:
+        for r in read_jsonl(path):
+            q = r.get("q_private") or ""
+            y = r.get("y_private") or ""
+            if not q or not y:
+                q, y = _qy_from_prompt(r.get("judge_prompt") or "")
+            v = parse_vote(r)
+            if v is None or not q or not y:
+                continue
+            key = sha_text(norm(q) + "\x00" + norm(y))
+            out.setdefault(key, {})[r.get("judge")] = v
+    return out
+
+
+def q_key_of(q: str) -> str:
+    return sha_text(norm(q))
+
+
+def resolved_from_vv(vv: dict[str, dict[str, Any]]) -> tuple[int | None, str]:
+    a = central_label(vv.get("judge_a"))
+    b = central_label(vv.get("judge_b"))
+    if a is not None and a == b and not (vv.get("judge_a", {}).get("uncertain") or vv.get("judge_b", {}).get("uncertain")):
+        return a, "double_agree"
+    av = central_label(vv.get("adjudicator"))
+    if av is not None:
+        return av, "adjudicated"
+    if a is not None and b is not None and a == b:
+        return a, "double_agree_uncertain"
+    return None, "unresolved"
 
 
 def resolved_label(rid: str, votes: dict[str, dict[str, Any]], adj: dict[str, dict[str, Any]]) -> tuple[int | None, str]:
@@ -251,6 +312,24 @@ def assemble_panel(cfg: dict[str, Any], out_dir) -> dict[str, Any]:
     manifest = read_json(out_dir / "E1_V4_TASK_MANIFEST.json")
     votes = _vote_index(out_dir / "E1_V4_GOLD_VOTES.jsonl")
     adj = _adj_index(out_dir / "E1_V4_GOLD_ADJUDICATION.jsonl")
+    content_index = build_content_vote_index(out_dir / "E1_V4_GOLD_VOTES.jsonl", out_dir / "E1_V4_GOLD_ADJUDICATION.jsonl")
+    q_index: dict[str, dict[str, dict[str, Any]]] = {}
+    for r in read_jsonl(out_dir / "E1_V4_GOLD_VOTES.jsonl"):
+        q = r.get("q_private") or ""
+        if not q:
+            q, _ = _qy_from_prompt(r.get("judge_prompt") or "")
+        v = parse_vote(r)
+        if v is None or not q:
+            continue
+        q_index.setdefault(q_key_of(q), {})[r.get("judge")] = v
+    for r in read_jsonl(out_dir / "E1_V4_GOLD_ADJUDICATION.jsonl"):
+        q = r.get("q_private") or ""
+        if not q:
+            q, _ = _qy_from_prompt(r.get("judge_prompt") or "")
+        v = parse_vote(r)
+        if v is None or not q:
+            continue
+        q_index.setdefault(q_key_of(q), {})[r.get("judge")] = v
     gen_y = _gen_index(out_dir / "E1_V4_GEN_Y_RESULTS.jsonl")
     gen_qb = _gen_index(out_dir / "E1_V4_GEN_QBENIGN_RESULTS.jsonl")
     y_by_rid = _y_by_rid(out_dir / "E1_V4_GOLD_VOTES.jsonl")
@@ -311,6 +390,26 @@ def assemble_panel(cfg: dict[str, Any], out_dir) -> dict[str, Any]:
             dropped.append({"kind": "b1", "idx": i, "scam": scam_lab, "benign": ben_lab})
 
     # ---- B2
+    # replicate build_gold_tasks refusal assignment (zh: generated refusal; en: aegis shuffle)
+    ref_by_q: dict[str, str] = {}
+    for r in read_jsonl(out_dir / "E1_V4_GEN_REFUSAL_RESULTS.jsonl"):
+        pq = r.get("pair_q")
+        t = (r.get("text") or "").strip()
+        if r.get("status") == "ok" and pq and t:
+            ref_by_q[pq] = t
+    aegis_list = _aegis_refusals(cfg["data"]["aegis_refusals"])
+    rng2 = random.Random(int(cfg["experiment"]["seed"]))
+    rng2.shuffle(aegis_list)
+    aegis_iter2 = iter(aegis_list)
+    b2_neg_y_by_k: dict[int, str] = {}
+    for k, item in enumerate(manifest["b2_qs"] + manifest["b2_gen_qs"]):
+        if item["language"] == "zh":
+            y_neg = ref_by_q.get(item["q_private"])
+        else:
+            a = next(aegis_iter2, None)
+            y_neg = a["y"] if a else None
+        if y_neg:
+            b2_neg_y_by_k[k] = y_neg
     b2_kept = 0
     for k, item in enumerate(manifest["b2_qs"] + manifest["b2_gen_qs"]):
         if b2_kept >= 1000:
@@ -325,8 +424,19 @@ def assemble_panel(cfg: dict[str, Any], out_dir) -> dict[str, Any]:
             pos_lab, pos_m = resolved_label(f"E1-V4-B2-PAIR-{k:04d}-POS", votes, adj)
             pos_y = gen_y.get(item["response_id"])
             pos_rid = f"E1-V4-B2-PAIR-{k:04d}-POS"
-        neg_lab, neg_m = resolved_label(f"E1-V4-B2-PAIR-{k:04d}-NEG", votes, adj)
-        y_neg = y_by_rid.get(f"E1-V4-B2-PAIR-{k:04d}-NEG")
+        neg_rid = f"E1-V4-B2-PAIR-{k:04d}-NEG"
+        y_neg = y_by_rid.get(neg_rid)
+        if neg_rid in votes:
+            neg_lab, neg_m = resolved_label(neg_rid, votes, adj)
+        elif y_neg:
+            neg_lab, neg_m = resolved_from_vv(content_index.get(sha_text(norm(q) + "\x00" + norm(y_neg))) or {})
+        else:
+            # recover the intended refusal y exactly as build_gold_tasks assigns it
+            y_neg = b2_neg_y_by_k.get(k)
+            if y_neg:
+                neg_lab, neg_m = resolved_from_vv(content_index.get(sha_text(norm(q) + "\x00" + norm(y_neg))) or {})
+            else:
+                neg_lab, neg_m = None, "no_votes"
         if pos_lab == 1 and neg_lab == 0 and pos_y and y_neg:
             add(pos_rid, q, pos_y, item["language"], case, "b2_response_critical_q_matched", f"B2-{case}", pair,
                 "source_derived_open_control" if item.get("from_sd") else "generated_y", 1, pos_m)
@@ -383,8 +493,16 @@ def assemble_panel(cfg: dict[str, Any], out_dir) -> dict[str, Any]:
     for k, it in enumerate(manifest["b3_aegis_qs"]):
         if b3_neg >= 1000:
             break
-        lab, m = resolved_label(f"E1-V4-B3-AEGIS-{k:04d}", votes, adj)
-        y_neg = y_by_rid.get(f"E1-V4-B3-AEGIS-{k:04d}")
+        aegis_rid = f"E1-V4-B3-AEGIS-{k:04d}"
+        y_neg = y_by_rid.get(aegis_rid)
+        if aegis_rid in votes:
+            lab, m = resolved_label(aegis_rid, votes, adj)
+        elif y_neg:
+            lab, m = resolved_from_vv(content_index.get(sha_text(norm(it["q_private"]) + "\x00" + norm(y_neg))) or {})
+        elif q_index.get(q_key_of(it["q_private"])):
+            lab, m = resolved_from_vv(q_index.get(q_key_of(it["q_private"])) or {})
+        else:
+            lab, m = None, "no_votes"
         if lab == 0 and y_neg:
             add(f"E1-V4-B3-AEGIS-{k:04d}", it["q_private"], y_neg, "en", it["canonical_case_id"],
                 "b3_context_stable_natural", it["canonical_case_id"], f"B3-{it['canonical_case_id']}", "aegis_refusal", 0, m)
@@ -392,8 +510,16 @@ def assemble_panel(cfg: dict[str, Any], out_dir) -> dict[str, Any]:
     for k, it in enumerate(manifest["b3_zh_qs"]):
         if b3_neg >= 1000:
             break
-        lab, m = resolved_label(f"E1-V4-B3-ZHREF-{k:04d}", votes, adj)
-        y_neg = y_by_rid.get(f"E1-V4-B3-ZHREF-{k:04d}")
+        zhref_rid = f"E1-V4-B3-ZHREF-{k:04d}"
+        y_neg = y_by_rid.get(zhref_rid)
+        if zhref_rid in votes:
+            lab, m = resolved_label(zhref_rid, votes, adj)
+        elif y_neg:
+            lab, m = resolved_from_vv(content_index.get(sha_text(norm(it["q_private"]) + "\x00" + norm(y_neg))) or {})
+        elif q_index.get(q_key_of(it["q_private"])):
+            lab, m = resolved_from_vv(q_index.get(q_key_of(it["q_private"])) or {})
+        else:
+            lab, m = None, "no_votes"
         if lab == 0 and y_neg:
             add(f"E1-V4-B3-ZHREF-{k:04d}", it["q_private"], y_neg, "zh", it["canonical_case_id"],
                 "b3_context_stable_natural", it["canonical_case_id"], f"B3-{it['canonical_case_id']}", "generated_refusal", 0, m)
