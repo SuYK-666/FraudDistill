@@ -185,7 +185,9 @@ def main() -> None:
     for i, lbl in fallback_labels.items():
         pred3[i] = lbl
     m3 = binary_metrics(y_t, s_t, pred=pred3, label="P3")
-    report["P3"] = {**m3, "api_rate": round(len(fallback_labels) / len(rows_t), 4),
+    c3 = calibration_metrics(1 - s_t, y_t)
+    report["P3"] = {**m3, "brier": c3["brier"], "ece": c3["ece"], "nll": c3["nll"],
+                    "api_rate": round(len(fallback_labels) / len(rows_t), 4),
                     "coverage": 1.0, "n_fallback": len(fallback_labels), "fallback_mode": "local_judge_1.5b" if not args.api else "deepseek"}
     rows_out.append({"policy": "P3", "cal_n": len(cal_rows), **{k: report["P3"][k] for k in ("macro_f1","recall","fpr","mcc","brier","ece","coverage","api_rate")}})
     print(f"[e5] P3 MF1={m3['macro_f1']} Recall={m3['recall']} FPR={m3['fpr']} API={report['P3']['api_rate']:.3f}")

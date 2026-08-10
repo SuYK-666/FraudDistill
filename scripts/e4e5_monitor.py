@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """E4/E5 realtime inference progress monitor.
 
 Reads the inference log + process CPU to estimate stage progress & ETA, and
@@ -24,10 +24,10 @@ PROTO = REPO / "outputs/exp4_unseen_student_v2/e4v2_FINAL"
 PROGRESS = REPO / "experiments/exp4_unseen/PROGRESS.md"
 
 STAGES = [  # (log marker, label, n_rows, pred file name, default row_s)
-    ("running final_student (Final Student)", "Final Student test", 1200, "final_student.jsonl", 13.0),
-    ("running neural_gold", "Neural-Gold test", 1200, "neural_gold.jsonl", 10.0),
-    ("running neural_softdistill", "Neural-SoftDistill test", 1200, "neural_softdistill.jsonl", 10.0),
-    ("final_student on calibration", "Final Student calibration", 600, "final_student_calibration.jsonl", 10.0),
+    ("running final_student (Final Student)", "Final Student test", 1200, "final_student.jsonl", 3.0),
+    ("running neural_gold", "Neural-Gold test", 1200, "neural_gold.jsonl", 3.0),
+    ("running neural_softdistill", "Neural-SoftDistill test", 1200, "neural_softdistill.jsonl", 3.0),
+    ("final_student on calibration", "Final Student calibration", 600, "final_student_calibration.jsonl", 3.0),
     ("base zero-shot", "Base-1.5B zero-shot", 300, "base_zeroshot.jsonl", 8.0),
 ]
 MODEL_LOAD_S = 75.0  # python boot + data + model load before row loop starts
@@ -82,9 +82,14 @@ def main() -> None:
         lines = LOG.read_text(encoding="utf-8", errors="ignore").splitlines() if LOG.exists() else []
 
         stage_idx = -1
-        for i, (marker, *_rest) in enumerate(STAGES):
-            if any(marker in ln for ln in lines):
-                stage_idx = i
+        # last log line wins: the most recent stage marker is the current stage
+        for ln in reversed(lines):
+            for i, (marker, *_rest) in enumerate(STAGES):
+                if marker in ln:
+                    stage_idx = i
+                    break
+            if stage_idx >= 0:
+                break
         if stage_idx < 0:
             stage_label, stage_n, pred_file, row_s = "starting / model load", 1200, "", 13.0
         else:
@@ -111,7 +116,14 @@ def main() -> None:
                 dur = now - state["stage_start"]
                 if dur > 0 and state["last_stage"] < len(STAGES):
                     state["row_s_calib"][state["last_stage"]] = dur / STAGES[state["last_stage"]][2]
-            if stage_idx == 0:
+            # anchor stage start: prior completed pred-file mtime + model load,
+            # so estimates survive monitor restarts (execution order != STAGES order)
+            anchor = {1: "final_student_calibration.jsonl", 2: "neural_gold.jsonl",
+                      3: "final_student.jsonl", 4: "neural_softdistill.jsonl"}.get(stage_idx)
+            prev_file = (PROTO / "predictions" / anchor) if anchor else None
+            if prev_file is not None and prev_file.exists():
+                state["stage_start"] = prev_file.stat().st_mtime + MODEL_LOAD_S
+            elif stage_idx == 0:
                 pst = proc_start(pid) if pid else None
                 state["stage_start"] = (pst + MODEL_LOAD_S) if pst else now
             else:
@@ -133,7 +145,8 @@ def main() -> None:
         stage_eta = rows_left * row_s
         total_eta = stage_eta + sum(
             st[2] * state["row_s_calib"].get(i, st[4])
-            for i, st in enumerate(STAGES) if i > stage_idx)
+            for i, st in enumerate(STAGES)
+            if i != stage_idx and not (PROTO / "predictions" / st[3]).exists())
 
         cores = state["rate_per_s"] or 9.5
         wall = now - (state["stage_start"] or now)
@@ -155,10 +168,13 @@ def main() -> None:
                     done = sum(1 for _ in open(pf, encoding="utf-8"))
                 except Exception:
                     done = 0
-            if i < stage_idx:
+            has_marker = any(marker in ln for ln in lines)
+            if done >= n:
                 txt.append(f"| {label} | {n} | done ({done}) | - |")
             elif i == stage_idx and stage_idx >= 0:
                 txt.append(f"| {label} | {n} | running ~{rows_done}/{n} | ~{stage_eta/3600:.1f}h |")
+            elif has_marker:
+                txt.append(f"| {label} | {n} | starting | - |")
             else:
                 txt.append(f"| {label} | {n} | pending | - |")
         if stage_idx >= 0 and rows_done >= stage_n and not (PROTO / "predictions" / pred_file).exists():
@@ -176,3 +192,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

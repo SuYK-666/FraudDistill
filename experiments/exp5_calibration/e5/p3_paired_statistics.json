@@ -1,0 +1,44 @@
+{
+  "P3_vs_P0": {
+    "bootstrap_macro_f1": {
+      "metric": "macro_f1",
+      "replicates": 10000,
+      "mean_diff": 0.1449,
+      "ci95": [
+        0.1142,
+        0.177
+      ],
+      "ci95_above_zero": true,
+      "p_value_approx": 0.0
+    },
+    "bootstrap_recall": {
+      "metric": "recall",
+      "replicates": 10000,
+      "mean_diff": 0.11671,
+      "ci95": [
+        0.0908,
+        0.1433
+      ],
+      "ci95_above_zero": true,
+      "p_value_approx": 0.0
+    },
+    "bootstrap_fpr": {
+      "metric": "fpr",
+      "replicates": 10000,
+      "mean_diff": -0.01672,
+      "ci95": [
+        -0.0294,
+        -0.0051
+      ],
+      "ci95_above_zero": false,
+      "p_value_approx": 0.005
+    },
+    "mcnemar": {
+      "b": 5,
+      "c": 85,
+      "n_disagreements": 90,
+      "p_exact": 0.0,
+      "direction": "A_better"
+    }
+  }
+}

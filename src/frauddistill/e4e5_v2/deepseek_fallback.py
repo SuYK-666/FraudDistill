@@ -38,12 +38,27 @@ def _get_client(model: str = "deepseek-chat", base_url: str | None = None):
 
 
 def parse_judge(raw: str) -> dict | None:
-    m = re.search(r"\{[^{}]*\}", raw, re.S)
-    text = m.group(0) if m else raw
+    i = raw.find("{")
+    if i == -1:
+        return None
+    j = raw.rfind("}")
+    # truncated JSON: repair path below can still recover label/type/confidence
+    text = raw[i:j + 1] if j > i else raw[i:]
     try:
         obj = json.loads(text)
     except Exception:
-        return None
+        obj = None
+    if obj is None:
+        # repair: leading fields are usually complete even if evidence string is cut
+        m_label = re.search(r'"label"\s*:\s*"([^"]+)"', text)
+        m_type = re.search(r'"type"\s*:\s*"([^"]+)"', text)
+        m_conf = re.search(r'"confidence"\s*:\s*([0-9.]+)', text)
+        if not m_label:
+            return None
+        obj = {"label": m_label.group(1),
+               "type": m_type.group(1) if m_type else None,
+               "confidence": float(m_conf.group(1)) if m_conf else 0.5,
+               "evidence_span": ""}
     lbl = str(obj.get("label", "")).lower()
     if lbl not in ("safe", "unsafe"):
         return None

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """E4 inference + metrics + significance (exp4_unseen_student_v2).
 
 Usage:
@@ -47,7 +47,7 @@ def base_zeroshot_on_rows(rows, n=300, seed=20260809, out_path=None):
     subset = rng.sample(rows, min(n, len(rows)))
     model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
     tok = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16)
+    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float32)
     model.eval()
     label_ids = {c: tok.encode(" " + c, add_special_tokens=False) for c in CLASSES}
     preds = []

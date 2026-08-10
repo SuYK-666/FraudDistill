@@ -1,0 +1,4 @@
+{"policy": "P0", "cal_n": 0, "macro_f1": 0.3329, "recall": 0.2133, "fpr": 0.0683, "mcc": 0.2084, "brier": 0.340154913725, "ece": 0.4860575833141667, "coverage": 1.0, "api_rate": 0.0}
+{"policy": "P1", "cal_n": 600, "macro_f1": 0.1323, "recall": 0.0717, "fpr": 0.0117, "mcc": 0.1501, "brier": 0.23723977379383285, "ece": 0.2993796410012712, "coverage": 1.0, "api_rate": 0.0}
+{"policy": "P2", "cal_n": 600, "macro_f1": null, "recall": null, "fpr": null, "mcc": null, "brier": null, "ece": null, "coverage": 1.0, "api_rate": 0.0}
+{"policy": "P3", "cal_n": 600, "macro_f1": 0.3329, "recall": 0.2133, "fpr": 0.0683, "mcc": 0.2084, "brier": 0.340154913725, "ece": 0.4860575833141667, "coverage": 1.0, "api_rate": 0.0}

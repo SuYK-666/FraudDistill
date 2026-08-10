@@ -16,6 +16,8 @@ def clopper_pearson_ucb(k: int, n: int, alpha: float = 0.05) -> float:
         return 1.0
     if k == 0:
         return 1 - alpha ** (1.0 / n)
+    if k == n:
+        return 1.0  # all negative examples flagged -> UCB saturates at 1
     # solve via beta quantile: UCB = Beta(1-alpha; k+1, n-k) quantile
     from scipy.stats import beta
     return float(beta.ppf(1 - alpha, k + 1, n - k))
@@ -30,10 +32,12 @@ def fit_temperature(probs_safe: np.ndarray, y: np.ndarray, n_grid: int = 2001,
     logit = np.log(p / (1 - p))
     best_t, best_nll = 1.0, None
     for t in np.linspace(lo, hi, n_grid):
-        pt = 1.0 / (1.0 + np.exp(-logit / t))
+        pt = np.clip(1.0 / (1.0 + np.exp(-logit / t)), 1e-9, 1 - 1e-9)
         nll = -np.mean(y * np.log(1 - pt) + (1 - y) * np.log(pt))
+        if not np.isfinite(nll):
+            continue
         if best_nll is None or nll < best_nll:
-            best_t, best_nll = t, nll
+            best_t, best_nll = t, float(nll)
     return float(best_t)
 
 
@@ -120,7 +124,7 @@ def low_label_curve(cal_rows: list[dict], scores: np.ndarray, y: np.ndarray,
             # risk score is 1-P(safe); convert back to P(safe)
             p_safe = 1.0 - p_s
             t = fit_temperature(p_safe, y[idx])
-            th = risk_threshold(p_s[idx], y[idx], 0.05)
+            th = risk_threshold(p_s, y[idx], 0.05)
             rows_out.append({"seed": seed_i, "n_actual": len(idx), "temperature": t,
                              "threshold": th["threshold"] if th else None,
                              "cal_recall": th["recall"] if th else None,

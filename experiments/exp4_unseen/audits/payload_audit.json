@@ -1,0 +1,15 @@
+{
+  "n": 1800,
+  "n_bad": 0,
+  "bad": [],
+  "source_probes": [
+    "Alpaca-7B_test",
+    "Alpaca2-7B_test",
+    "gen_v1",
+    "phi3_5_mini",
+    "smollm2_1_7b",
+    "smollm2_cont_v2"
+  ],
+  "template": "neural_input_text(context, q, y) only",
+  "checked_at": "2026-08-10T04:11:54"
+}

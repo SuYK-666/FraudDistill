@@ -51,8 +51,8 @@ def paired_cluster_bootstrap(y: np.ndarray, scores_a: np.ndarray, scores_b: np.n
         "replicates": replicates,
         "mean_diff": round(float(diffs.mean()), 5),
         "ci95": [round(float(lo), 5), round(float(hi), 5)],
-        "ci95_above_zero": lo > 0,
-        "p_value_approx": round(float((diffs <= 0).mean()), 5),
+       "ci95_above_zero": bool(lo > 0),
+        "p_value_approx": round(float(min(1.0, 2 * min((diffs <= 0).mean(), (diffs >= 0).mean()))), 5),
     }
 
 
@@ -67,7 +67,7 @@ def exact_mcnemar(pred_a: np.ndarray, pred_b: np.ndarray, y: np.ndarray | None =
         return {"b": b, "c": c, "p_exact": 1.0, "direction": "tie"}
     from math import comb
     p = 0.0
-    for k in range(min(b, c), n + 1):
+    for k in range(0, min(b, c) + 1):
         p += comb(n, k) * 0.5 ** n
     p = min(1.0, 2 * p)  # two-sided
     return {"b": b, "c": c, "n_disagreements": n, "p_exact": round(p, 6),

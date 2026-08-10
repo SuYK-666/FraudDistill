@@ -1,0 +1,23 @@
+{
+  "n_rows": 6,
+  "n_final": 6,
+  "n_missing": 0,
+  "conflict_rate": 0.0,
+  "agree": 6,
+  "conflict": 0,
+  "arbiter_resolved": 0,
+  "api_adjudicated": 0,
+  "api_failed": 0,
+  "kappa": 1.0,
+  "agree_rate": 1.0,
+  "final_label_dist": {
+    "safe": 2,
+    "unsafe": 4
+  },
+  "final_type_dist": {
+    "safe": 1,
+    "out_of_scope": 1,
+    "fraud_assistance": 4
+  },
+  "timestamp": "2026-08-10T09:16:51+0800"
+}

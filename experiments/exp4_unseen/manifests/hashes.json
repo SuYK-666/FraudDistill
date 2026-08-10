@@ -1,0 +1,10 @@
+{
+  "frozen_test": {
+    "n": 1200,
+    "sha256": "7f086e6500888378452f922378a772b84e111a1c56264ace3de0eab9598f5ecb"
+  },
+  "calibration": {
+    "n": 600,
+    "sha256": "5c52724ca869f35558cddc1200498189763d72e48c7bb9f3b65023a0c647d4ec"
+  }
+}

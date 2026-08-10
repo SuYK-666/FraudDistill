@@ -1,0 +1,10 @@
+{
+  "k": 600,
+  "n_rows": 600,
+  "n_deepseek": 299,
+  "n_cache": 301,
+  "n_failed": 0,
+  "spent_cny": 0.070006,
+  "elapsed_s": 190.4,
+  "unlabeled_count": 0
+}
