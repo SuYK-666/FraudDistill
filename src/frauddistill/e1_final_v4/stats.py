@@ -55,16 +55,21 @@ def cluster_bootstrap_delta(by_mode: dict[str, list[dict[str, Any]]], iterations
         counts[m] = arr
 
     def mf(draw: np.ndarray, m: str) -> float:
+        # Macro-F1 = mean(positive-class F1, negative-class F1), matching the
+        # point estimate computed by binary_metrics().
         tp = int(counts[m][draw, 0].sum())
         fp = int(counts[m][draw, 1].sum())
         fn = int(counts[m][draw, 2].sum())
+        tn = int(counts[m][draw, 3].sum())
         denom_p = tp + fp
         denom_r = tp + fn
-        if denom_p == 0 or denom_r == 0:
-            return 0.0
-        prec = tp / denom_p
-        rec = tp / denom_r
-        return 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
+        prec = tp / denom_p if denom_p else 0.0
+        rec = tp / denom_r if denom_r else 0.0
+        f1p = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
+        nprec = tn / (tn + fn) if (tn + fn) else 0.0
+        nrec = tn / (tn + fp) if (tn + fp) else 0.0
+        f1n = 2 * nprec * nrec / (nprec + nrec) if (nprec + nrec) > 0 else 0.0
+        return (f1p + f1n) / 2
 
     rng = np.random.RandomState(seed)
     vals = np.empty(iterations, dtype=np.float64)

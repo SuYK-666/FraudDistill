@@ -251,23 +251,42 @@ def run_audits(dev, cal, anc, out_dir) -> dict[str, Any]:
     return audit
 
 
-def build_wrong_q_map(anchor: list[dict[str, Any]], rng_seed: int) -> dict[str, str]:
-    """response_id -> wrong q (same split, same language, different MERGED family)."""
+def build_wrong_q_map(anchor: list[dict[str, Any]], rng_seed: int, category_of: dict[str, str] | None = None) -> dict[str, str]:
+    """response_id -> wrong q.
+
+    v4.5 control: same split, same language AND same fraud category (when the
+    category can be resolved, e.g. via the A7500 canonical-case registry),
+    different MERGED family. Rows without a resolvable category fall back to
+    same-language different-family, then any different-family row, so every
+    anchor row receives a wrong q (coverage is audited by the caller).
+    """
     rng = random.Random(rng_seed)
     fam_root: dict[str, int] = {}
     for i, g in enumerate(merge_families(anchor)):
         for r in g:
             fam_root[r["response_id"]] = i
-    by_key: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
+    cat = category_of or {}
+    by_lc: dict[tuple[str, str], list[dict[str, Any]]] = collections.defaultdict(list)
+    by_lang: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
     for r in anchor:
-        by_key[str(r["language"])].append(r)
+        lang = str(r.get("language") or "unknown")
+        c = str(cat.get(r["response_id"]) or "")
+        by_lc[(lang, c)].append(r)
+        by_lang[lang].append(r)
     out: dict[str, str] = {}
-    for key, rows in by_key.items():
-        rng.shuffle(rows)
-        for i, r in enumerate(rows):
-            other = rows[(i + 1) % len(rows)]
-            if fam_root.get(other["response_id"]) != fam_root.get(r["response_id"]):
-                out[r["response_id"]] = other["q_private"]
+    for r in anchor:
+        lang = str(r.get("language") or "unknown")
+        c = str(cat.get(r["response_id"]) or "")
+        my_fam = fam_root.get(r["response_id"])
+        pools = [by_lc.get((lang, c), []), by_lang.get(lang, []), anchor]
+        chosen = None
+        for pool in pools:
+            cands = [o for o in pool if o["response_id"] != r["response_id"] and fam_root.get(o["response_id"]) != my_fam]
+            if cands:
+                chosen = rng.choice(cands)
+                break
+        if chosen is not None:
+            out[r["response_id"]] = chosen["q_private"]
     return out
 
 

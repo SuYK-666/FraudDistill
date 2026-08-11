@@ -4,7 +4,7 @@ experiment:
   protocol: E1-FINAL-TRIAD-v4-Relational-Ablation
   seed: 20260810
   baseline_commit: a690d5d
-  note: "v4: B1 context-critical/y-matched 2000 (构造对, 双Gold), B2 response-critical/q-matched 2000, B3 context-stable 2000; A7500 完全冻结且不进入 B; C=A7500 独立回放."
+  note: "v4: B1 context-critical/y-matched 2000 (受控构造对, 双 Gold 确认), B2 response-critical/q-matched 2000, B3 context-stable mixed-source 2000; B 复用 A7500 canonical cases（B1 真实 q / B3 自然响应等），C 使用排除 B 面板 cases 后剩余的 A7500 独立 reserve（624 行）."
 
 data:
   output_dir: data/prepared/e1_final_triad_v4
