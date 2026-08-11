@@ -1,0 +1,43 @@
+{
+  "cumulative_cost_cny": 1.4153,
+  "budget_hard_limit": 50.0,
+  "remaining_cny": 48.5847,
+  "by_stage": {
+    "probe": {
+      "calls": 76,
+      "cost_cny": 0.0684,
+      "input_tokens": 3408,
+      "output_tokens": 16483
+    },
+    "pilot": {
+      "calls": 73,
+      "cost_cny": 0.0633,
+      "input_tokens": 13589,
+      "output_tokens": 17609
+    },
+    "retry": {
+      "calls": 118,
+      "cost_cny": 0.0444,
+      "input_tokens": 21221,
+      "output_tokens": 28703
+    },
+    "formal": {
+      "calls": 1030,
+      "cost_cny": 0.8923,
+      "input_tokens": 184687,
+      "output_tokens": 237329
+    },
+    "judge": {
+      "calls": 480,
+      "cost_cny": 0.3189,
+      "input_tokens": 364134,
+      "output_tokens": 24917
+    },
+    "adjudication": {
+      "calls": 48,
+      "cost_cny": 0.0235,
+      "input_tokens": 41023,
+      "output_tokens": 2843
+    }
+  }
+}

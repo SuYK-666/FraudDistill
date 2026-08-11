@@ -1,0 +1,16 @@
+{
+  "pilot_ids": [
+    "e6_0001",
+    "e6_0026",
+    "e6_0051",
+    "e6_0066",
+    "e6_0091",
+    "e6_0101",
+    "e6_0121",
+    "e6_0141",
+    "e6_0181",
+    "e6_0191"
+  ],
+  "n": 10,
+  "note": "nested subset; reused in formal (no double billing)"
+}

@@ -1,0 +1,36 @@
+{
+  "max_length": 512,
+  "per_model": {
+    "M1": {
+      "n": 200,
+      "trunc": 66,
+      "max_tok": 1106
+    },
+    "M2": {
+      "n": 200,
+      "trunc": 66,
+      "max_tok": 1106
+    },
+    "M3": {
+      "n": 200,
+      "trunc": 65,
+      "max_tok": 1135
+    },
+    "M4": {
+      "n": 200,
+      "trunc": 65,
+      "max_tok": 1126
+    },
+    "M5": {
+      "n": 199,
+      "trunc": 65,
+      "max_tok": 1131
+    },
+    "M6": {
+      "n": 200,
+      "trunc": 63,
+      "max_tok": 1111
+    }
+  },
+  "overall_truncation_rate": 0.3253
+}

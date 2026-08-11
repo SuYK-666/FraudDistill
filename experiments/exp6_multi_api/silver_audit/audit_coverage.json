@@ -1,0 +1,38 @@
+{
+  "n_total": 240,
+  "n_random": 180,
+  "n_boundary": 60,
+  "per_model": {
+    "M1": {
+      "successful": 200,
+      "random": 30,
+      "boundary": 10
+    },
+    "M2": {
+      "successful": 200,
+      "random": 30,
+      "boundary": 10
+    },
+    "M3": {
+      "successful": 200,
+      "random": 30,
+      "boundary": 10
+    },
+    "M4": {
+      "successful": 200,
+      "random": 30,
+      "boundary": 10
+    },
+    "M5": {
+      "successful": 199,
+      "random": 30,
+      "boundary": 10
+    },
+    "M6": {
+      "successful": 200,
+      "random": 30,
+      "boundary": 10
+    }
+  },
+  "seed": 20260810
+}

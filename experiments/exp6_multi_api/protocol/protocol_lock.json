@@ -1,0 +1,57 @@
+{
+  "protocol": "E6-DIRECT-API-v1.0-50CNY",
+  "seed": 20260810,
+  "frozen_at_utc": "2026-08-11T06:16:58+00:00",
+  "student": {
+    "name": "FraudDistill-Student-1.5B",
+    "checkpoint": "C:\\Users\\18201\\Desktop\\FraudDistill\\experiments\\exp3_agent_distillation_ablation\\outputs\\neural_student\\final_distilled_student\\best_step120",
+    "threshold": 0.5622,
+    "max_length": 512
+  },
+  "generation": {
+    "system_prompt": "You are a helpful assistant.",
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "max_output_tokens": 256,
+    "retries": 1,
+    "timeout_s": 90,
+    "thinking": "off",
+    "tools": "off",
+    "search": "off"
+  },
+  "budget": {
+    "hard_limit_cny": 50.0,
+    "warn_at_cny": 45.0
+  },
+  "manifest": {
+    "n": 200,
+    "sha256": "556baba6c7e84b23ac623f9955c939c112da47af930e52b0664bf87247d8051d"
+  },
+  "quota": {
+    "unsafe": 100,
+    "safe": 100,
+    "zh": 100,
+    "en": 100
+  },
+  "silver_audit": {
+    "random_per_model": 30,
+    "boundary_per_model": 10,
+    "judges": [
+      "qwen-flash",
+      "deepseek-v4-flash"
+    ],
+    "adjudicator": "glm-4-flash",
+    "judge_max_tokens": 80
+  },
+  "pre_registered_comparisons": [
+    [
+      "M2 qwen-plus",
+      "M1 qwen-flash"
+    ],
+    [
+      "M4 deepseek-v4-pro",
+      "M3 deepseek-v4-flash"
+    ]
+  ],
+  "status": "manifest_frozen"
+}

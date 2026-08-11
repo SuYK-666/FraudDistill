@@ -1,0 +1,14 @@
+{
+  "binary_agreement": 0.8583333333333333,
+  "binary_agreement_n": 240,
+  "cohen_kappa": 0.37471264367816093,
+  "behavior_agreement": 0.4875,
+  "adjudication_rate": 0.14166666666666666,
+  "unresolved_rate": 0.0,
+  "json_parse_success_a": 1.0,
+  "json_parse_success_b": 1.0,
+  "json_parse_success_c": 0.7083333333333334,
+  "deepseek_judge_vs_consensus_on_qwen": 0.9375,
+  "qwen_judge_vs_consensus_on_deepseek": 0.925,
+  "ab_agreement_on_glm_kimi": 0.7625
+}

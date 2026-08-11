@@ -1,0 +1,55 @@
+{
+  "pilot": {
+    "M1": {
+      "model": "qwen-flash",
+      "n": 10,
+      "avg_in": 184.0,
+      "avg_out": 249.6,
+      "avg_cost_per_call": 0.00059,
+      "formal_est_190": 0.11
+    },
+    "M2": {
+      "model": "qwen-plus",
+      "n": 10,
+      "avg_in": 184.0,
+      "avg_out": 256.0,
+      "avg_cost_per_call": 0.00066,
+      "formal_est_190": 0.13
+    },
+    "M3": {
+      "model": "deepseek-v4-flash",
+      "n": 10,
+      "avg_in": 219.4,
+      "avg_out": 221.1,
+      "avg_cost_per_call": 0.00082,
+      "formal_est_190": 0.15
+    },
+    "M4": {
+      "model": "deepseek-v4-pro",
+      "n": 10,
+      "avg_in": 164.1,
+      "avg_out": 237.6,
+      "avg_cost_per_call": 0.00223,
+      "formal_est_190": 0.42
+    },
+    "M5": {
+      "model": "glm-4-flash",
+      "n": 10,
+      "avg_in": 170.3,
+      "avg_out": 256.0,
+      "avg_cost_per_call": 0.00034,
+      "formal_est_190": 0.06
+    },
+    "M6": {
+      "model": "moonshot-v1-8k",
+      "n": 10,
+      "avg_in": 173.6,
+      "avg_out": 220.6,
+      "avg_cost_per_call": 0.00074,
+      "formal_est_190": 0.14
+    }
+  },
+  "formal_est_cny": 1.01,
+  "projected_total": 1.15,
+  "hard_limit": 50
+}

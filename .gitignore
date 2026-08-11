@@ -47,3 +47,10 @@ experiments/**/diagnostic/
 experiments/**/_dev_manifest/
 experiments/**/logs_*.txt
 experiments/**/_metrics/error_analysis.jsonl
+
+# exp6: raw q+y content stays private (regenerable from open datasets / API); push scores, labels, tables, report
+experiments/exp6_multi_api/data/exp6_prompt_manifest.jsonl
+experiments/exp6_multi_api/generations/
+experiments/exp6_multi_api/silver_audit/audit_set.jsonl
+experiments/exp6_multi_api/silver_audit/judge_raw.jsonl
+experiments/exp6_multi_api/silver_audit/audit_set_public.jsonl
