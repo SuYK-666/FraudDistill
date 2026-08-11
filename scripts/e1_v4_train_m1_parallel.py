@@ -51,8 +51,9 @@ def run_shard(shard: int, nshards: int, threads: int) -> None:
         resume.append((m, s))
     mine = resume
     print(f"[shard {shard}/{nshards}] jobs: {mine}", flush=True)
-    results: dict[str, list] = {}
     part_path = out_dir / f"E1_V4_TRAIN_PART_{shard}.json"
+    # resume: keep previously completed jobs in this shard's part file
+    results: dict[str, list] = read_json(part_path) if part_path.exists() else {}
     t0 = time.time()
     for mode, seed in mine:
         t1 = time.time()

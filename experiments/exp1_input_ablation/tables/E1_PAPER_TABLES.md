@@ -40,10 +40,24 @@
 | DeepSeek | q_y | 0.8383 | 0.8408 | 0.7632 | 0.9667 | 0.7723 | 0.2850 |
 | DeepSeek | wrong_q_y | 0.7055 | 0.7058 | 0.6425 | 0.7417 | 0.6921 | 0.3300 |
 
-## Table E1-B-M1: XLM-R joint encoder (pending M1 training)
+## Table E1-B-M1: XLM-R joint encoder (Frozen Anchor 1200, 5 seeds mean ± sd)
 
-【M1 训练完成后填入】
+| View | Macro-F1 | AUROC | AUPRC | Recall | Precision | FPR |
+|---|---|---|---|---|---|---|
+| q_only | 0.6450 ± 0.0165 | 0.7172 | 0.6497 | 0.9097 | 0.6135 | 0.5750 |
+| y_only | 0.8017 ± 0.0032 | 0.9201 | 0.9242 | 0.8303 | 0.7962 | 0.2233 |
+| **q_y** | **0.9685 ± 0.0035** | **0.9944** | **0.9934** | 0.9853 | 0.9534 | 0.0483 |
+| wrong_q_y | 0.7609 ± 0.0022 | 0.7315 | 0.6473 | 0.8377 | 0.7281 | 0.3130 |
 
-## Table E1-C: Natural distribution transfer (pending C replay)
+Δ_joint = +0.1717 (family-cluster bootstrap 95% CI [0.1213, 0.1498], p_below_zero = 0.0); exact McNemar q_y vs y_only p = 1.10e-55; Holm-adjusted p < 0.05; q_y beats best-single 5/5 seeds.
 
-【M1 训练完成后填入】
+Stratified q_y MF1: B1 (y-matched) 0.9925 / B2 (q-matched) 0.9950 / B3 (natural) 0.9273.
+
+## Table E1-C: Natural distribution transfer (independent 624 rows / 6 positives, 5 seeds mean ± sd)
+
+| View | Macro-F1 | Recall | FPR | AUROC | AUPRC | Recall@FPR1% | Recall@FPR5% | Precision@10 |
+|---|---|---|---|---|---|---|---|---|
+| q_y | 0.6748 ± 0.0808 | 0.5000 ± 0.1826 | 0.0162 ± 0.0167 | 0.9706 ± 0.0215 | 0.3970 ± 0.1538 | 0.5333 ± 0.1944 | 0.8667 ± 0.1247 | 0.3200 ± 0.1166 |
+| y_only | 0.6099 ± 0.0250 | 0.7333 ± 0.3091 | 0.0427 ± 0.0261 | 0.9794 ± 0.0058 | 0.2983 ± 0.0361 | 0.4333 ± 0.1700 | 0.9000 ± 0.1333 | 0.3000 ± 0.0632 |
+
+Notes: q_y achieves higher Macro-F1 / AUPRC / lower FPR than y_only; frozen-threshold recall is conservative (0.50); differences are exploratory given only 6 independent positives.

@@ -1,6 +1,6 @@
 ﻿# 实验1 进度（PROGRESS）
 
-> 更新时间：2026-08-11 01:45 · M1 训练进行中
+> 更新时间：2026-08-11 · **全部完成**（M1 GPU 训练 15/15，统计与回放收官，报告已更新，代码已提交 GitHub）
 
 | 子实验 | 状态 | 说明 |
 |---|---|---|
@@ -8,17 +8,26 @@
 | E1-B 面板 | ✅ 冻结 | 6000 行，Split-Freeze Gate PASS |
 | E1-B M0 LR | ✅ 完成 | q+y MF1 0.951，Δ=+0.165 |
 | E1-B M2/M3 Anchor | ✅ 完成 | 9600/9600 票，四视图模式一致 |
-| E1-B M1 XLM-R | ⏳ 训练中 | **2/15**：q_only seed13 MF1 0.656 / seed17 0.619（符合预期区间 0.55-0.70） |
-| E1-C | ⏳ 待回放 | 独立 reserve 624 行 / 6 阳性，离线 |
-| 统计检验 | ⏳ 待运行 | M1 完成后 |
-| 最终报告/GitHub | ⏳ 待完成 | 报告骨架已写入 report/ |
+| E1-B M1 XLM-R | ✅ 完成 | 15/15（GPU）；q_y MF1 0.9685 ± 0.0035 / AUROC 0.9944；Δ=+0.1717，Gate 全过，5/5 seeds |
+| E1-C | ✅ 完成 | 独立 624 行 / 6 阳性；q_y MF1 0.6748 / AUROC 0.9706 / AUPRC 0.397 / Recall@FPR1% 0.533 |
+| 统计检验 | ✅ 完成 | bootstrap CI [0.1213, 0.1498]；McNemar / Holm 全部显著 |
+| 最终报告 / GitHub | ✅ 完成 | `report/E1_FINAL_REPORT.md` + `tables/E1_PAPER_TABLES.md` 已更新并提交 |
 
-## M1 任务清单（每任务约 2.3h）
-- shard0：q_only(13✅/23/20260810) → y_only(17/42) → q_y(13/23/20260810)
-- shard1：q_only(17✅/42) → y_only(13/23/20260810) → q_y(17/42)
-- 预计全部完成：约 2026-08-11 18:00
+## 执行说明（GPU）
+- 15 个 M1 训练任务在远程服务器（10.160.16.3:23213，RTX 4090 24GB，venv `~/e1venv`）完成，单任务 58–121 s、全量约 12 分钟；
+- 模型与日志已回传 `data/prepared/e1_final_triad_v4/models/`（15 checkpoint / 90 文件 / 8.6 GB），merge 校验 missing: NONE；
+- 本机 CPU 训练已停止；旧 CPU 模型与 GPU 暂存文件已归档。
 
-## 实时监控
-- 状态脚本：`python scripts/e1_v4_status.py`
+## 最终 M1 指标（Frozen Anchor 1200，5 seeds 均值 ± sd）
+
+| View | Macro-F1 | AUROC | AUPRC | Recall | Precision | FPR |
+|---|---|---|---|---|---|---|
+| q_only | 0.6450 ± 0.0165 | 0.7172 | 0.6497 | 0.9097 | 0.6135 | 0.5750 |
+| y_only | 0.8017 ± 0.0032 | 0.9201 | 0.9242 | 0.8303 | 0.7962 | 0.2233 |
+| **q_y** | **0.9685 ± 0.0035** | **0.9944** | **0.9934** | 0.9853 | 0.9534 | 0.0483 |
+| wrong_q_y | 0.7609 ± 0.0022 | 0.7315 | 0.6473 | 0.8377 | 0.7281 | 0.3130 |
+
+## 日志与结果位置
 - 训练日志：`data/prepared/e1_final_triad_v4/logs/m1_shard0.out.log`、`m1_shard1.out.log`
-- 每任务完成追加 `E1_V4_TRAIN_PROGRESS.jsonl`（mode/seed/Anchor 指标）
+- 统计结果：`data/prepared/e1_final_triad_v4/E1_V4_STATS.json`
+- E1-C 结果：`data/prepared/e1_final_triad_v4/E1_V4_C_RESULT.json`

@@ -31,16 +31,46 @@ def delta_joint(by_mode: dict[str, list[dict[str, Any]]], anchor) -> dict[str, A
 
 
 def cluster_bootstrap_delta(by_mode: dict[str, list[dict[str, Any]]], iterations: int = 10000, seed: int = 13) -> dict[str, Any]:
-    rng = random.Random(seed)
+    # Vectorized family-cluster bootstrap over per-family confusion counts
+    # (equivalent to the classic row-resampling formulation; TP/FP/FN/TN are
+    # additive over the resampled family set, so Macro-F1 per draw is exact).
+    import numpy as np
     fams = sorted({r["family_id"] for r in by_mode["q_y"]})
-    rows_by_fam = {f: {m: [r for r in rows if r["family_id"] == f] for m, rows in by_mode.items()} for f in fams}
-    vals = []
-    for _ in range(iterations):
-        chosen = [rng.choice(fams) for _ in fams]
-        def mf(m):
-            rows = [r for f in chosen for r in rows_by_fam[f].get(m, [])]
-            return binary_metrics(rows)["macro_f1"] if rows else 0.0
-        vals.append(mf("q_y") - max(mf("q_only"), mf("y_only")))
+    fidx = {f: i for i, f in enumerate(fams)}
+    n = len(fams)
+    counts: dict[str, np.ndarray] = {}
+    for m, rows in by_mode.items():
+        arr = np.zeros((n, 4), dtype=np.int64)  # tp, fp, fn, tn
+        for r in rows:
+            i = fidx[r["family_id"]]
+            g, p = int(r["gold"]), int(r["pred"])
+            if g == 1 and p == 1:
+                arr[i, 0] += 1
+            elif g == 0 and p == 1:
+                arr[i, 1] += 1
+            elif g == 1 and p == 0:
+                arr[i, 2] += 1
+            else:
+                arr[i, 3] += 1
+        counts[m] = arr
+
+    def mf(draw: np.ndarray, m: str) -> float:
+        tp = int(counts[m][draw, 0].sum())
+        fp = int(counts[m][draw, 1].sum())
+        fn = int(counts[m][draw, 2].sum())
+        denom_p = tp + fp
+        denom_r = tp + fn
+        if denom_p == 0 or denom_r == 0:
+            return 0.0
+        prec = tp / denom_p
+        rec = tp / denom_r
+        return 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
+
+    rng = np.random.RandomState(seed)
+    vals = np.empty(iterations, dtype=np.float64)
+    for it in range(iterations):
+        draw = rng.randint(0, n, size=n)
+        vals[it] = mf(draw, "q_y") - max(mf(draw, "q_only"), mf(draw, "y_only"))
     vals.sort()
     point = delta_joint(by_mode, None)["delta"]
     return {
@@ -84,7 +114,7 @@ def aggregate_results(anchor, preds_by_mode: dict[str, list[dict[str, Any]]], it
     mcn_qy_vs_y = paired_mcnemar(preds_by_mode["q_y"], preds_by_mode["y_only"])
     mcn_qy_vs_q = paired_mcnemar(preds_by_mode["q_y"], preds_by_mode["q_only"])
     mcn_qy_vs_wrong = paired_mcnemar(preds_by_mode["q_y"], preds_by_mode["wrong_q_y"])
-    holm = holm_adjust([mcn_qy_vs_y["p"], mcn_qy_vs_q["p"]])
+    holm = [r["holm_p"] for r in holm_adjust([{"p_exact": mcn_qy_vs_y["p"]}, {"p_exact": mcn_qy_vs_q["p"]}])]
     return {
         "metrics": metrics,
         "delta_joint": dj,

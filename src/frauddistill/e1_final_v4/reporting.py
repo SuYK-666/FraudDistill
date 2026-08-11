@@ -61,8 +61,9 @@ def build_report(cfg, out_dir) -> dict[str, Any]:
                 rows.append({"model": "M1 XLM-R", "view": view, "macro_f1": mean.get("macro_f1"), "auprc": mean.get("auprc"), "recall": mean.get("recall"), "fpr": mean.get("fpr"), "precision": mean.get("precision")})
         else:
             prov = "Qwen" if "qwen" in key else "DeepSeek"
+            src_prov = src.get(prov.lower(), {})
             for view in ["q_only", "y_only", "q_y", "wrong_q_y"]:
-                d = src.get(view, {})
+                d = src_prov.get(view, {})
                 rows.append({"model": prov, "view": view, "macro_f1": d.get("macro_f1"), "auprc": d.get("auprc"), "recall": d.get("recall"), "fpr": d.get("fpr"), "precision": d.get("precision")})
     lines.append("| Model | View | Macro-F1 | AUPRC | Recall | Precision | FPR |")
     lines.append("|---|---|---|---|---|---|---|")

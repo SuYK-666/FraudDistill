@@ -276,7 +276,9 @@ def phase_b_anchor_local(cfg: dict[str, Any], args) -> dict[str, Any]:
         load_mode = "q_y" if mode == "wrong_q_y" else mode
         per_seed = []
         for seed in seeds:
-            det = NeuralJointDetector(mode, model_name=cfg["e1_v4"]["neural"]["model_name"], max_length=int(cfg["e1_v4"]["neural"]["max_length"]), seed=seed)
+            neural_cfg = cfg["e1_v4"]["neural"]
+            det = NeuralJointDetector(mode, model_name=neural_cfg["model_name"], max_length=int(neural_cfg["max_length"]), seed=seed,
+                                      q_cap=int(neural_cfg.get("q_cap", 0)) or None, y_cap=int(neural_cfg.get("y_cap", 0)) or None)
             model_dir = out_dir / "models" / f"{load_mode}_seed{seed}"
             if not (model_dir / "meta.json").exists():
                 continue
@@ -363,20 +365,25 @@ def phase_b_stats(cfg: dict[str, Any], args) -> dict[str, Any]:
             continue
         votes_by_provider[key].setdefault(view, {})[r["response_id"]] = lab
     llm = {}
+    llm_rows: dict[str, dict[str, list]] = {}
     for prov, views in votes_by_provider.items():
         llm[prov] = {}
+        llm_rows[prov] = {}
         for view, lab_map in views.items():
             rows = []
             for a in anchor:
                 lab = lab_map.get(a["response_id"])
                 if lab is None:
                     continue
-                rows.append({**a, "pred": lab, "score": float(lab)})
+                rows.append({**a, "pred": lab, "score": float(lab), "gold": int(a["gold_central"])})
             llm[prov][view] = binary_metrics(rows)
+            llm_rows[prov][view] = rows
     out["m2_m3_llm"] = llm
 
     # ---- aggregate statistics for M1 (mean seed) + LLM views
-    for key, preds_source in [("m1", m1), ("llm_qwen", llm.get("qwen")), ("llm_deepseek", llm.get("deepseek"))]:
+    for key, preds_source, rows_source in [("m1", m1, None),
+                                            ("llm_qwen", llm.get("qwen"), llm_rows.get("qwen")),
+                                            ("llm_deepseek", llm.get("deepseek"), llm_rows.get("deepseek"))]:
         if not preds_source:
             continue
         # build eval rows per view
@@ -385,13 +392,7 @@ def phase_b_stats(cfg: dict[str, Any], args) -> dict[str, Any]:
             if key == "m1":
                 rows = local[view][0]["rows"] if local.get(view) else []
             else:
-                rows = []
-                lab_map = preds_source.get(view, {})
-                for a in anchor:
-                    lab = lab_map.get(a["response_id"])
-                    if lab is None:
-                        continue
-                    rows.append({**a, "pred": lab, "score": float(lab)})
+                rows = (rows_source or {}).get(view, [])
             by_view[view] = rows
         if by_view.get("q_y"):
             res = aggregate_results(anchor, by_view, iterations=int(cfg["e1_v4"]["bootstrap_iterations"]), seed=int(cfg["experiment"]["seed"]))
@@ -422,7 +423,9 @@ def phase_c_replay(cfg: dict[str, Any], args) -> dict[str, Any]:
             model_dir = out_dir / "models" / f"{mode}_seed{seed}"
             if not (model_dir / "meta.json").exists():
                 continue
-            det = NeuralJointDetector(mode, model_name=cfg["e1_v4"]["neural"]["model_name"], max_length=int(cfg["e1_v4"]["neural"]["max_length"]), seed=seed)
+            neural_cfg = cfg["e1_v4"]["neural"]
+            det = NeuralJointDetector(mode, model_name=neural_cfg["model_name"], max_length=int(neural_cfg["max_length"]), seed=seed,
+                                      q_cap=int(neural_cfg.get("q_cap", 0)) or None, y_cap=int(neural_cfg.get("y_cap", 0)) or None)
             det.model = type(det.model).from_pretrained(str(model_dir))
             det.tokenizer = type(det.tokenizer).from_pretrained(str(model_dir))
             meta = json.loads((model_dir / "meta.json").read_text(encoding="utf-8"))

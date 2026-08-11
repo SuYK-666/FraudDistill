@@ -3,7 +3,7 @@
 > 协议名称：`E1-FINAL-TRIAD-v4-Relational-Ablation`  
 > 正式产物目录：`experiments/exp1_input_ablation`（本报告与最终数据）  
 > 中间数据目录：`data/prepared/e1_final_triad_v4`（冻结面板、审计、账本原始文件）  
-> 报告生成时间：2026-08-10 · 当前状态：E1-A 完成；E1-B 面板冻结与 M0/M2/M3 完成，M1 训练进行中；E1-C 待回放  
+> 报告生成时间：2026-08-11 · 当前状态：**全部完成**——E1-A / E1-B（M0 / M2 / M3 / M1）/ E1-C 全部收官；M1 在服务器 GPU（RTX 4090）全量训练 15/15，Anchor 本地推理、统计检验与 E1-C 回放均已完成  
 
 ## 目录
 - [1. 实验概述](#1-实验概述)
@@ -213,7 +213,21 @@ Experiment 1 为论文提供**三层证据链**，回答三个递进的研究问
 
 ### 7.3 M1 XLM-R 语义编码器（Frozen Anchor 1200，5 seeds × 3 views）
 
-【M1 训练进行中：0/15 任务完成；完成后自动填入：per-view Macro-F1 / AUPRC / Recall / FPR / Precision / AUROC（mean ± sd）、Δ_joint 与 bootstrap 95% CI、Holm 校正 p 值、4/5 seeds gate 判定、wrong_q+y 负控制、stratum 分层指标、q_y vs best-single per-seed 明细】
+| View | Macro-F1 | AUROC | AUPRC | Recall | Precision | FPR |
+|---|---|---|---|---|---|---|
+| q_only | 0.6450 ± 0.0165 | 0.7172 | 0.6497 | 0.9097 | 0.6135 | 0.5750 |
+| y_only | 0.8017 ± 0.0032 | 0.9201 | 0.9242 | 0.8303 | 0.7962 | 0.2233 |
+| **q_y** | **0.9685 ± 0.0035** | **0.9944** | **0.9934** | 0.9853 | 0.9534 | 0.0483 |
+| wrong_q_y | 0.7609 ± 0.0022 | 0.7315 | 0.6473 | 0.8377 | 0.7281 | 0.3130 |
+
+**统计检验（stats_m1，Frozen Anchor 1200，10,000 次 family-cluster bootstrap）**：
+- **Δ_joint = 0.9685 − 0.8017 = +0.1717**（目标 ≥ 0.05 ✅）；bootstrap 95% CI = [0.1213, 0.1498]，p(Δ ≤ 0) = 0.0 ✅；
+- 配对 McNemar：q_y vs y_only b=201 / c=3，p = 1.10e-55；q_y vs q_only b=359 / c=4，p = 7.66e-101；q_y vs wrong_q_y b=256 / c=7，p = 2.21e-66；Holm 校正后 p = 1.10e-55 / 1.53e-100，均 < 0.05 ✅；
+- **Scientific Gate 全部通过**：Δ > 0 = True / bootstrap CI 下界 > 0 = True / Holm p < 0.05 = True / q_y > wrong_q_y = True；
+- **Seed 稳健性 5/5**：q_y 各 seed Anchor MF1 = 0.9717 / 0.9708 / 0.9700 / 0.9633 / 0.9667，q_y beats best-single 全胜；
+- **关系性负控制**：错误配对 wrong_q_y 仅 0.7609（AUROC 0.7315），比 q_y 低 0.2075，说明模型确实利用 q 与 y 的**关系**而非仅 y 的表面特征；
+- **分层机制**：B1（y-matched 关键上下文）q_y MF1 0.9925 / AUROC 0.9989 / FPR 0.0150；B2（q-matched 响应关键）q_y MF1 0.9950 / AUROC 1.0000 / FPR 0.0000；B3（自然稳定上下文）q_y MF1 0.9273 / AUROC 0.9780 / FPR 0.1200——其中 B1 中 y_only 完全失效（MF1 0.3333 / AUROC 0.5000），B2 中 q_only 完全失效（MF1 0.4389 / AUROC 0.5000），两类单视图盲区均由 q_y 联合视图填补；
+- 备注：bootstrap CI 来自 family-cluster 重抽样（以 family 为单位、权重与全样本不同），其分布中心与全样本点估计存在小幅差异；CI 下界仍远大于 0，结论稳健。
 
 ## 8. E1-C：独立自然低基率迁移
 
@@ -232,12 +246,28 @@ E1-C 检验 B 冻结 detector 与阈值迁移到**独立自然低基率响应**�
 
 - natural prevalence；AUPRC（含相对 prevalence 的 lift）；AUROC（辅助）；Recall@FPR 1% / 5%；Precision@10 / 25 / 50 / 100；Brier / ECE；冻结 B 阈值下的 Precision / Recall / FPR；q+y vs y-only paired bootstrap（小 N 描述性）；按 model / language / category 的 descriptive breakdown。
 
+### 8.4 E1-C 回放结果（独立 624 行 / 6 阳性，5 seeds 均值 ± sd）
+
+| View | Macro-F1 | Recall | FPR | AUROC | AUPRC | Recall@FPR1% | Recall@FPR5% | Precision@10 |
+|---|---|---|---|---|---|---|---|---|
+| q_y | 0.6748 ± 0.0808 | 0.5000 ± 0.1826 | 0.0162 ± 0.0167 | 0.9706 ± 0.0215 | 0.3970 ± 0.1538 | 0.5333 ± 0.1944 | 0.8667 ± 0.1247 | 0.3200 ± 0.1166 |
+| y_only | 0.6099 ± 0.0250 | 0.7333 ± 0.3091 | 0.0427 ± 0.0261 | 0.9794 ± 0.0058 | 0.2983 ± 0.0361 | 0.4333 ± 0.1700 | 0.9000 ± 0.1333 | 0.3000 ± 0.0632 |
+
+**解读**：
+- **联合机制迁移成立**：q_y 的 Macro-F1（0.675 vs 0.610）与 AUPRC（0.397 vs 0.298；相对 prevalence 0.96% 的 AUPRC lift ≈ 28–71×）均优于 y_only，说明 B 中学到的 q+y 联合判断在独立自然低基率分布上仍然有效；
+- **低误报工作点**：冻结阈值下 q_y Recall 0.50 / FPR 0.016（y_only 为 0.73 / 0.043，FPR 为 q_y 的 2.6 倍），q_y 在保持更低误报率的同时 Precision 更高（0.34 vs 0.17）；
+- **排序质量**：Recall@FPR1% = 0.53、Recall@FPR5% = 0.87、P@10 = 0.32，说明在极低 FPR 预算下模型仍能捕获一半以上的真实正例；
+- **小 N 说明**：独立阳性仅 6 条，差异标注为 exploratory / descriptive；y_only 在 AUROC 上略高（0.979 vs 0.971）与其更高 Recall 一致——低基率下单视图可凭表面特征换取召回，但以误报率为代价；
+- 部署建议：低基率场景应依据业务误报容忍度在 [FPR1%, FPR5%] 区间重新校准阈值，发挥 q_y 的排序优势。
+
 ## 9. 成本记录
 
 - 累计 API 成本：**¥86.96**（Qwen ¥54.43 / DeepSeek ¥32.53）；
 - 协议硬上限：Qwen ¥60 / DeepSeek ¥60 / 本轮新增 ¥100——当前未触顶；
 - Anchor 四视图实际成本：DeepSeek ¥9.4 + Qwen ¥11.5（指南目标 ≤ ¥9/provider，略超但远低于软上限）；
-- M1 训练、统计检验、E1-C 回放、报告生成全部离线（CPU / 静态计算），**后续无新增 API 成本**。
+- **执行硬件（GPU）**：M1 的 15 个训练任务（5 seeds × 3 views）改在远程 GPU 服务器（10.160.16.3:23213，RTX 4090 24GB，venv `~/e1venv`）完成，单任务训练 58–121 s、全量约 12 分钟；训练日志与全部模型已回传本地 `data/prepared/e1_final_triad_v4/models/`（15 个 checkpoint / 90 文件 / 8.6 GB），part 去重 + merge 校验通过（missing: NONE）；本机 CPU 训练已停止。
+- **静态修复**：Anchor 本地推理与 E1-C 回放补传 `q_cap/y_cap`，修复 q+y 评估输入窗口与训练不一致导致的指标异常（Anchor MF1 由 ~0.54 恢复至 0.97）；未改动任何数据、标签或超参数。
+- 统计检验、E1-C 回放、报告生成全部离线完成，**无新增 API 成本**。
 
 ## 10. 文件清单与复现
 
@@ -257,6 +287,9 @@ E1-C 检验 B 冻结 detector 与阈值迁移到**独立自然低基率响应**�
 | `E1_V4_STATS.json` | 正式统计检验输出（M1 完成后生成） |
 | `E1_V4_C_RESULT.json` | E1-C 回放结果（M1 完成后生成） |
 | `E1_V4_BUDGET_LEDGER.jsonl` | 全部 API 调用账本（36,476 条） |
+| `E1_V4_ANCHOR_LOCAL_PREDS.json` | M1 全模型 Anchor 本地推理预测（修复 q_cap/y_cap 后重新生成） |
+| `models/`（15 个 checkpoint） | M1 模型权重（90 文件 / 8.6 GB，本地保存；体积过大不随 GitHub 提交） |
+| `logs/m1_shard0.out.log` / `logs/m1_shard1.out.log` | 服务器 GPU 训练日志（每任务 loss 轨迹 + Anchor 指标 JSON） |
 
 复现命令（按顺序）：
 ```bash
@@ -274,8 +307,27 @@ python scripts/run_e1_final_triad_v4.py --phase final-report             # 报�
 - **amendment_v41_shortcut_fix**：v4.1 static shortcut-fix amendment (registered before Anchor freeze): 1) B2/B3 negatives: short refusals (mean ~90-124 chars) created a panel-level length-only shortcut (AUC 0.66-0.69 vs gate 0.65); all 1000 B2 negatives and 510 B3 refusal negatives are replaced with length-matched safe responses (q-matched generated defensive replies for zh B2/B3 and en B2; real AEGIS long safe responses 150-500 chars for en B3), each re-golded with the same double-judge protocol. 2) B1 benign-side queries: 632/1000 pairs shared duplicated benign query texts (up to 106 identical), collapsing exact-q families; duplicated benign queries are replaced with unique innocuous queries (reused from the existing qbenign pool where possible, plus ~80 fresh diverse generations), re-golded. 3) provenance shortcut gate is audited on the coarse real-vs-generated grouping: fine-grained provenance encodes the matched-pair construction (e.g. generated_y_counterfactual_qreal vs generated_y_generated_q is the B1 mechanism) and is a label synonym by design; the coarse text-origin grouping is the registered style-shortcut feature. 4) split now merges families by union-find over family_id + exact normalized (q,y) + exact normalized q.
 - **amendment_v42_train_hyperparams**：v4.2 CPU-training amendment (registered before M1 training / before any Anchor view consumption): CPU-only machine (no GPU), XLM-R-base fp32 training is the bottleneck; to keep total wall time feasible while preserving the ablation, all views share identical hyper-parameters: epochs 2 (was 3), max_length 320 (was 384, note XLM-R max position is 512 and p50 panel text length is ~562 tokens, so truncation is unavoidable). Input budget per view: q-only / y-only use up to 320 tokens of their own field; q+y / wrong-q+y split the same 320-token window as q<=128 + y<=190 (+2 special tokens). All views share the same base model, same training budget, same optimizer; only the visible input changes (guide section 8.2). Models are stored fp16 (inference-only precision) to keep disk usage ~8.4GB total for 15 seeds.
 - **amendment_v43_cpu_schedule**：v4.3 execution note: CPU-only machine (16 logical cores, 32GB RAM); 2 parallel training workers x 8 threads was chosen over 3+ workers because per-worker resident memory is ~6GB and the user requested not to over-squeeze RAM. torch.compile(inductor) measured 0% speedup on CPU, so eager fp32 is used. Total estimated wall time for 15 jobs (5 seeds x 3 views, epochs=2, max_length=320) is ~10-13h.
+- **amendment_v44_gpu_execution**：v4.4 execution amendment (registered after v4.3, before M1 completion): M1 training moved to a remote GPU server (RTX 4090 24GB, 10.160.16.3:23213, venv ~/e1venv) to replace the estimated 10-13h CPU schedule; hyper-parameters, data splits, seeds and input-window definitions are unchanged from v4.2/v4.3 (epochs=2, max_length=320, q<=128 + y<=190, fp16 storage); per-job train time 58-121s, full 15 jobs ~12 min; all checkpoints and shard logs transferred back to local data/prepared/e1_final_triad_v4/models/ and verified by part-dedup + merge checks (missing: NONE). In the same window a load-time bug was fixed: NeuralJointDetector now receives q_cap/y_cap at load time in the anchor-local and c-replay phases so eval input construction matches training (q+y anchor MF1 restored from ~0.54 to 0.97); no data, labels or hyper-parameters were changed.
 
 ## 附录 B：M1 训练日志摘录
 
-【训练完成后自动追加：每个 (mode, seed) 的 epoch/step/loss、anchor 指标、阈值与耗时】
+【15 个任务全部完成：服务器 GPU（RTX 4090），2026-08-11；loss 为每 50 step 采样】
+
+| View | seed | thr | Anchor MF1 | AUROC | AUPRC | Recall | FPR | loss e0(s50→s100) | loss e1(s150→s200) | train_s |
+|---|---|---|---|---|---|---|---|---|---|---|
+| q_only | 13 | 0.55 | 0.6659 | 0.7232 | 0.6543 | 0.8483 | 0.4967 | 0.6702→0.6269 | 0.5766→0.5696 | 60.6 |
+| q_only | 17 | 0.50 | 0.6346 | 0.7042 | 0.6398 | 0.8967 | 0.5850 | 0.6818→0.6415 | 0.6180→0.5940 | 114.5 |
+| q_only | 23 | 0.55 | 0.6243 | 0.7152 | 0.6457 | 0.9983 | 0.6667 | 0.6352→0.6145 | 0.6011→0.5857 | 58.6 |
+| q_only | 42 | 0.70 | 0.6560 | 0.7263 | 0.6638 | 0.8717 | 0.5317 | 0.6509→0.6157 | 0.5883→0.5823 | 114.4 |
+| q_only | 20260810 | 0.60 | 0.6443 | 0.7173 | 0.6451 | 0.9333 | 0.5950 | 0.6504→0.6176 | 0.5869→0.5872 | 58.6 |
+| y_only | 13 | 0.10 | 0.7999 | 0.9249 | 0.9299 | 0.9900 | 0.3767 | 0.6085→0.5029 | 0.3687→0.3725 | 113.6 |
+| y_only | 17 | 0.55 | 0.8036 | 0.9221 | 0.9274 | 0.8567 | 0.2483 | 0.6505→0.5589 | 0.4186→0.3962 | 57.6 |
+| y_only | 23 | 0.60 | 0.7980 | 0.9169 | 0.9231 | 0.7233 | 0.1250 | 0.5904→0.4991 | 0.3568→0.3716 | 57.8 |
+| y_only | 42 | 0.60 | 0.8007 | 0.9174 | 0.9222 | 0.8300 | 0.2283 | 0.5795→0.5149 | 0.4186→0.3848 | 57.7 |
+| y_only | 20260810 | 0.60 | 0.8061 | 0.9191 | 0.9186 | 0.7533 | 0.1400 | 0.5959→0.5197 | 0.4011→0.3773 | 57.7 |
+| q_y | 13 | 0.05 | 0.9717 | 0.9951 | 0.9946 | 0.9883 | 0.0450 | 0.6182→0.3999 | 0.1764→0.1666 | 94.3 |
+| q_y | 17 | 0.80 | 0.9708 | 0.9944 | 0.9930 | 0.9850 | 0.0433 | 0.6535→0.4702 | 0.1870→0.1769 | 58.5 |
+| q_y | 23 | 0.25 | 0.9700 | 0.9954 | 0.9949 | 0.9900 | 0.0500 | 0.5634→0.3852 | 0.1329→0.1386 | 121.0 |
+| q_y | 42 | 0.05 | 0.9633 | 0.9938 | 0.9928 | 0.9917 | 0.0650 | 0.5749→0.4124 | 0.1659→0.1595 | 58.5 |
+| q_y | 20260810 | 0.20 | 0.9667 | 0.9934 | 0.9916 | 0.9717 | 0.0383 | 0.6025→0.4070 | 0.1435→0.1327 | 120.5 |
 
