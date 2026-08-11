@@ -47,11 +47,22 @@
 | q_only | 0.6450 ± 0.0165 | 0.7172 | 0.6497 | 0.9097 | 0.6135 | 0.5750 |
 | y_only | 0.8017 ± 0.0032 | 0.9201 | 0.9242 | 0.8303 | 0.7962 | 0.2233 |
 | **q_y** | **0.9685 ± 0.0035** | **0.9944** | **0.9934** | 0.9853 | 0.9534 | 0.0483 |
-| wrong_q_y | 0.7609 ± 0.0022 | 0.7315 | 0.6473 | 0.8377 | 0.7281 | 0.3130 |
+| wrong_q_y | 0.7574 ± 0.0039 | 0.7327 | 0.6632 | 0.8200 | 0.7300 | 0.3033 |
 
-Δ_joint = +0.1717 (family-cluster bootstrap 95% CI [0.1213, 0.1498], p_below_zero = 0.0); exact McNemar q_y vs y_only p = 1.10e-55; Holm-adjusted p < 0.05; q_y beats best-single 5/5 seeds.
+Δ_joint = +0.1717 (family-cluster bootstrap 95% CI, Macro-F1 formulation [0.1511, 0.1928], p_below_zero = 0.0); exact McNemar q_y vs y_only p = 1.10e-55; Holm-adjusted p < 0.05; q_y beats best-single 5/5 seeds. Wrong-q control (v4.5): same language + same fraud category + different family (1200/1200); wrong_q_y MF1 0.7574.
 
-Stratified q_y MF1: B1 (y-matched) 0.9925 / B2 (q-matched) 0.9950 / B3 (natural) 0.9273.
+Stratified q_y MF1: B1 (y-matched) 0.9925 / B2 (q-matched) 0.9950 / B3 (context-stable mixed-source) 0.9273.
+
+## Table E1-B-M1-clean: clean-anchor sensitivity (exclude 212 near-dup-y rows, n=988, 5 seeds mean ± sd)
+
+| View | Macro-F1 | AUROC | AUPRC | Recall | FPR |
+|---|---|---|---|---|---|
+| q_only | 0.6713 ± 0.0196 | 0.7303 | 0.6919 | 0.9122 | 0.5492 |
+| y_only | 0.8011 ± 0.0045 | 0.9196 | 0.9336 | 0.8414 | 0.2376 |
+| q_y | 0.9700 ± 0.0031 | 0.9943 | 0.9940 | 0.9849 | 0.0468 |
+| wrong_q_y | 0.7509 ± 0.0029 | 0.7166 | 0.6800 | 0.8249 | 0.3256 |
+
+Clean Δ_joint = +0.1784 (bootstrap 95% CI [0.1551, 0.2028], p_below_zero = 0.0); McNemar q_y vs y_only b=165/c=2 p=1.50e-46; all sensitivity gates pass.
 
 ## Table E1-C: Natural distribution transfer (independent 624 rows / 6 positives, 5 seeds mean ± sd)
 

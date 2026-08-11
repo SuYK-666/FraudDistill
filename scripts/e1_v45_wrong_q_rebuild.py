@@ -71,15 +71,19 @@ def main() -> None:
     # category match rate: fraction of rows whose wrong-q row has same (lang, cat)
     cat_by_rid = {r["response_id"]: category_of[r["response_id"]] for r in anchor}
     lang_by_rid = {r["response_id"]: str(r.get("language") or "unknown") for r in anchor}
+    # every row that shares this wrong-q text counts as a candidate owner;
+    # same-language/same-category is satisfied if ANY candidate matches
+    q_to_rows: dict[str, list[dict]] = collections.defaultdict(list)
+    for r in anchor:
+        q_to_rows[r["q_private"]].append(r)
     same_cat = same_lang = 0
     for rid, wq in new_map.items():
-        # find the row that owns this wrong q (first anchor row with same q text)
-        owner = next((r for r in anchor if r["q_private"] == wq), None)
-        if owner is None:
+        owners = q_to_rows.get(wq, [])
+        if not owners:
             continue
-        if lang_by_rid[rid] == str(owner.get("language") or "unknown"):
+        if any(lang_by_rid[rid] == str(o.get("language") or "unknown") for o in owners):
             same_lang += 1
-            if cat_by_rid[rid] and cat_by_rid[rid] == cat_by_rid.get(owner["response_id"], ""):
+            if cat_by_rid[rid] and any(cat_by_rid[rid] == cat_by_rid.get(o["response_id"], "") for o in owners):
                 same_cat += 1
     print(f"same-language pairs: {same_lang}/{len(new_map)}; same-language+category pairs: {same_cat}/{len(new_map)}")
 

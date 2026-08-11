@@ -59,7 +59,7 @@ def main() -> None:
     print("excluded by label:", dict(Counter(int(r["gold_central"]) for r in anchor if r["response_id"] in excl)))
     print("clean by label:", dict(Counter(int(r["gold_central"]) for r in keep)))
 
-    rid_keep = set(keep)
+    rid_keep = {r["response_id"] for r in keep}
     out: dict = {
         "n_anchor": len(anchor),
         "n_excluded_near_dup_y": len(excl),
@@ -96,7 +96,17 @@ def main() -> None:
         "ci_lower_gt_0": cb["ci95"][0] > 0,
         "qy_gt_wrong": m1["q_y"]["macro_f1_mean"] > m1["wrong_q_y"]["macro_f1_mean"],
     }
-    out["stats_clean_seed0"] = {"delta_joint": dj, "bootstrap": cb, "mcnemar": mcn, "gates": gates}
+    def _py(x):
+        import numpy as np
+        if isinstance(x, np.generic):
+            return x.item()
+        if isinstance(x, dict):
+            return {k: _py(v) for k, v in x.items()}
+        if isinstance(x, (list, tuple)):
+            return [_py(v) for v in x]
+        return x
+
+    out["stats_clean_seed0"] = {"delta_joint": _py(dj), "bootstrap": _py(cb), "mcnemar": _py(mcn), "gates": gates}
     print("clean Δ_joint:", round(dj["delta"], 4), "CI:", [round(x, 4) for x in cb["ci95"]])
     print("gates:", gates)
 
@@ -122,7 +132,7 @@ def main() -> None:
             llm[prov][view] = binary_metrics(rows)
     out["llm_clean"] = llm
 
-    (DATA / "E1_V4_CLEAN_ANCHOR_SENSITIVITY.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    (DATA / "E1_V4_CLEAN_ANCHOR_SENSITIVITY.json").write_text(json.dumps(out, ensure_ascii=False, indent=2, default=lambda o: o.item() if hasattr(o, "item") else str(o)), encoding="utf-8")
     print("wrote E1_V4_CLEAN_ANCHOR_SENSITIVITY.json")
 
 
