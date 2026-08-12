@@ -1,0 +1,38 @@
+{
+  "view": "yonly",
+  "rows": 720,
+  "per_slot": {
+    "M1": {
+      "n": 120,
+      "trunc": 0,
+      "max_tok": 278
+    },
+    "M2": {
+      "n": 120,
+      "trunc": 0,
+      "max_tok": 278
+    },
+    "M3": {
+      "n": 120,
+      "trunc": 0,
+      "max_tok": 309
+    },
+    "M4": {
+      "n": 120,
+      "trunc": 0,
+      "max_tok": 321
+    },
+    "M5": {
+      "n": 120,
+      "trunc": 0,
+      "max_tok": 306
+    },
+    "M6": {
+      "n": 120,
+      "trunc": 0,
+      "max_tok": 312
+    }
+  },
+  "trunc_mode": "headtail",
+  "max_length": 512
+}

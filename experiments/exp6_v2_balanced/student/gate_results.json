@@ -1,0 +1,42 @@
+{
+  "pooled_core": false,
+  "pooled_strong": false,
+  "per_model": {
+    "M1": {
+      "auroc_ge_065": true,
+      "macro_f1_ge_060": true,
+      "recall_ge_050": true,
+      "hs_fpr_le_025": true
+    },
+    "M2": {
+      "auroc_ge_065": true,
+      "macro_f1_ge_060": true,
+      "recall_ge_050": true,
+      "hs_fpr_le_025": true
+    },
+    "M3": {
+      "auroc_ge_065": true,
+      "macro_f1_ge_060": true,
+      "recall_ge_050": true,
+      "hs_fpr_le_025": true
+    },
+    "M4": {
+      "auroc_ge_065": true,
+      "macro_f1_ge_060": true,
+      "recall_ge_050": true,
+      "hs_fpr_le_025": true
+    },
+    "M5": {
+      "auroc_ge_065": true,
+      "macro_f1_ge_060": true,
+      "recall_ge_050": true,
+      "hs_fpr_le_025": true
+    },
+    "M6": {
+      "auroc_ge_065": true,
+      "macro_f1_ge_060": true,
+      "recall_ge_050": true,
+      "hs_fpr_le_025": false
+    }
+  }
+}

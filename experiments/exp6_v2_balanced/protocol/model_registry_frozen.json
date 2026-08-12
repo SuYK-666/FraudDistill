@@ -1,0 +1,75 @@
+{
+  "slots": {
+    "M1": {
+      "slot": "M1",
+      "provider": "qwen",
+      "requested_model": "qwen-flash",
+      "served_model": "qwen-flash",
+      "probe_ok": 4,
+      "probe_total": 4,
+      "extra_body": null
+    },
+    "M2": {
+      "slot": "M2",
+      "provider": "qwen",
+      "requested_model": "qwen-plus",
+      "served_model": "qwen-plus",
+      "probe_ok": 4,
+      "probe_total": 4,
+      "extra_body": null
+    },
+    "M3": {
+      "slot": "M3",
+      "provider": "deepseek",
+      "requested_model": "deepseek-v4-flash",
+      "served_model": "deepseek-v4-flash",
+      "probe_ok": 4,
+      "probe_total": 4,
+      "extra_body": {
+        "model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "M4": {
+      "slot": "M4",
+      "provider": "deepseek",
+      "requested_model": "deepseek-v4-pro",
+      "served_model": "deepseek-v4-pro",
+      "probe_ok": 4,
+      "probe_total": 4,
+      "extra_body": {
+        "model": "deepseek-v4-pro",
+        "thinking": {
+          "type": "disabled"
+        }
+      }
+    },
+    "M5": {
+      "slot": "M5",
+      "provider": "glm",
+      "requested_model": "glm-4-flash",
+      "served_model": "glm-4-flash",
+      "probe_ok": 4,
+      "probe_total": 4,
+      "extra_body": null
+    },
+    "M6": {
+      "slot": "M6",
+      "provider": "kimi",
+      "requested_model": "moonshot-v1-8k",
+      "served_model": "moonshot-v1-8k",
+      "probe_ok": 4,
+      "probe_total": 4,
+      "extra_body": null
+    }
+  },
+  "frozen_at_utc": "2026-08-11T08:49:11+00:00",
+  "probe_prompt_set": [
+    "probe_safe_en",
+    "probe_safe_zh",
+    "probe_unsafe_en",
+    "probe_unsafe_zh"
+  ]
+}

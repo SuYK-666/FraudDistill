@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """E6 API stage: probe / pilot / formal generation with cost ledger + budget gate + resume."""
 from __future__ import annotations
 import json, sys, time, traceback
@@ -70,8 +70,10 @@ def call_model(provider: str, model: str, user_query: str, system_prompt: str = 
     }
 
 def call_with_rl_retry(provider: str, model: str, user_query: str, **kw):
-    """Call with up to 3 retries on rate-limit (429) errors, sleeping between attempts."""
+    """Call with up to 3 retries on rate-limit (429) errors, sleeping between attempts.
+    Optional _backoff=(a,b,c) overrides sleeps (seconds)."""
     import time as _t
+    backoff = kw.pop("_backoff", None)
     last = None
     for attempt in range(3):
         try:
@@ -79,7 +81,10 @@ def call_with_rl_retry(provider: str, model: str, user_query: str, **kw):
         except Exception as e:
             last = e
             if "429" in str(e) or "RateLimit" in type(e).__name__:
-                _t.sleep(3.0 + 3.0 * attempt)
+                if backoff:
+                    _t.sleep(backoff[min(attempt, len(backoff) - 1)])
+                else:
+                    _t.sleep(3.0 + 3.0 * attempt)
                 continue
             raise
     raise last

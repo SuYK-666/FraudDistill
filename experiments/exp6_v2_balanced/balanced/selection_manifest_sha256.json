@@ -1,0 +1,7 @@
+{
+  "balanced_selection_manifest_sha256": "a5f5c7b5847ba567657623234bc610f11931f8e234c70ce00771bfcf8bcebf57",
+  "calibration_manifest_sha256": "70c2144263e0387b6d0137c69bd78ea5db93c3dceca7efb8baeec791a4e05941",
+  "frozen_test_manifest_sha256": "9a18c53dc84f2d99704dd2167cb6ec00f67a80b2eb67686731c3cc8b3bbfaed6",
+  "hard_safe_manifest_sha256": "4b913247c418f39001ef2bd2a98af71833e692c62ba26be1a2a4157ce0f38d75",
+  "generated_at_utc": "2026-08-12T06:14:55+00:00"
+}

@@ -1,0 +1,3781 @@
+{
+ "M1": {
+  "e6v2_fam_fraudr1_chinese_114": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_129": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_19": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_217": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_218": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_26": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_271": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_280": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_286": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_29": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_30": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_31": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_32": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_34": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_344": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_355": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_356": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_37": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_382": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_392": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_408": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_433": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_45": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_50": {
+   "lang": "zh",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_656": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1000": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1002": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1013": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_13": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_144": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_160": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_175": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_177": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_180": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_19": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_20": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_341": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_41": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_42": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_47": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "direct",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_54": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_597": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_598": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_632": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_638": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_64": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_641": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_656": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_666": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_757": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_997": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_998": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  }
+ },
+ "M2": {
+  "e6v2_fam_b1_fraudr1_chinese_509": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_chinese_567": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_chinese_690": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_1022": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_1032": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_1044": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_199": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_328": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_387": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_405": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_522": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_817": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_958": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_299": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_465": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_483": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_494": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_58": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_81": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_89": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_1044": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_329": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_484": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_958": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_962": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_978": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_114": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_125": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_129": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_19": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_217": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_218": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_221": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_25": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_26": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_271": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_280": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_286": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_29": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_30": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_31": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_32": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_34": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_344": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_355": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_356": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_37": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_382": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_392": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_397": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_4": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_422": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_45": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_50": {
+   "lang": "zh",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_650": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_656": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_660": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_689": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1000": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1002": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1013": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1015": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_13": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_14": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_144": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_160": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_174": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_175": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_177": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_19": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_20": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_28": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_335": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_341": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_41": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_42": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_47": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_54": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_598": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_632": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_64": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_641": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_656": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_666": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_756": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_757": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_758": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_759": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_761": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_762": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_995": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_997": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_998": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  }
+ },
+ "M3": {
+  "e6v2_fam_b1_fraudr1_chinese_211": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_chinese_65": {
+   "lang": "zh",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_chinese_690": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_1022": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_1032": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_1044": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_199": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "direct",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_328": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_405": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_522": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_299": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_483": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_494": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_58": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_chinese_89": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_1044": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_329": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_484": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "direct",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_842": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_958": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_978": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_125": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_129": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_19": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_217": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_218": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_25": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_254": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_271": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_280": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_286": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_29": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_30": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_31": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_34": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_344": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_355": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_356": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_37": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_382": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_392": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_397": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_4": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_408": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_433": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_45": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_50": {
+   "lang": "zh",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_650": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_656": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_660": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1000": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1002": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1013": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1015": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_115": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_13": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_14": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_144": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_160": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_174": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_175": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_177": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_180": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_19": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_20": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_28": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_335": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_341": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_41": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_42": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_54": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_597": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_598": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_632": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_638": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_64": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_641": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_656": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_666": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi",
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_757": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_758": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_759": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_761": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_769": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_997": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_998": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  }
+ },
+ "M4": {
+  "e6v2_fam_fraudr1_chinese_114": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_125": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_129": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_217": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_218": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_25": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_26": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_271": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_280": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_286": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_29": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_30": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_31": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_34": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_355": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_356": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_382": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_392": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_397": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_408": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_422": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_433": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_50": {
+   "lang": "zh",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_650": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_656": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1000": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1002": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1013": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_13": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_144": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_160": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_175": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_177": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_180": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_19": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_20": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_28": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_341": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_41": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_47": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_54": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_597": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_632": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_638": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_64": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_641": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_666": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_756": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_757": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_760": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_761": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_762": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_769": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_995": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_997": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_998": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  }
+ },
+ "M5": {
+  "e6v2_fam_b1_fraudr1_english_405": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_522": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b1_fraudr1_english_817": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_b2_fraudr1_english_329": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_271": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_280": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_689": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1002": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_177": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_19": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_20": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_341": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_47": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_54": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_64": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_997": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_998": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  }
+ },
+ "M6": {
+  "e6v2_fam_fraudr1_chinese_217": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_218": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_221": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_25": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_280": {
+   "lang": "zh",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_29": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_31": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_32": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_344": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_355": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_37": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_408": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_chinese_650": {
+   "lang": "zh",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1000": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1002": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1013": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_1015": {
+   "lang": "en",
+   "existing": [
+    "multi",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_13": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_20": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_341": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_41": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "multi"
+   ],
+   "pick": [
+    "roleplay"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_42": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_47": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "unseen"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_54": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_597": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_598": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_632": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_638": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_64": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "multi",
+    "roleplay"
+   ],
+   "pick": [
+    "direct"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_656": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_762": {
+   "lang": "en",
+   "existing": [
+    "indirect",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_997": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "indirect",
+    "roleplay"
+   ],
+   "pick": [
+    "multi"
+   ]
+  },
+  "e6v2_fam_fraudr1_english_998": {
+   "lang": "en",
+   "existing": [
+    "direct",
+    "roleplay",
+    "unseen"
+   ],
+   "pick": [
+    "multi"
+   ]
+  }
+ }
+}

@@ -1,0 +1,7 @@
+{
+  "hard_limit_cny": 50.0,
+  "v1_cost_cny": 1.4153,
+  "cumulative_cny": 51.4713,
+  "remaining_cny": -1.4713,
+  "status": "HARD_STOP_EXCEEDED"
+}

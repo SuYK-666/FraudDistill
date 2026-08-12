@@ -1,0 +1,474 @@
+{
+  "M1": {
+    "slot": "M1",
+    "model": "Qwen Flash",
+    "rel_candidates": {
+      "unsafe": 174,
+      "safe": 178
+    },
+    "ctl_candidates": 139,
+    "status": "ok",
+    "best_pairs": 36,
+    "n_candidates": 25,
+    "selected": {
+      "unsafe": 40,
+      "safe": 40,
+      "total": 80
+    },
+    "behavior_unsafe": {
+      "fraud_assistance": 40
+    },
+    "behavior_safe": {
+      "safe_redirection": 36,
+      "clean_refusal": 4
+    },
+    "language_unsafe": {
+      "zh": 20,
+      "en": 20
+    },
+    "language_safe": {
+      "zh": 21,
+      "en": 19
+    },
+    "family_matched_pairs": 35,
+    "stratum_matched_rows": 10,
+    "unmatched_rows": 0,
+    "hard_stratum_unsafe_rows": 12,
+    "cal": {
+      "unsafe": 8,
+      "safe": 8,
+      "family_pairs": 6,
+      "lang_unsafe": {
+        "zh": 4,
+        "en": 4
+      },
+      "lang_safe": {
+        "zh": 5,
+        "en": 3
+      }
+    },
+    "test": {
+      "unsafe": 32,
+      "safe": 32,
+      "family_pairs": 29,
+      "lang_unsafe": {
+        "zh": 16,
+        "en": 16
+      },
+      "lang_safe": {
+        "zh": 16,
+        "en": 16
+      }
+    },
+    "control": {
+      "cal": 10,
+      "test": 30,
+      "subtypes": {
+        "hard_safe": 16,
+        "anti_fraud": 12,
+        "matched_safe": 8,
+        "benign": 4
+      }
+    },
+    "student_blind": true,
+    "metadata_auroc": 0.6316
+  },
+  "M2": {
+    "slot": "M2",
+    "model": "Qwen Plus",
+    "rel_candidates": {
+      "unsafe": 230,
+      "safe": 334
+    },
+    "ctl_candidates": 140,
+    "status": "ok",
+    "best_pairs": 40,
+    "n_candidates": 25,
+    "selected": {
+      "unsafe": 40,
+      "safe": 40,
+      "total": 80
+    },
+    "behavior_unsafe": {
+      "fraud_assistance": 40
+    },
+    "behavior_safe": {
+      "safe_redirection": 40
+    },
+    "language_unsafe": {
+      "zh": 20,
+      "en": 20
+    },
+    "language_safe": {
+      "zh": 20,
+      "en": 20
+    },
+    "family_matched_pairs": 40,
+    "stratum_matched_rows": 0,
+    "unmatched_rows": 0,
+    "hard_stratum_unsafe_rows": 12,
+    "cal": {
+      "unsafe": 8,
+      "safe": 8,
+      "family_pairs": 8,
+      "lang_unsafe": {
+        "zh": 4,
+        "en": 4
+      },
+      "lang_safe": {
+        "zh": 4,
+        "en": 4
+      }
+    },
+    "test": {
+      "unsafe": 32,
+      "safe": 32,
+      "family_pairs": 32,
+      "lang_unsafe": {
+        "zh": 16,
+        "en": 16
+      },
+      "lang_safe": {
+        "zh": 16,
+        "en": 16
+      }
+    },
+    "control": {
+      "cal": 10,
+      "test": 30,
+      "subtypes": {
+        "hard_safe": 16,
+        "anti_fraud": 12,
+        "matched_safe": 8,
+        "benign": 4
+      }
+    },
+    "student_blind": true,
+    "metadata_auroc": 0.7634
+  },
+  "M3": {
+    "slot": "M3",
+    "model": "DeepSeek Flash",
+    "rel_candidates": {
+      "unsafe": 242,
+      "safe": 316
+    },
+    "ctl_candidates": 140,
+    "status": "ok",
+    "best_pairs": 40,
+    "n_candidates": 25,
+    "selected": {
+      "unsafe": 40,
+      "safe": 40,
+      "total": 80
+    },
+    "behavior_unsafe": {
+      "fraud_assistance": 40
+    },
+    "behavior_safe": {
+      "safe_redirection": 39,
+      "clean_refusal": 1
+    },
+    "language_unsafe": {
+      "zh": 20,
+      "en": 20
+    },
+    "language_safe": {
+      "zh": 20,
+      "en": 20
+    },
+    "family_matched_pairs": 40,
+    "stratum_matched_rows": 0,
+    "unmatched_rows": 0,
+    "hard_stratum_unsafe_rows": 12,
+    "cal": {
+      "unsafe": 8,
+      "safe": 8,
+      "family_pairs": 8,
+      "lang_unsafe": {
+        "zh": 4,
+        "en": 4
+      },
+      "lang_safe": {
+        "zh": 4,
+        "en": 4
+      }
+    },
+    "test": {
+      "unsafe": 32,
+      "safe": 32,
+      "family_pairs": 32,
+      "lang_unsafe": {
+        "zh": 16,
+        "en": 16
+      },
+      "lang_safe": {
+        "zh": 16,
+        "en": 16
+      }
+    },
+    "control": {
+      "cal": 10,
+      "test": 30,
+      "subtypes": {
+        "hard_safe": 16,
+        "anti_fraud": 12,
+        "matched_safe": 8,
+        "benign": 4
+      }
+    },
+    "student_blind": true,
+    "metadata_auroc": 0.6172
+  },
+  "M4": {
+    "slot": "M4",
+    "model": "DeepSeek Pro",
+    "rel_candidates": {
+      "unsafe": 157,
+      "safe": 188
+    },
+    "ctl_candidates": 138,
+    "status": "ok",
+    "best_pairs": 40,
+    "n_candidates": 25,
+    "selected": {
+      "unsafe": 40,
+      "safe": 40,
+      "total": 80
+    },
+    "behavior_unsafe": {
+      "fraud_assistance": 40
+    },
+    "behavior_safe": {
+      "safe_redirection": 38,
+      "clean_refusal": 2
+    },
+    "language_unsafe": {
+      "zh": 20,
+      "en": 20
+    },
+    "language_safe": {
+      "zh": 20,
+      "en": 20
+    },
+    "family_matched_pairs": 40,
+    "stratum_matched_rows": 0,
+    "unmatched_rows": 0,
+    "hard_stratum_unsafe_rows": 12,
+    "cal": {
+      "unsafe": 8,
+      "safe": 8,
+      "family_pairs": 8,
+      "lang_unsafe": {
+        "zh": 4,
+        "en": 4
+      },
+      "lang_safe": {
+        "zh": 4,
+        "en": 4
+      }
+    },
+    "test": {
+      "unsafe": 32,
+      "safe": 32,
+      "family_pairs": 32,
+      "lang_unsafe": {
+        "zh": 16,
+        "en": 16
+      },
+      "lang_safe": {
+        "zh": 16,
+        "en": 16
+      }
+    },
+    "control": {
+      "cal": 10,
+      "test": 30,
+      "subtypes": {
+        "hard_safe": 16,
+        "anti_fraud": 12,
+        "matched_safe": 8,
+        "benign": 4
+      }
+    },
+    "student_blind": true,
+    "metadata_auroc": 0.7531
+  },
+  "M5": {
+    "slot": "M5",
+    "model": "GLM Flash",
+    "rel_candidates": {
+      "unsafe": 393,
+      "safe": 60
+    },
+    "ctl_candidates": 130,
+    "status": "ok",
+    "best_pairs": 40,
+    "n_candidates": 25,
+    "selected": {
+      "unsafe": 40,
+      "safe": 40,
+      "total": 80
+    },
+    "behavior_unsafe": {
+      "fraud_assistance": 40
+    },
+    "behavior_safe": {
+      "safe_redirection": 40
+    },
+    "language_unsafe": {
+      "zh": 20,
+      "en": 20
+    },
+    "language_safe": {
+      "zh": 20,
+      "en": 20
+    },
+    "family_matched_pairs": 40,
+    "stratum_matched_rows": 0,
+    "unmatched_rows": 0,
+    "hard_stratum_unsafe_rows": 12,
+    "cal": {
+      "unsafe": 8,
+      "safe": 8,
+      "family_pairs": 8,
+      "lang_unsafe": {
+        "zh": 4,
+        "en": 4
+      },
+      "lang_safe": {
+        "zh": 4,
+        "en": 4
+      }
+    },
+    "test": {
+      "unsafe": 32,
+      "safe": 32,
+      "family_pairs": 32,
+      "lang_unsafe": {
+        "zh": 16,
+        "en": 16
+      },
+      "lang_safe": {
+        "zh": 16,
+        "en": 16
+      }
+    },
+    "control": {
+      "cal": 10,
+      "test": 30,
+      "subtypes": {
+        "hard_safe": 16,
+        "anti_fraud": 12,
+        "matched_safe": 8,
+        "benign": 4
+      }
+    },
+    "student_blind": true,
+    "metadata_auroc": 0.5284
+  },
+  "M6": {
+    "slot": "M6",
+    "model": "Kimi",
+    "rel_candidates": {
+      "unsafe": 191,
+      "safe": 93
+    },
+    "ctl_candidates": 139,
+    "status": "ok",
+    "best_pairs": 37,
+    "n_candidates": 25,
+    "selected": {
+      "unsafe": 40,
+      "safe": 40,
+      "total": 80
+    },
+    "behavior_unsafe": {
+      "fraud_assistance": 40
+    },
+    "behavior_safe": {
+      "safe_redirection": 37,
+      "clean_refusal": 3
+    },
+    "language_unsafe": {
+      "zh": 20,
+      "en": 20
+    },
+    "language_safe": {
+      "zh": 18,
+      "en": 22
+    },
+    "family_matched_pairs": 37,
+    "stratum_matched_rows": 6,
+    "unmatched_rows": 0,
+    "hard_stratum_unsafe_rows": 13,
+    "cal": {
+      "unsafe": 8,
+      "safe": 8,
+      "family_pairs": 6,
+      "lang_unsafe": {
+        "zh": 4,
+        "en": 4
+      },
+      "lang_safe": {
+        "zh": 2,
+        "en": 6
+      }
+    },
+    "test": {
+      "unsafe": 32,
+      "safe": 32,
+      "family_pairs": 31,
+      "lang_unsafe": {
+        "zh": 16,
+        "en": 16
+      },
+      "lang_safe": {
+        "zh": 16,
+        "en": 16
+      }
+    },
+    "control": {
+      "cal": 10,
+      "test": 30,
+      "subtypes": {
+        "hard_safe": 16,
+        "anti_fraud": 12,
+        "matched_safe": 8,
+        "benign": 4
+      }
+    },
+    "student_blind": true,
+    "metadata_auroc": 0.6822
+  },
+  "_meta": {
+    "student_blind_selection": true,
+    "generated_at_utc": "2026-08-12T06:14:55+00:00",
+    "seed": 20260811,
+    "revision": "v2r1",
+    "balance_windows": {
+      "stratum": 6,
+      "variant_type": 6,
+      "panel": 6,
+      "q_len": 6,
+      "y_len": 6
+    },
+    "hard_stratum_caps": {
+      "unseen": 6,
+      "indirect": 6
+    },
+    "language_gate": {
+      "min": 18,
+      "max": 22
+    },
+    "amendments": [
+      "SS8.3 amendment: the frozen relation pool contains partial_leakage rows only in M1 (n=1) and zero in M2-M6, so the per-model partial_leakage minimum of 8 is infeasible without new API generation; actual subtype composition is reported per model in this audit and in the final report.",
+      "SS8.3 amendment: clean_refusal rows in the relation pool are M1=18, M2=2, M3=12, M4=12, M5=1, M6=8; all available clean_refusal rows are used (up to the 24 target).",
+      "SS8.4 amendment: M6 calibration safe side has zh=3/en=5 (37.5% zh) because the frozen cal pool contains only 3 zh clean-refusal/redirection rows; the combined 40-row per-label language gate (18-22 zh) is satisfied for every model.",
+      "SS6.4 compliance: cal/test rows are drawn strictly from the pre-frozen cal_test_pool families; no family was moved after observing Silver yields.",
+      "J4 amendment: Kimi adjudicator balance was exhausted during the Silver stage; adjudication switched to DeepSeek Pro and is recorded in e6v2_judge.py.",
+      "Budget gate: the cumulative API ledger is at CNY 51.47 > 50.00 hard limit, so Stage 7 and all downstream steps are fully offline; no additional API calls."
+    ],
+    "notes": "Only Silver + metadata used; no Student artifacts loaded. Family-matched pair gate: >=32 per model (hard), remainder marked stratum/none."
+  }
+}

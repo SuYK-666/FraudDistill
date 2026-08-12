@@ -1,0 +1,74 @@
+{
+  "v1_cost_cny": 1.4153,
+  "cumulative_cost_cny": 51.4713,
+  "budget_hard_limit": 50.0,
+  "remaining_cny": -1.4713,
+  "by_stage": {
+    "pool_translation": {
+      "calls": 45,
+      "cost_cny": 0.0045,
+      "input_tokens": 2479,
+      "output_tokens": 836
+    },
+    "v2_probe": {
+      "calls": 64,
+      "cost_cny": 0.0376,
+      "input_tokens": 1824,
+      "output_tokens": 12812
+    },
+    "v2_gen_anchor": {
+      "calls": 1219,
+      "cost_cny": 1.0176,
+      "input_tokens": 256286,
+      "output_tokens": 277864
+    },
+    "v2_judge": {
+      "calls": 29572,
+      "cost_cny": 27.2281,
+      "input_tokens": 36806028,
+      "output_tokens": 1782923
+    },
+    "v2_adjudication": {
+      "calls": 3619,
+      "cost_cny": 9.7751,
+      "input_tokens": 4598652,
+      "output_tokens": 208000
+    },
+    "v2_gen_b0": {
+      "calls": 1189,
+      "cost_cny": 1.183,
+      "input_tokens": 469959,
+      "output_tokens": 254152
+    },
+    "v2_gen_control": {
+      "calls": 240,
+      "cost_cny": 0.16,
+      "input_tokens": 7304,
+      "output_tokens": 55159
+    },
+    "v2_retry": {
+      "calls": 1,
+      "cost_cny": 0.0013,
+      "input_tokens": 539,
+      "output_tokens": 256
+    },
+    "v2_gen_b1": {
+      "calls": 400,
+      "cost_cny": 0.2844,
+      "input_tokens": 143813,
+      "output_tokens": 86478
+    },
+    "v2_gen_b2": {
+      "calls": 399,
+      "cost_cny": 0.2733,
+      "input_tokens": 133843,
+      "output_tokens": 84044
+    },
+    "v2_gen_b3": {
+      "calls": 345,
+      "cost_cny": 0.3341,
+      "input_tokens": 130319,
+      "output_tokens": 71987
+    }
+  }
+}

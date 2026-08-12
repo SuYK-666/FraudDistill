@@ -1,0 +1,12 @@
+{
+  "pool": "all",
+  "audits_total": 3541,
+  "judged_triples": 3541,
+  "unresolved": 0,
+  "unresolved_rate": 0.0,
+  "binary_fleiss_kappa": 0.7474,
+  "behavior_fleiss_kappa": 0.6377,
+  "unanimous_rate": 0.8232,
+  "schema_consistency": 1.0,
+  "generated_at": "2026-08-11T18:41:56+00:00"
+}

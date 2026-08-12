@@ -63,7 +63,7 @@ def head_tail_truncate(tokens: list[int], max_length: int, answer_start_token_id
     return tokens[:head_n] + tokens[-(budget - head_n):]
 
 
-def neural_collate(batch, tokenizer, max_length=None, architecture="standard"):
+def neural_collate(batch, tokenizer, max_length=None, architecture="standard", trunc_mode="headtail"):
     texts = [ex["text"] for ex in batch]
     if max_length is not None:
         answer_marker = tokenizer("[ANSWER]", add_special_tokens=False)["input_ids"]
@@ -71,7 +71,10 @@ def neural_collate(batch, tokenizer, max_length=None, architecture="standard"):
         encs = []
         for t in texts:
             ids = tokenizer(t, add_special_tokens=False)["input_ids"]
-            encs.append(head_tail_truncate(ids, max_length, answer_id))
+            if trunc_mode == "tail":
+                encs.append(ids[:max_length])
+            else:
+                encs.append(head_tail_truncate(ids, max_length, answer_id))
         enc = tokenizer.pad({"input_ids": encs}, padding=True, return_tensors="pt")
     else:
         enc = tokenizer(texts, padding=True, truncation=True, max_length=max_length, return_tensors="pt")

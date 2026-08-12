@@ -54,3 +54,15 @@ experiments/exp6_multi_api/generations/
 experiments/exp6_multi_api/silver_audit/audit_set.jsonl
 experiments/exp6_multi_api/silver_audit/judge_raw.jsonl
 experiments/exp6_multi_api/silver_audit/audit_set_public.jsonl
+
+# exp6 v2: raw high-risk q+y stays local; only public manifest / audits / metrics / report are pushed
+experiments/exp6_v2_balanced/data/prompt_pool_manifest.jsonl
+experiments/exp6_v2_balanced/generations/
+experiments/exp6_v2_balanced/silver/judge_J*_raw.jsonl
+experiments/exp6_v2_balanced/silver/adjudicator_raw.jsonl
+experiments/exp6_v2_balanced/silver/silver_consensus.jsonl
+experiments/exp6_v2_balanced/balanced/balanced_selection_manifest.jsonl
+experiments/exp6_v2_balanced/balanced/calibration_manifest.jsonl
+experiments/exp6_v2_balanced/balanced/frozen_test_manifest.jsonl
+experiments/exp6_v2_balanced/balanced/hard_safe_manifest.jsonl
+_e6v2_server_stage/
