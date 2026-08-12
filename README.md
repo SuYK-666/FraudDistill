@@ -100,8 +100,8 @@ flowchart LR
 ```mermaid
 flowchart TD
     X[q + y] --> S[Frozen Student<br/>risk_score]
-    S -->|score ≥ 阈值| U[unsafe]
-    S -->|score < 阈值| A{分数歧义审计<br/>分数距 0.5 最近}
+    S -->|"高于阈值"| U[unsafe]
+    S -->|"低于阈值"| A{分数歧义审计<br/>分数距 0.5 最近}
     A -->|Top-K 最模糊| J[Judge 复核<br/>缓存 qy-hash]
     A -->|其余| V[safe]
     J -->|unsafe| U
