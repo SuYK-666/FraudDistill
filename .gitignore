@@ -20,6 +20,7 @@ data/
 src/**/__pycache__/
 src/**/*.py[cod]
 third_party/
+paper/
 experiments/**/split_manifest/
 experiments/**/raw_outputs/
 experiments/**/predictions/
