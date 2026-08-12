@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-V2_DIR = ROOT / "experiments" / "exp6_v2_balanced"
+V2_DIR = ROOT / "experiments" / "exp6_balanced_multi_api"
 PROTOCOL_DIR = V2_DIR / "protocol"
 DATA_DIR = V2_DIR / "data"
 GEN_DIR = V2_DIR / "generations"

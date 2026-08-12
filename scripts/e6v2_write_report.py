@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """E6 v2: generate EXP6_V2_FINAL_REPORT.md (Chinese, UTF-8 BOM) from audit/metrics JSONs."""
 from __future__ import annotations
 import json, sys
@@ -53,7 +53,7 @@ def main():
         return f"- {name} Macro-F1 bootstrap 95% CI: [{lo:.3f}, {hi:.3f}]\n"
     lines = []
     lines.append("# EXP6 v2 最终报告：跨多 API 直连响应的欺诈协助检测与 Selective Audit 级联\n")
-    lines.append(f"> 实验目录：`experiments/exp6_v2_balanced` ｜ 协议：`EXP6_V2_BALANCED_RERUN_STRICT_PROTOCOL.md` ｜ 生成时间：{utc_now()}（UTC）\n")
+    lines.append(f"> 实验目录：`experiments/exp6_balanced_multi_api` ｜ 协议：`EXP6_V2_BALANCED_RERUN_STRICT_PROTOCOL.md` ｜ 生成时间：{utc_now()}（UTC）\n")
     lines.append("## 0. 摘要\n")
     p0 = mets.get("p0", {}); p1 = mets.get("p1_metrics", {})
     hs = mets.get("hs_pool", {})

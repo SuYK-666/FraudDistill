@@ -109,7 +109,8 @@
 - **E1-C 为方向性支持**：仅 6 个独立阳性，q_y 在 Macro-F1 / AUPRC（0.397 vs 0.298，相对 prevalence 0.96% 的 lift ≈ 28–71×）与低 FPR 工作点上优于 y_only，但按指南标注为 exploratory / descriptive，不强作 confirmatory claim。
 - 统计修正记录：v4.6 将 cluster bootstrap 修正为 Macro-F1 口径（原实现只对正类 F1 重抽样，CI 与点估计不可比）。
 
----## 2. E2 — 跨工作对比（平衡诊断集）
+---
+## 2. E2 — 跨工作对比（平衡诊断集）
 
 - **文件夹**：[`exp2_prior_work_comparison/`](exp2_prior_work_comparison/)
 - **报告**：[`EXP2_BALANCED_FINAL_REPORT_20260807.md`](exp2_prior_work_comparison/EXP2_BALANCED_FINAL_REPORT_20260807.md)
@@ -230,7 +231,8 @@ Final Student 补充：Acc 0.9136、Real-only **0.7913**、4-class 0.4657；Hard
 - **Final Student vs Neural-SoftDistill**：MF1 +0.0286、Recall +0.0759、Real-only +0.1018、4-class +0.0525；配对显著性 ΔMF1 CI [0.0122, 0.0446]、ΔRecall CI [0.0513, 0.1007] 均不跨 0，McNemar p = 1.7e-08。
 - **能力链**：Base-1.5B 0.3584（几乎全判 unsafe）→ Neural-Gold 0.8794 → Neural-SoftDistill 0.9032 → Final Student 0.9135，蒸馏训练的价值链条完整成立。
 
----## 4. E4 — 未见类别/来源/风格泛化
+---
+## 4. E4 — 未见类别/来源/风格泛化
 
 - **文件夹**：[`exp4_unseen/`](exp4_unseen/)
 - **最终报告（static-fix）**：[`experiments/e4e5_final_staticfix/EXP4_UNSEEN_GENERALIZATION_REPORT_FINAL.md`](e4e5_final_staticfix/EXP4_UNSEEN_GENERALIZATION_REPORT_FINAL.md)
