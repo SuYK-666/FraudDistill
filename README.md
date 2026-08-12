@@ -1,114 +1,97 @@
 # FraudDistill
 
-FraudDistill 是一个面向 **LLM 欺诈协助输出检测** 的研究与实验框架。项目关注的不是传统短信、邮件或网页诈骗文本分类，也不是只判断用户 prompt 是否危险，而是检测：
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-473%20passed%20%7C%204%20skipped-brightgreen)
+![Experiments](https://img.shields.io/badge/experiments-6%20completed-4E9A51)
+![Student](https://img.shields.io/badge/student-1.5B%20QLoRA-blueviolet)
+![Status](https://img.shields.io/badge/status-research%20prototype-lightgrey)
+![License](https://img.shields.io/badge/license-TBD-lightgrey)
+
+FraudDistill 是一个面向 **LLM 欺诈协助输出检测**（fraud-assistance response detection）的研究与实验框架。
+
+本项目检测的不是“用户 prompt 是否危险”，也不是传统的诈骗文本分类，而是目标大模型面对欺诈诱导时**实际生成的回答**是否构成欺诈协助：
 
 ```text
-user_query q + target_model_answer y -> safe / unsafe, risk_type, risk_score
+user_query q + target_model_answer y  ->  safe / unsafe, risk_type, risk_score
 ```
 
-核心问题是：当目标大模型面对欺诈诱导、角色扮演、多轮上下文或越狱式输入时，它是否生成了具有欺诈协助风险的回答，以及如何用较低成本自动检测这类回答。
+核心主张：欺诈协助是一个**响应级且关系性（response-level & relational）**的属性——必须联合观察 `q` 与 `y` 才能可靠判断，单看查询或单看回答都不可靠。
 
-## 项目定位
+## 亮点
 
-当前版本只保留一条主线：
+- **关系性检测范式**：三视图（q-only / y-only / q+y）联合评估，配 wrong-q 负控制，机制证据来自受控消融实验。
+- **增强型 Multi-Agent Teacher**：三专家（欺诈协助 / 拒答质量 / 相关性）+ Evidence Arbiter + 冲突纠错 + Platt 校准，产出结构化教师信号。
+- **可部署的 1.5B 学生模型**：FraudDistill-Student-1.5B（QLoRA 蒸馏），Macro-F1 0.9135，支持 head-tail 编码的低成本本地推理。
+- **低成本级联修复**：分数歧义选择性审计（15% 查询率）可在不重训模型的情况下显著恢复部署召回。
+- **完整实验体系**：E1 机制验证 → E2 跨工作对比 → E3 教师/学生蒸馏 → E4 未见泛化 → E5 校准级联 → E6 多 API 实测，全部含冻结数据、统计检验与复现材料。
 
-```text
-Prompt 诱导 -> Target LLM 生成回答 -> 检测是否存在欺诈协助、拒答失败或过度拒答
-```
+## 核心任务定义
 
-小模型和多 Agent 都是检测手段，不是研究对象本身。
-
-当前风险类型限定为：
-
-| 类型 | 含义 |
+| 风险类型 | 含义 |
 |---|---|
 | `fraud_assistance` | 回答为诈骗、钓鱼、冒充身份、虚假招聘、情感诈骗等提供可执行协助 |
 | `refusal_failure` | 面对明显欺诈诱导请求时，模型没有拒绝并给出实质帮助 |
 | `over_refusal` | 面对反诈教育、识别诈骗、防范诈骗等正常请求时错误拒绝 |
 | `safe` | 正常回答、正确拒答或安全教育 |
 
-幻觉、事实性错误、RAG 证据一致性等旧方向暂不作为当前主实验。
-
 ## 方法概览
 
 ```text
 公开数据集 / benchmark
-        -> 统一为 q + y 样本
-        -> Multi-Agent Teacher 生成结构化 teacher signal
-        -> 本地 Student Detector 学习 gold/weak label + teacher signal
-        -> 低成本部署的欺诈协助输出检测器
+    -> 统一为 q + y 响应级样本
+    -> Multi-Agent Teacher 生成结构化 teacher signal
+    -> 本地 Student Detector 学习 gold/weak label + teacher signal
+    -> 低成本部署的欺诈协助输出检测器
 ```
 
-保留的 Agent：
+框架组件（代码位于 `src/frauddistill/`）：
 
-| Agent | 作用 |
+| 组件 | 作用 |
 |---|---|
 | Fraud Assistance Agent | 判断回答是否提供欺诈协助，关注可执行性 |
 | Refusal Quality Agent | 判断拒答失败和过度拒答 |
 | Relevance Agent | 判断回答是否真正回应用户意图 |
-| Arbiter Agent | 汇总 teacher signal |
+| Evidence Arbiter | 汇总三专家证据，输出结构化分数与证据表 |
+| Student Detector | 1.5B QLoRA 学生模型，本地推理（含 head-tail 截断编码） |
 
-Factuality Agent 代码暂保留，但第一阶段不作为主线实验组件。
+## 实验总览（E1–E6）
 
-## 数据集
+| # | 实验 | 目录 | 一句话目标 |
+|---|---|---|---|
+| E1 | 输入消融与关系性机制验证 | [`experiments/exp1_input_ablation/`](experiments/exp1_input_ablation/) | 证明 q+y 联合观察的必要性 |
+| E2 | 跨工作对比（平衡诊断集） | [`experiments/exp2_prior_work_comparison/`](experiments/exp2_prior_work_comparison/) | 四基准同数据集对比原工作基线 |
+| E3 | 增强多 Agent 教师与蒸馏消融 | [`experiments/exp3_agent_distillation_ablation/`](experiments/exp3_agent_distillation_ablation/) | 教师分解价值 + 1.5B 学生蒸馏 |
+| E4 | 未见类别/来源/风格泛化 | [`experiments/exp4_unseen/`](experiments/exp4_unseen/) | family-disjoint 复合迁移评估 |
+| E5 | 校准与选择性审计级联 | [`experiments/exp5_calibration/`](experiments/exp5_calibration/) | 低代价恢复部署召回 |
+| E6 | 跨多 API 直连响应检测 | [`experiments/exp6_balanced_multi_api/`](experiments/exp6_balanced_multi_api/) | 真实目标模型行为率与判别 |
 
-主数据集：
+> 📖 每个实验的**实验思路、实验设计、数据集选取、主结果表格与实验分析**详见：[`experiments/EXPERIMENTS_SUMMARY.md`](experiments/EXPERIMENTS_SUMMARY.md)（六实验总结文档，含全部报告与数据链接）。
 
-| 数据集 | 用途 |
-|---|---|
-| Fraud-R1 | 核心数据来源，第一阶段聚焦 Phishing Scams、Impersonation、Fake Job Postings |
-
-辅助数据集：
-
-| 数据集 | 用途 |
-|---|---|
-| Do-Not-Answer | 补充危险请求应拒绝的基线能力 |
-| Aegis / Nemotron Content Safety Dataset | 补充内容安全 safe/unsafe 样本，优先抽取 fraud/deception/scams 相关子类 |
-| OR-Bench | 提供 hard safe cases，用于控制过度拒绝和误报 |
-
-当前仓库已包含 Fraud-R1 原始仓库数据。正式实验前建议先构造：
-
-```text
-data/generated_answers/fraudr1/qwen_outputs.jsonl
-data/unified/fraudr1_qwen.jsonl
-data/teacher_signals/fraudr1_qwen_teacher.jsonl
-```
-
-注意：报告和公开材料中不展示可复用的高风险 prompt、诈骗话术或完整欺诈脚本。
-
-## 实验报告
-
-| 实验 | 说明 | 报告 |
-|---|---|---|
-| Exp2 跨工作对比（最终平衡诊断集） | 10,813 行平衡响应级诊断集（Fraud-R1/OR-Bench/DNA/Aegis，正负约 1:1）；四基准统一评估与门槛判定，全部 PASS；基线同数据集重评 | [EXP2_BALANCED_FINAL_REPORT_20260807.md](experiments/exp2_prior_work_comparison/EXP2_BALANCED_FINAL_REPORT_20260807.md) |
-| Exp3 增强多Agent与蒸馏消融 | 6,400 行三块数据；T0–T6 Teacher 消融（Full MAT 0.9016）、组件贡献、Student 蒸馏链与 1.5B 神经学生（SoftDistill 0.8849）；Base-1.5B Zero-shot 下界（2026-08-07 更新） | [EXP3_ENHANCED_AGENT_DISTILLATION_REPORT.md](experiments/exp3_agent_distillation_ablation/EXP3_ENHANCED_AGENT_DISTILLATION_REPORT.md) |
-
-## 项目结构
+## 仓库结构
 
 ```text
 FraudDistill/
-├── configs/
-│   ├── agents/
-│   ├── data/
-│   ├── experiments/
-│   └── student/
-├── data/
-│   ├── raw/
-│   ├── generated_answers/
-│   ├── unified/
-│   ├── teacher_signals/
-│   └── predictions/
-├── outputs/
+├── configs/                  # 数据集 / 模型 / 阈值 / 实验配置
+├── data/prepared/            # 各实验冻结面板与中间数据（raw 高风险内容不入库）
+├── experiments/
+│   ├── exp1_input_ablation/  # E1 输入消融（报告 + 论文表格）
+│   ├── exp2_prior_work_comparison/  # E2 跨工作对比（平衡诊断集 + 八行主表）
+│   ├── exp3_agent_distillation_ablation/  # E3 教师/学生蒸馏（最终模型）
+│   ├── exp4_unseen/          # E4 未见泛化（冻结 test/calibration manifest）
+│   ├── exp5_calibration/     # E5 校准与选择性审计
+│   ├── exp6_balanced_multi_api/  # E6 多 API 平衡重跑
+│   ├── e4e5_final_staticfix/ # E4/E5 最终静态修复产物
+│   └── EXPERIMENTS_SUMMARY.md # 六实验总结文档
+├── scripts/                  # 实验构建 / 评测 / 报告脚本
 ├── src/frauddistill/
-│   ├── agents/
-│   ├── data/
-│   ├── eval/
-│   ├── experiments/
-│   ├── student/
-│   ├── target_llm/
-│   ├── teacher/
-│   └── utils/
-└── tests/
+│   ├── agents/               # 专家 Agent 与 Arbiter
+│   ├── teacher/              # 教师信号、证据表、校准
+│   ├── student/              # 学生模型（构建 / 训练 / 推理）
+│   ├── providers/            # 多 API provider 客户端
+│   ├── e4e5_v2/  e1_final_v4/  exp2_cross_benchmark/  # 实验实现
+│   └── ...
+├── tests/                    # pytest 测试套件（473 passed）
+└── third_party/              # 第三方基线代码（不随包分发）
 ```
 
 ## 安装
@@ -118,248 +101,19 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-如后续需要本地 Student 微调，再安装：
+本地学生模型训练/推理（PyTorch + Transformers）：
 
 ```powershell
 pip install -e ".[student]"
 ```
 
-## API Key 与多模型接口
-
-复制模板：
+## API Key 配置
 
 ```powershell
 Copy-Item api_keys.template.py api_keys.py
 ```
 
-然后在 `api_keys.py` 中填写本地 key。`api_keys.py` 已在 `.gitignore` 中，不应提交。
-
-本地接口统一使用 OpenAI-compatible Chat Completions 形式，后续只需要在 `api_keys.py` 填入 key。默认不会自动发起大规模 API 调用。
-
-支持的 provider：
-
-| Provider | 默认模型 | Base URL |
-|---|---|---|
-| Qwen / DashScope | `qwen-plus` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| DeepSeek | `deepseek-chat` | `https://api.deepseek.com` |
-| OpenAI | `gpt-4.1-mini` | `https://api.openai.com/v1` |
-| Gemini | `gemini-2.5-flash` | `https://generativelanguage.googleapis.com/v1beta/openai` |
-| Kimi / Moonshot | `moonshot-v1-8k` | `https://api.moonshot.cn/v1` |
-| GLM / ZhipuAI | `glm-4-flash` | `https://open.bigmodel.cn/api/paas/v4` |
-| Doubao / Volcano Ark | `doubao-seed-1-6-flash` | `https://ark.cn-beijing.volces.com/api/v3` |
-| OpenRouter | `openai/gpt-4.1-mini` | `https://openrouter.ai/api/v1` |
-
-模型清单位于：
-
-```text
-configs/models.yaml
-```
-
-轻量阶段建议先只启用 2-3 个目标模型；正式扩展阶段再打开更多 provider，并记录实际模型版本、调用日期、参数和中转平台。
-
-## 轻量准备与烟测
-
-构造极小 Fraud-R1 聚焦版 smoke 数据。该命令只读取本地 Fraud-R1 prompt，并写入脱敏占位回答，不调用 API：
-
-```powershell
-python -m frauddistill.data.prepare_fraud_focus `
-  --input_files `
-  data/raw/fraudr1/repo/dataset/FP-base-full/FP-base-Chinese.json `
-  data/raw/fraudr1/repo/dataset/FP-base-full/FP-base-English.json `
-  data/raw/fraudr1/repo/dataset/FP-levelup-full/FP-levelup-Chinese.json `
-  data/raw/fraudr1/repo/dataset/FP-levelup-full/FP-levelup-English.json `
-  --output_file data/unified/fraud_focus_smoke.jsonl `
-  --limit 12
-```
-
-跑三个实验的离线 smoke：
-
-```powershell
-python -m frauddistill.experiments.fraud_detection_smoke `
-  --input_file data/unified/fraud_focus_smoke.jsonl `
-  --output_dir outputs/fraud_detection_smoke `
-  --limit 12
-```
-
-该 smoke 会生成：
-
-```text
-outputs/fraud_detection_smoke/fraud_detection_smoke_metrics.json
-outputs/fraud_detection_smoke/rule_predictions.jsonl
-```
-
-## Phase A 补充实验流水线
-
-新增补充实验围绕四类输出组织：
-
-| 步骤 | 输出 | 说明 |
-|---|---|---|
-| Prompt pool | `data/prompts/*.jsonl` | 统一公开数据、hard safe 和反诈教育 prompt |
-| Target generations | `data/generations/*.jsonl` | 多目标 LLM 回答，记录模型、参数、延迟和错误 |
-| Raw votes | `data/labels/raw_votes/*.jsonl` | 规则拒答检测、离线 teacher、后续外部 judge/guard 投票 |
-| Silver labels | `data/labels/silver/*.jsonl` | 聚合为 `silver_high`、`silver_medium`、`ambiguous` |
-
-先做不调用 API 的极小链路测试：
-
-```powershell
-python -m frauddistill.target_llm.generate_responses `
-  --input_file data/unified/fraud_focus_smoke.jsonl `
-  --output_file data/generations/generations_smoke_dryrun.jsonl `
-  --limit 2 `
-  --dry_run
-
-python -m frauddistill.labelers.run_auto_labelers `
-  --input_file data/generations/generations_smoke_dryrun.jsonl `
-  --output_file data/labels/raw_votes/smoke_votes.jsonl
-
-python -m frauddistill.labelers.aggregator `
-  --input_file data/labels/raw_votes/smoke_votes.jsonl `
-  --output_file data/labels/silver/smoke_silver.jsonl
-```
-
-接入真实 API 后，去掉 `--dry_run`，并通过 `configs/models.yaml` 控制启用模型。可用 `--model qwen-plus` 对单个模型做小范围验证。
-
-## 全量数据准备
-
-全量数据准备只构造 prompt pool 和已有 q+y evaluation set，不调用任何模型 API：
-
-```powershell
-python -m frauddistill.data.prepare_full_experiment_data `
-  --output_root data/prepared/full
-```
-
-主要产物：
-
-```text
-data/prepared/full/MANIFEST.md
-data/prepared/full/prompts/all_target_prompts.jsonl
-data/prepared/full/evaluation_qy/
-```
-
-当前全量准备包含 Fraud-R1、OR-Bench、Do-Not-Answer、Aegis、HaluEval、RAGTruth、HaluBench 和 FELM。WildGuardMix 是 Hugging Face gated dataset，需要账号授权后再下载；DetoxBench 暂未发现单一官方可下载数据包，因此不混入非官方数据。
-
-## 六个正式实验入口
-
-本轮论文实验统一入口为：
-
-```powershell
-python scripts/run_high_standard_rerun.py all --bootstrap 500
-python scripts/write_six_experiment_master_report.py
-```
-
-当前 CCF-A 重定位审查先跑小规模 qwen 版，不直接覆盖为全量结论：
-
-```powershell
-python scripts/run_high_standard_rerun.py small --bootstrap 300 --small-limit 720 --api-provider qwen --api-probe-limit 6
-python scripts/write_six_experiment_master_report.py --run-id ccfa_small_qwen
-```
-
-该命令会先把既有 `outputs/` 内容归档到 `archive/pre_ccfa_small_qwen_rerun_*`，然后只保留本轮小规模输出在 `outputs/*/ccfa_small_qwen/`。实验 1-5 会调用 qwen 生成 teacher probe 原始记录，但这些记录只作为训练期/审计信号，不写入 gold label，也不在 Student 推理时作为特征。实验 6 继续读取当前可用的 qwen、DeepSeek、Kimi、GLM generation bank。
-
-小样本复盘后的下一步是中等规模 gate，不直接跑最终全量：
-
-```powershell
-git status --short
-python scripts/run_high_standard_rerun.py gate --bootstrap 500 --api-provider qwen --api-probe-limit 12
-python scripts/write_six_experiment_master_report.py --run-id ccfa_medium_gate
-pytest -q
-```
-
-Gate 版会先归档旧 `outputs/`，再保留 `outputs/*/ccfa_medium_gate/`。该流程修复了四类 P0 协议问题：分组切分不丢行、E5 四路 group-disjoint calibration split、E3 Student 推理只输入 q+y、E6 新回复不继承 prompt gold 而改写 `prompt_risk_label`、`response_harm_label`、`pair_fraud_label`。
-
-全量版仍可按 `smoke -> pilot -> high_standard_full` 执行；smoke/pilot 自动归档，正式结果保留在 `outputs/*/high_standard_full/`。GitHub 上可查看报告副本：
-
-```text
-docs/results/SIX_EXPERIMENTS_MASTER_REPORT_中文.md
-docs/reproduction/REPRODUCE_SIX_EXPERIMENTS.md
-```
-
-六个实验分别对应：
-
-| 实验 | 输出目录 | 重点 |
-|---|---|---|
-| E1 输入边界消融 | `outputs/exp1_input_ablation/ccfa_small_qwen/` 或 `high_standard_full/` | q only、y only、q+y、matched-FPR、matched-Recall、McNemar |
-| E2 现有工作对比 | `outputs/exp2_prior_work_comparison/ccfa_small_qwen/` 或 `high_standard_full/` | proxy coverage 与官方 baseline 缺口审计 |
-| E3 Agent/蒸馏消融 | `outputs/exp3_agent_distillation_ablation/ccfa_small_qwen/` 或 `high_standard_full/` | nested ablation、leave-one-out、组件压力表、Student 梯度 |
-| E4 unseen 泛化 | `outputs/exp4_unseen/ccfa_small_qwen/` 或 `high_standard_full/` | leave-one-category-out 与 hard-safe source holdout |
-| E5 校准 | `outputs/exp5_calibration/ccfa_small_qwen/` 或 `high_standard_full/` | Platt、FPR-UCB 阈值、reliability 数据 |
-| E6 多 API | `outputs/exp6_multi_api/ccfa_small_qwen/` 或 `high_standard_full/` | 多目标模型 generations、行为指标、detector-dependent 排名 |
-
-`data/`、`outputs/`、`archive/`、模型文件和 `api_keys.py` 均不提交到 GitHub；公开仓库只保留代码、配置、复现说明和报告副本。
-
-当前 CCF-A 重新定位版额外增加三类弱评测轨道：
-
-| 轨道 | 文件 | 说明 |
-|---|---|---|
-| Context-Critical paired | `outputs/exp1_input_ablation/high_standard_full/tables/context_critical_table.csv` | 同一或高度相似回答在不同 q 下发生 safe/unsafe 语义反转，用于证明 q 的信息增益 |
-| Component Stress | `outputs/exp3_agent_distillation_ablation/high_standard_full/tables/stress_agent_ablation.csv` | 程序化构造 actionable、partial leakage、hard-safe、conflict 压力集 |
-| Procedural five-category LOCO | `outputs/exp4_unseen/high_standard_full/tables/procedural_loco5.csv` | 五类欺诈均含 safe/unsafe 对照，用于观察未见类别趋势 |
-
-这些轨道标注为 `procedural_weak_*`，用于论文叙事中的受控机制验证；官方 gold 主张仍应以公开 benchmark 或官方 evaluator 为准。
-
-## 旧版三个主实验
-
-| 实验 | 配置 | 目的 |
-|---|---|---|
-| 实验一：输入边界消融 | `configs/experiments/exp1_input_ablation_fraud.yaml` | 比较 `q only`、`y only`、`q + y`，证明检测对象必须包含用户请求与模型回答 |
-| 实验二：多 Agent 教师蒸馏 | `configs/experiments/exp2_agent_distillation_fraud.yaml` | 比较 Student-Gold 与 Student-AgentDistill |
-| 实验三：轻量部署与泛化 | `configs/experiments/exp3_deployment_generalization_fraud.yaml` | 验证新欺诈类别、新 Target LLM 与低误报约束下的表现 |
-
-默认配置不会启动大规模实验、训练或批量 API 调用。正式实验请在明确指令后运行。
-
-## 当前实验产物
-
-截至 2026-06-17，V1 与 V2 三个实验正式版均已完成。V1 主要用于管线验证；当前更推荐引用 V2 hard-control setting：
-
-| 实验 | 输出目录 | 报告 |
-|---|---|---|
-| 实验一：输入边界消融 | `outputs/exp1_final/` | `outputs/exp1_final/EXP1_REPORT.md` |
-| 实验二：多 Agent 教师蒸馏 | `outputs/exp2_final/` | `outputs/exp2_final/EXP2_REPORT.md` |
-| 实验三：轻量部署与泛化 | `outputs/exp3_final/` | `outputs/exp3_final/EXP3_REPORT.md` |
-| 实验一 V2：Hard-Control 输入边界消融 | `outputs/v2_exp1_final/` | `outputs/v2_exp1_final/EXP1_V2_REPORT.md` |
-| 实验二 V2：Hard-Control 教师蒸馏 | `outputs/v2_exp2_final/` | `outputs/v2_exp2_final/EXP2_V2_REPORT.md` |
-| 实验三 V2：Hard-Control 泛化与部署 | `outputs/v2_exp3_final/` | `outputs/v2_exp3_final/EXP3_V2_REPORT.md` |
-
-V2 引入 Qwen 生成的多样 safe answers、反诈教育 hard safe、OR-Bench hard safe，以及 Qwen 漏检/Phishing 边界 hard unsafe。smoke、预演和 API 分片中间文件已归档到 `archive/`；主路径保留最终版数据、预测、表格和报告。
-
-### 实验二跨工作对比（当前目录）
-
-| 版本 | 输出目录 | 报告 |
-|---|---|---|
-| 最终平衡诊断集（10,813 行，四基准 PASS，2026-08-07） | `experiments/exp2_prior_work_comparison/balanced_design/` | `experiments/exp2_prior_work_comparison/EXP2_BALANCED_FINAL_REPORT_20260807.md` |
-
-最终平衡诊断集在阈值冻结后完成全量评测：Fraud-R1 / OR-Bench / DNA / Aegis 四基准 7 项预注册门槛全部通过；原工作基线（GPTCheck / Official Checker / Longformer-Harmful / NemoGuard）均在最终数据集上重评；全部指标、置信区间、显著性检验、图表与复现材料见报告。
-
-## Student Detector
-
-推荐本地 Student：
-
-```text
-deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-```
-
-配置文件：
-
-```text
-configs/student/deepseek_r1_distill_qwen_1_5b_qlora.yaml
-```
-
-本项目最多只建议部署一个本地小模型。第一阶段可先跑 Student-ZeroShot，再进行 LoRA/QLoRA 小样本微调。
-
-实验三神经学生（DeepSeek-R1-Distill-Qwen-1.5B + LoRA，4 类统一 softmax）复现命令：
-
-```powershell
-# 0) 训练数据审计（保留 Exp2 测试集，group/template-family disjoint）
-python scripts/audit_student_training_data.py
-# 1) 训练/微调（CPU；GPU 可改用 configs/student/deepseek_r1_distill_qwen_1_5b_qlora.yaml）
-python scripts/train_exp3_students.py --manifest data/prepared/exp3_neural_student/train_manifest.jsonl `
-  --backend neural --architecture standard --seeds 11 --max-length 384 `
-  --micro-batch 2 --effective-batch 32 --setting gold --epochs 2
-# 2) 完整评估（AUPRC/MCC/ECE/4类/切片/泛化/部署）
-python scripts/evaluate_neural_student.py --checkpoint experiments/exp3_agent_distillation_ablation/outputs/neural_student/gold_standard_seed11_final `
-  --architecture standard --max-length 384 --out-dir experiments/exp3_agent_distillation_ablation/outputs/neural_student/eval_gold
-```
-
+然后在 `api_keys.py` 中填写本地 key（`api_keys.py` 已在 `.gitignore` 中，不应提交）。本地接口统一使用 OpenAI-compatible Chat Completions 形式；默认不会自动发起大规模 API 调用。
 
 ## 测试
 
@@ -367,17 +121,15 @@ python scripts/evaluate_neural_student.py --checkpoint experiments/exp3_agent_di
 pytest -q
 ```
 
-测试覆盖 schema、转换器、离线 teacher、指标、API 客户端配置和端到端烟测。
+测试覆盖 schema、转换器、离线教师、指标、API 客户端配置与端到端烟测（473 passed / 4 skipped）。
 
 ## 安全与复现原则
 
-- 不人工改写公开数据集正文。
-- 不进行大规模人工标注。
-- 不把 teacher signal 伪称为 gold label；若无官方 evaluator，应写作 weak supervision。
-- 不展示可复用的诈骗 prompt、完整话术或欺诈脚本。
-- 默认脚本不进行大规模训练或批量 API 调用。
-- API Teacher 只用于训练期信号生成；最终目标是本地低成本 Student Detector。
+- 不人工改写公开数据集正文；不把 teacher signal 伪称为 gold label（无官方 evaluator 时写作 weak supervision）。
+- 不展示可复用的高风险 prompt、诈骗话术或完整欺诈脚本；**原始 q+y 数据仅保留在本机**，`.gitignore` 已保护相关路径。
+- 默认脚本不进行大规模训练或批量 API 调用；预算、缓存与断点机制见 `src/frauddistill/providers/` 与各实验协议。
+- 所有实验结果均附带冻结清单、数据审计（SHA256）、统计检验与复现材料，归档目录 `archive/` 不进入 Git 仓库。
 
 ## License
 
-当前仓库尚未指定许可证。正式开源前建议补充 `LICENSE`，并再次确认所有外部数据集的许可条款。
+当前仓库尚未指定许可证；正式开源前将补充 `LICENSE`，并再次确认所有外部数据集的许可条款。

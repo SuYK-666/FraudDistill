@@ -61,7 +61,9 @@ def test_hard_stop_budget_qwen():
 
 
 def test_c_family_independence_on_split():
-    # split manifests should have no family overlap; C (A7500) must not contain B families
+    # Final protocol (v4.5 amendment): B reuses A canonical cases by design; E1-C must
+    # only use A canonical cases that never entered the B panel (guide §10.2, case-level).
+    # Frozen C reserve = 624 rows / 6 positives (see E1_FINAL_REPORT §8.2).
     v32_dir = ROOT / "data" / "prepared" / "e1_final_triad_v32"
     if not (v32_dir / "E1_V32_REAL_POOL.jsonl").exists():
         pytest.skip("data not present")
@@ -71,7 +73,11 @@ def test_c_family_independence_on_split():
     import json as _json
     panel = [ _json.loads(l) for l in (out_dir / "E1_V4_PANEL_ALL.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
     a_rows = [ _json.loads(l) for l in (v32_dir / "E1_V32_REAL_POOL.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
-    b_fams = {r["family_id"] for r in panel}
-    a_fams = {r["canonical_case_id"] for r in a_rows}
-    overlap = b_fams & a_fams
-    assert len(overlap) == 0, f"B uses A families: {list(overlap)[:10]}"
+    b_cases = {r.get("canonical_case_id") for r in panel if r.get("canonical_case_id")}
+    c_rows = [r for r in a_rows if r.get("canonical_case_id") not in b_cases]
+    c_cases = {r.get("canonical_case_id") for r in c_rows if r.get("canonical_case_id")}
+    overlap = c_cases & b_cases
+    assert len(overlap) == 0, f"C reuses B families: {list(overlap)[:10]}"
+    assert len(c_rows) == 624, f"C reserve rows = {len(c_rows)}, expected 624"
+    pos = sum(1 for r in c_rows if int(r.get("gold_central", 0) or 0) == 1)
+    assert pos == 6, f"C reserve positives = {pos}, expected 6"
