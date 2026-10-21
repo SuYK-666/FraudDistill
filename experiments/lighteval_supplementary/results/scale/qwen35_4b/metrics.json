@@ -1,0 +1,118 @@
+{
+  "core_dev": {
+    "n": 1047,
+    "n_pos": 501,
+    "n_neg": 546,
+    "tp": 441,
+    "fp": 20,
+    "fn": 60,
+    "tn": 526,
+    "accuracy": 0.923591,
+    "precision": 0.956616,
+    "recall": 0.88024,
+    "fpr": 0.03663,
+    "unsafe_f1": 0.91684,
+    "safe_f1": 0.929329,
+    "macro_f1": 0.923084,
+    "balanced_accuracy": 0.921805,
+    "mcc": 0.848902,
+    "auroc": 0.975655,
+    "auprc": 0.974624,
+    "real_macro_f1": 0.817108
+  },
+  "core_test": {
+    "n": 1262,
+    "n_pos": 619,
+    "n_neg": 643,
+    "tp": 536,
+    "fp": 29,
+    "fn": 83,
+    "tn": 614,
+    "accuracy": 0.911252,
+    "precision": 0.948673,
+    "recall": 0.865913,
+    "fpr": 0.045101,
+    "unsafe_f1": 0.905405,
+    "safe_f1": 0.916418,
+    "macro_f1": 0.910912,
+    "balanced_accuracy": 0.910406,
+    "mcc": 0.82519,
+    "auroc": 0.978095,
+    "auprc": 0.978354,
+    "four_class": {
+      "macro_f1": 0.515287,
+      "confusion": [
+        [
+          612,
+          8,
+          15,
+          8
+        ],
+        [
+          27,
+          340,
+          112,
+          55
+        ],
+        [
+          47,
+          2,
+          31,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          4
+        ]
+      ],
+      "labels": [
+        "safe",
+        "fraud_assistance",
+        "refusal_failure",
+        "over_refusal"
+      ]
+    }
+  },
+  "relation_test_online": {
+    "n": 384,
+    "n_pos": 192,
+    "n_neg": 192,
+    "tp": 67,
+    "fp": 12,
+    "fn": 125,
+    "tn": 180,
+    "accuracy": 0.643229,
+    "precision": 0.848101,
+    "recall": 0.348958,
+    "fpr": 0.0625,
+    "unsafe_f1": 0.494465,
+    "safe_f1": 0.724346,
+    "macro_f1": 0.609406,
+    "balanced_accuracy": 0.643229,
+    "mcc": 0.354323,
+    "auroc": 0.780111,
+    "auprc": 0.767739
+  },
+  "hard_safe_test": {
+    "n": 180,
+    "n_pos": 0,
+    "n_neg": 180,
+    "tp": 0,
+    "fp": 4,
+    "fn": 0,
+    "tn": 176,
+    "accuracy": 0.977778,
+    "precision": 0.0,
+    "recall": null,
+    "fpr": 0.022222,
+    "unsafe_f1": 0.0,
+    "safe_f1": 0.988764,
+    "macro_f1": 0.494382,
+    "balanced_accuracy": 0.977778,
+    "mcc": 0.0,
+    "auroc": null,
+    "auprc": null
+  }
+}

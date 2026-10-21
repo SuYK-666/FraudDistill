@@ -1,0 +1,167 @@
+{
+  "protocol": "lighteval-ablation-v1",
+  "generated_at_utc": "2026-10-20T17:11:33+00:00",
+  "counts": {
+    "relation_test": 384,
+    "relation_calibration": 96,
+    "hard_safe_calibration": 60,
+    "hard_safe_test": 180
+  },
+  "source_threshold": 0.5622,
+  "target_threshold": 0.2323,
+  "threshold_recomputed": {
+    "feasible": true,
+    "threshold": 0.2323,
+    "constraints": {
+      "relation_recall_min": 0.65,
+      "hard_safe_fpr_max": 0.15
+    },
+    "calibration": {
+      "threshold": 0.2323,
+      "relation_macro_f1": 0.768319,
+      "relation_mcc": 0.553819,
+      "relation_recall": 0.666667,
+      "hard_safe_fpr": 0.116667,
+      "hard_safe_fp": 7,
+      "hard_safe_n": 60
+    },
+    "n_feasible_candidates": 22
+  },
+  "threshold_matches_frozen_record": true,
+  "budget_prefixes": [
+    {
+      "rate": 0.05,
+      "k": 19,
+      "new_items": 19,
+      "prefix": 19
+    },
+    {
+      "rate": 0.1,
+      "k": 38,
+      "new_items": 19,
+      "prefix": 38
+    },
+    {
+      "rate": 0.15,
+      "k": 57,
+      "new_items": 19,
+      "prefix": 57
+    },
+    {
+      "rate": 0.2,
+      "k": 76,
+      "new_items": 19,
+      "prefix": 76
+    }
+  ],
+  "audit_max_items": 76,
+  "ranking": "distance_to_target_threshold_then_fixed_id",
+  "source_assets": {
+    "calibration_manifest": {
+      "path": "experiments\\exp6_balanced_multi_api\\balanced\\calibration_manifest.jsonl",
+      "sha256": "919e8240fa239a349ea9533a89dcbbd52e0dbf32fe3cf3e4b3da214974ad5447",
+      "bytes": 410336,
+      "rows": 156
+    },
+    "test_manifest": {
+      "path": "experiments\\exp6_balanced_multi_api\\balanced\\frozen_test_manifest.jsonl",
+      "sha256": "df29546d73c69c781c8bbcd2f67f5323205f8698d3b9bf216cfc7f5436654184",
+      "bytes": 1168765,
+      "rows": 384
+    },
+    "hard_safe_manifest": {
+      "path": "experiments\\exp6_balanced_multi_api\\balanced\\hard_safe_manifest.jsonl",
+      "sha256": "bdf1a604a07066d72a8f94a5c25bdcdf0b5d612dd08412e493d290d049991691",
+      "bytes": 387265,
+      "rows": 240
+    },
+    "student_predictions": {
+      "path": "experiments\\exp6_balanced_multi_api\\student\\predictions_all.jsonl",
+      "sha256": "1f37fe44a8c13e32813ec9bda650c3e00e8160f4e60197ae06ecf547afefa7a6",
+      "bytes": 308724,
+      "rows": 720
+    },
+    "threshold_selection": {
+      "path": "experiments\\exp6_balanced_multi_api\\student\\threshold_selection.json",
+      "sha256": "0babe7431c133dbe50899f18214538203b89c66269c874381a2c42aec0970e41",
+      "bytes": 300
+    },
+    "e5_audit_cache": {
+      "path": "experiments\\exp5_calibration\\e5\\p3_audit_cache.jsonl",
+      "sha256": "a88bb4cc5a233e8e769fd7b5740edde7c42c797aaac503dcd6bf8841e9d7edd0",
+      "bytes": 166017,
+      "rows": 598
+    }
+  },
+  "e5_cache_plan": {
+    "rows": 598,
+    "selected_rows_with_exact_qy_match": 0,
+    "compatible_for_reuse": 0,
+    "known_prompt_version": "e5-fallback-v1",
+    "known_prompt_sha256_prefix": "6ec0d6b9703736dd",
+    "note": "No E5 row is reused unless the selected q+y hash matches and prompt/model compatibility is enabled."
+  },
+  "prepared_assets": {
+    "raw_files": {
+      "core_dev": {
+        "path": "experiments\\lighteval_supplementary\\prepared\\raw\\core_dev.jsonl",
+        "sha256": "21a1c0c02040e6ef91e3f2be4677fe39623f96b481a4021c9dd472e1c94791f1",
+        "bytes": 1304755,
+        "rows": 1047
+      },
+      "core_test": {
+        "path": "experiments\\lighteval_supplementary\\prepared\\raw\\core_test.jsonl",
+        "sha256": "eba0ed509ba874bc2e7787b81867ad5611b61fe65163f151c010c9e776fab93e",
+        "bytes": 1686024,
+        "rows": 1262
+      },
+      "relation_calibration": {
+        "path": "experiments\\lighteval_supplementary\\prepared\\raw\\relation_calibration.jsonl",
+        "sha256": "d8205b664a8609d7810fa7718d2b7f41fe8df7d3d678032ec6a94caae8c2c930",
+        "bytes": 310106,
+        "rows": 96
+      },
+      "hard_safe_calibration": {
+        "path": "experiments\\lighteval_supplementary\\prepared\\raw\\hard_safe_calibration.jsonl",
+        "sha256": "e5e9468c02eb7dc2af59bf6754acd8622e642326076889bc08de86c2149aba0b",
+        "bytes": 100230,
+        "rows": 60
+      },
+      "relation_test": {
+        "path": "experiments\\lighteval_supplementary\\prepared\\raw\\relation_test.jsonl",
+        "sha256": "df29546d73c69c781c8bbcd2f67f5323205f8698d3b9bf216cfc7f5436654184",
+        "bytes": 1168765,
+        "rows": 384
+      },
+      "hard_safe_test": {
+        "path": "experiments\\lighteval_supplementary\\prepared\\raw\\hard_safe_test.jsonl",
+        "sha256": "8de914d0d5e838de7ad8d192768e0a193d8616ddc3210fc66a56b300fa0b0825",
+        "bytes": 287035,
+        "rows": 180
+      }
+    },
+    "counts": {
+      "train": 4747,
+      "core_dev": 1047,
+      "core_test": 1262,
+      "relation_calibration": 96,
+      "hard_safe_calibration": 60,
+      "relation_test": 384,
+      "hard_safe_test": 180
+    }
+  },
+  "audit_artifacts": {
+    "selection_manifest": {
+      "path": "experiments\\lighteval_supplementary\\prepared\\audit_selection_manifest.jsonl",
+      "sha256": "4e71a7883f3c51e4691c7bfa53e96ca6337e7a13f89ac69d221141110368e5ca",
+      "bytes": 28735,
+      "rows": 76
+    },
+    "reviewer_inputs": {
+      "path": "experiments\\lighteval_supplementary\\prepared\\raw\\audit_inputs.jsonl",
+      "sha256": "07acd36cf8af56c3c509fc5120572f96af89fca2adf3ab7bb34697b345316ad7",
+      "bytes": 203152,
+      "rows": 76
+    }
+  }
+}

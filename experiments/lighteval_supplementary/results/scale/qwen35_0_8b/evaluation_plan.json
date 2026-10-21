@@ -1,0 +1,17 @@
+{
+  "protocol": "lighteval-scale-v1",
+  "model_id": "qwen35_0_8b",
+  "hf_id": "Qwen/Qwen3.5-0.8B",
+  "run_dir": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/runs/qwen35_0_8b/final_distilled_student",
+  "checkpoint": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/runs/qwen35_0_8b/final_distilled_student/best_step140",
+  "device": "cuda",
+  "dtype": "bf16",
+  "sets": {
+    "core_dev": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/prepared/raw/core_dev.jsonl",
+    "core_test": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/prepared/raw/core_test.jsonl",
+    "relation_calibration": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/prepared/raw/relation_calibration.jsonl",
+    "hard_safe_calibration": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/prepared/raw/hard_safe_calibration.jsonl",
+    "relation_test": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/prepared/raw/relation_test.jsonl",
+    "hard_safe_test": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/prepared/raw/hard_safe_test.jsonl"
+  }
+}

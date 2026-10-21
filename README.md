@@ -1,9 +1,9 @@
 # FraudDistill
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-473%20passed%20%7C%204%20skipped-brightgreen)
-![Experiments](https://img.shields.io/badge/experiments-6%20completed-4E9A51)
-![Student](https://img.shields.io/badge/student-1.5B%20QLoRA-blueviolet)
+![Tests](https://img.shields.io/badge/tests-491%20passed%20%7C%204%20skipped-brightgreen)
+![Experiments](https://img.shields.io/badge/experiments-E1--E6%20%2B%20supplement-4E9A51)
+![Student](https://img.shields.io/badge/student-0.5B--7B%20scale%20sweep-blueviolet)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/status-research%20prototype-lightgrey)
 
@@ -92,6 +92,9 @@ flowchart LR
 | E4 | 未见类别/来源/风格泛化 | [`experiments/exp4_unseen/`](experiments/exp4_unseen/) | family-disjoint 复合迁移评估 |
 | E5 | 校准与选择性审计级联 | [`experiments/exp5_calibration/`](experiments/exp5_calibration/) | 低代价恢复部署召回 |
 | E6 | 跨多 API 直连响应检测 | [`experiments/exp6_balanced_multi_api/`](experiments/exp6_balanced_multi_api/) | 真实目标模型行为率与判别 |
+| S1 | LightEval 补充实验：模型规模与预算审计 | [`experiments/lighteval_supplementary/`](experiments/lighteval_supplementary/) | 10 个新模型的规模/成本分析，以及训练、校准、审计预算消融 |
+
+补充实验最终报告：[`FINAL_EXPERIMENT_REPORT.md`](experiments/lighteval_supplementary/results/FINAL_EXPERIMENT_REPORT.md)。
 
 > 📖 每个实验的**实验思路、实验设计、数据集选取、主结果表格与实验分析**详见：[`experiments/EXPERIMENTS_SUMMARY.md`](experiments/EXPERIMENTS_SUMMARY.md)（六实验总结文档，含全部报告与数据链接）。
 
@@ -123,6 +126,7 @@ FraudDistill/
 │   ├── exp4_unseen/          # E4 未见泛化（冻结 test/calibration manifest）
 │   ├── exp5_calibration/     # E5 校准与选择性审计
 │   ├── exp6_balanced_multi_api/  # E6 多 API 平衡重跑
+│   ├── lighteval_supplementary/  # 补充实验：模型规模与预算审计
 │   ├── e4e5_final_staticfix/ # E4/E5 最终静态修复产物
 │   └── EXPERIMENTS_SUMMARY.md # 六实验总结文档
 ├── scripts/                  # 实验构建 / 评测 / 报告脚本
@@ -133,7 +137,7 @@ FraudDistill/
 │   ├── providers/            # 多 API provider 客户端
 │   ├── e4e5_v2/  e1_final_v4/  exp2_cross_benchmark/  # 实验实现
 │   └── ...
-├── tests/                    # pytest 测试套件（473 passed）
+├── tests/                    # pytest 测试套件（491 passed）
 └── third_party/              # 第三方基线代码（不随包分发）
 ```
 
@@ -185,7 +189,7 @@ Copy-Item api_keys.template.py api_keys.py
 pytest -q
 ```
 
-测试覆盖 schema、转换器、离线教师、指标、API 客户端配置与端到端烟测（473 passed / 4 skipped）。
+测试覆盖 schema、转换器、离线教师、指标、API 客户端配置、补充实验报告生成与端到端烟测（491 passed / 4 skipped）。
 
 ## 安全与复现原则
 

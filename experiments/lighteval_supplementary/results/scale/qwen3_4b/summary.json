@@ -1,0 +1,604 @@
+{
+  "protocol": "lighteval-scale-v1",
+  "model": {
+    "id": "qwen3_4b",
+    "label": "Qwen3-4B student",
+    "family": "qwen3",
+    "params_b": 4.0,
+    "hf_id": "Qwen/Qwen3-4B",
+    "hf_revision": "1cfa9a7208912126459214e8b04321603b3df60c",
+    "micro_batch": 1,
+    "eval_batch": 8,
+    "min_free_vram_gb": 24,
+    "train": true
+  },
+  "checkpoint": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/runs/qwen3_4b/final_distilled_student/best_step140",
+  "checkpoint_sha256": "89c32d93d1003b4410cd974676b99a6307c28d3e589cc7ab59e7f15bf2b73224",
+  "threshold_selection": {
+    "feasible": true,
+    "threshold": 0.163064,
+    "constraints": {
+      "relation_recall_min": 0.65,
+      "hard_safe_fpr_max": 0.15
+    },
+    "calibration": {
+      "threshold": 0.163064,
+      "relation_macro_f1": 0.697621,
+      "relation_mcc": 0.396609,
+      "relation_recall": 0.666667,
+      "hard_safe_fpr": 0.066667,
+      "hard_safe_fp": 4,
+      "hard_safe_n": 60
+    },
+    "n_feasible_candidates": 24
+  },
+  "metrics": {
+    "core_dev": {
+      "n": 1047,
+      "n_pos": 501,
+      "n_neg": 546,
+      "tp": 465,
+      "fp": 29,
+      "fn": 36,
+      "tn": 517,
+      "accuracy": 0.937918,
+      "precision": 0.941296,
+      "recall": 0.928144,
+      "fpr": 0.053114,
+      "unsafe_f1": 0.934673,
+      "safe_f1": 0.940855,
+      "macro_f1": 0.937764,
+      "balanced_accuracy": 0.937515,
+      "mcc": 0.875613,
+      "auroc": 0.981813,
+      "auprc": 0.982878,
+      "real_macro_f1": 0.843552
+    },
+    "core_test": {
+      "n": 1262,
+      "n_pos": 619,
+      "n_neg": 643,
+      "tp": 597,
+      "fp": 82,
+      "fn": 22,
+      "tn": 561,
+      "accuracy": 0.917591,
+      "precision": 0.879234,
+      "recall": 0.964459,
+      "fpr": 0.127527,
+      "unsafe_f1": 0.919877,
+      "safe_f1": 0.915171,
+      "macro_f1": 0.917524,
+      "balanced_accuracy": 0.918466,
+      "mcc": 0.839212,
+      "auroc": 0.985639,
+      "auprc": 0.985328,
+      "four_class": {
+        "macro_f1": 0.529458,
+        "confusion": [
+          [
+            610,
+            16,
+            14,
+            3
+          ],
+          [
+            3,
+            355,
+            121,
+            55
+          ],
+          [
+            31,
+            2,
+            47,
+            0
+          ],
+          [
+            4,
+            0,
+            0,
+            1
+          ]
+        ],
+        "labels": [
+          "safe",
+          "fraud_assistance",
+          "refusal_failure",
+          "over_refusal"
+        ]
+      }
+    },
+    "relation_test_online": {
+      "n": 384,
+      "n_pos": 192,
+      "n_neg": 192,
+      "tp": 155,
+      "fp": 61,
+      "fn": 37,
+      "tn": 131,
+      "accuracy": 0.744792,
+      "precision": 0.717593,
+      "recall": 0.807292,
+      "fpr": 0.317708,
+      "unsafe_f1": 0.759804,
+      "safe_f1": 0.727778,
+      "macro_f1": 0.743791,
+      "balanced_accuracy": 0.744792,
+      "mcc": 0.493454,
+      "auroc": 0.842963,
+      "auprc": 0.85783
+    },
+    "hard_safe_test": {
+      "n": 180,
+      "n_pos": 0,
+      "n_neg": 180,
+      "tp": 0,
+      "fp": 13,
+      "fn": 0,
+      "tn": 167,
+      "accuracy": 0.927778,
+      "precision": 0.0,
+      "recall": null,
+      "fpr": 0.072222,
+      "unsafe_f1": 0.0,
+      "safe_f1": 0.962536,
+      "macro_f1": 0.481268,
+      "balanced_accuracy": 0.927778,
+      "mcc": 0.0,
+      "auroc": null,
+      "auprc": null
+    }
+  },
+  "cost": {
+    "training": {
+      "measurement": "new_gpu_run",
+      "wall_seconds": 2810.3,
+      "peak_vram_gb": 17.053,
+      "wall_hours": 0.78064,
+      "billable_gpu_hours": 0.78064,
+      "input_tokens": 2038326,
+      "input_tokens_method": "estimated retained tokens per sampled row x epochs",
+      "output_tokens": 0,
+      "last_attempt_wall_seconds": 2810.3,
+      "step_timestamp_span_seconds": 2748.97,
+      "cumulative_wall_seconds": 2810.3,
+      "attempts": 1,
+      "cuda_memory_retries": 0,
+      "cost_basis": "step timestamps spanning resumptions, model reloads and retries; endpoint save excluded"
+    },
+    "evaluation": {
+      "wall_seconds": 639.06,
+      "peak_vram_gb": 8.658,
+      "per_set": {
+        "core_dev": {
+          "rows": 1047,
+          "seconds": 76.687,
+          "rows_per_s": 13.653,
+          "input_tokens": 176561,
+          "output_tokens": 0
+        },
+        "core_test": {
+          "rows": 1262,
+          "seconds": 89.248,
+          "rows_per_s": 14.14,
+          "input_tokens": 226407,
+          "output_tokens": 0
+        },
+        "relation_calibration": {
+          "rows": 96,
+          "seconds": 3.491,
+          "rows_per_s": 27.496,
+          "input_tokens": 44157,
+          "output_tokens": 0
+        },
+        "hard_safe_calibration": {
+          "rows": 60,
+          "seconds": 1.93,
+          "rows_per_s": 31.092,
+          "input_tokens": 16501,
+          "output_tokens": 0
+        },
+        "relation_test": {
+          "rows": 384,
+          "seconds": 22.085,
+          "rows_per_s": 17.387,
+          "input_tokens": 172325,
+          "output_tokens": 0
+        },
+        "hard_safe_test": {
+          "rows": 180,
+          "seconds": 5.681,
+          "rows_per_s": 31.686,
+          "input_tokens": 46525,
+          "output_tokens": 0
+        }
+      },
+      "total_rows": 3029,
+      "total_input_tokens": 682476,
+      "total_output_tokens": 0,
+      "retry_tokens": 0,
+      "serving": {
+        "batch_size_for_primary_scoring": 4,
+        "latency_batch": 1,
+        "latency_samples": 64,
+        "latency_p50_ms": 56.59,
+        "latency_p95_ms": 57.34,
+        "throughput_batch": 4,
+        "throughput_samples": 128,
+        "throughput_seconds": 8.3967,
+        "rows_per_s": 15.244,
+        "seconds_per_1000_rows": 65.599,
+        "input_tokens_per_s": 6854.808,
+        "output_tokens": 0,
+        "peak_vram_gb": 8.658
+      }
+    },
+    "total_gpu_hours": 0.95816,
+    "gpu_hour_cny": 0.0,
+    "estimated_total_gpu_cny": 0.0,
+    "classifier_output_tokens": 0,
+    "note": "Wall time includes checkpoint loading and all frozen evaluation sets; serving latency excludes load time."
+  },
+  "selection": {
+    "candidate_count": 9,
+    "fast_subset": 300,
+    "shortlist": [
+      {
+        "checkpoint": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/runs/qwen3_4b/final_distilled_student/checkpoint-180",
+        "step": 180,
+        "fast_metrics": {
+          "n": 300,
+          "n_pos": 136,
+          "n_neg": 164,
+          "tp": 128,
+          "fp": 11,
+          "fn": 8,
+          "tn": 153,
+          "accuracy": 0.936667,
+          "precision": 0.920863,
+          "recall": 0.941176,
+          "fpr": 0.067073,
+          "unsafe_f1": 0.930909,
+          "safe_f1": 0.941538,
+          "macro_f1": 0.936224,
+          "balanced_accuracy": 0.937052,
+          "mcc": 0.872637,
+          "auroc": 0.977896,
+          "auprc": 0.978923,
+          "real_macro_f1": 0.840866
+        },
+        "timing": {
+          "rows": 300,
+          "seconds": 14.072,
+          "rows_per_s": 21.319,
+          "input_tokens": 54549,
+          "output_tokens": 0
+        }
+      },
+      {
+        "checkpoint": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/runs/qwen3_4b/final_distilled_student/best_step140",
+        "step": 140,
+        "fast_metrics": {
+          "n": 300,
+          "n_pos": 136,
+          "n_neg": 164,
+          "tp": 128,
+          "fp": 11,
+          "fn": 8,
+          "tn": 153,
+          "accuracy": 0.936667,
+          "precision": 0.920863,
+          "recall": 0.941176,
+          "fpr": 0.067073,
+          "unsafe_f1": 0.930909,
+          "safe_f1": 0.941538,
+          "macro_f1": 0.936224,
+          "balanced_accuracy": 0.937052,
+          "mcc": 0.872637,
+          "auroc": 0.978524,
+          "auprc": 0.97793,
+          "real_macro_f1": 0.840866
+        },
+        "timing": {
+          "rows": 300,
+          "seconds": 13.889,
+          "rows_per_s": 21.6,
+          "input_tokens": 54549,
+          "output_tokens": 0
+        }
+      },
+      {
+        "checkpoint": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/runs/qwen3_4b/final_distilled_student/best_step120",
+        "step": 120,
+        "fast_metrics": {
+          "n": 300,
+          "n_pos": 136,
+          "n_neg": 164,
+          "tp": 130,
+          "fp": 14,
+          "fn": 6,
+          "tn": 150,
+          "accuracy": 0.933333,
+          "precision": 0.902778,
+          "recall": 0.955882,
+          "fpr": 0.085366,
+          "unsafe_f1": 0.928571,
+          "safe_f1": 0.9375,
+          "macro_f1": 0.933036,
+          "balanced_accuracy": 0.935258,
+          "mcc": 0.867411,
+          "auroc": 0.981931,
+          "auprc": 0.979474,
+          "real_macro_f1": 0.838676
+        },
+        "timing": {
+          "rows": 300,
+          "seconds": 14.174,
+          "rows_per_s": 21.166,
+          "input_tokens": 54549,
+          "output_tokens": 0
+        }
+      }
+    ],
+    "full_evaluated": [
+      {
+        "checkpoint": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/runs/qwen3_4b/final_distilled_student/checkpoint-180",
+        "step": 180,
+        "fast_metrics": {
+          "n": 300,
+          "n_pos": 136,
+          "n_neg": 164,
+          "tp": 128,
+          "fp": 11,
+          "fn": 8,
+          "tn": 153,
+          "accuracy": 0.936667,
+          "precision": 0.920863,
+          "recall": 0.941176,
+          "fpr": 0.067073,
+          "unsafe_f1": 0.930909,
+          "safe_f1": 0.941538,
+          "macro_f1": 0.936224,
+          "balanced_accuracy": 0.937052,
+          "mcc": 0.872637,
+          "auroc": 0.977896,
+          "auprc": 0.978923,
+          "real_macro_f1": 0.840866
+        },
+        "timing": {
+          "rows": 300,
+          "seconds": 14.072,
+          "rows_per_s": 21.319,
+          "input_tokens": 54549,
+          "output_tokens": 0
+        },
+        "full_metrics": {
+          "n": 1047,
+          "n_pos": 501,
+          "n_neg": 546,
+          "tp": 472,
+          "fp": 43,
+          "fn": 29,
+          "tn": 503,
+          "accuracy": 0.931232,
+          "precision": 0.916505,
+          "recall": 0.942116,
+          "fpr": 0.078755,
+          "unsafe_f1": 0.929134,
+          "safe_f1": 0.93321,
+          "macro_f1": 0.931172,
+          "balanced_accuracy": 0.931681,
+          "mcc": 0.862677,
+          "auroc": 0.978673,
+          "auprc": 0.980132,
+          "real_macro_f1": 0.833617
+        },
+        "full_timing": {
+          "rows": 1047,
+          "seconds": 76.987,
+          "rows_per_s": 13.6,
+          "input_tokens": 176561,
+          "output_tokens": 0
+        }
+      },
+      {
+        "checkpoint": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/runs/qwen3_4b/final_distilled_student/best_step140",
+        "step": 140,
+        "fast_metrics": {
+          "n": 300,
+          "n_pos": 136,
+          "n_neg": 164,
+          "tp": 128,
+          "fp": 11,
+          "fn": 8,
+          "tn": 153,
+          "accuracy": 0.936667,
+          "precision": 0.920863,
+          "recall": 0.941176,
+          "fpr": 0.067073,
+          "unsafe_f1": 0.930909,
+          "safe_f1": 0.941538,
+          "macro_f1": 0.936224,
+          "balanced_accuracy": 0.937052,
+          "mcc": 0.872637,
+          "auroc": 0.978524,
+          "auprc": 0.97793,
+          "real_macro_f1": 0.840866
+        },
+        "timing": {
+          "rows": 300,
+          "seconds": 13.889,
+          "rows_per_s": 21.6,
+          "input_tokens": 54549,
+          "output_tokens": 0
+        },
+        "full_metrics": {
+          "n": 1047,
+          "n_pos": 501,
+          "n_neg": 546,
+          "tp": 465,
+          "fp": 29,
+          "fn": 36,
+          "tn": 517,
+          "accuracy": 0.937918,
+          "precision": 0.941296,
+          "recall": 0.928144,
+          "fpr": 0.053114,
+          "unsafe_f1": 0.934673,
+          "safe_f1": 0.940855,
+          "macro_f1": 0.937764,
+          "balanced_accuracy": 0.937515,
+          "mcc": 0.875613,
+          "auroc": 0.981813,
+          "auprc": 0.982878,
+          "real_macro_f1": 0.843552
+        },
+        "full_timing": {
+          "rows": 1047,
+          "seconds": 76.878,
+          "rows_per_s": 13.619,
+          "input_tokens": 176561,
+          "output_tokens": 0
+        }
+      },
+      {
+        "checkpoint": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/runs/qwen3_4b/final_distilled_student/best_step120",
+        "step": 120,
+        "fast_metrics": {
+          "n": 300,
+          "n_pos": 136,
+          "n_neg": 164,
+          "tp": 130,
+          "fp": 14,
+          "fn": 6,
+          "tn": 150,
+          "accuracy": 0.933333,
+          "precision": 0.902778,
+          "recall": 0.955882,
+          "fpr": 0.085366,
+          "unsafe_f1": 0.928571,
+          "safe_f1": 0.9375,
+          "macro_f1": 0.933036,
+          "balanced_accuracy": 0.935258,
+          "mcc": 0.867411,
+          "auroc": 0.981931,
+          "auprc": 0.979474,
+          "real_macro_f1": 0.838676
+        },
+        "timing": {
+          "rows": 300,
+          "seconds": 14.174,
+          "rows_per_s": 21.166,
+          "input_tokens": 54549,
+          "output_tokens": 0
+        },
+        "full_metrics": {
+          "n": 1047,
+          "n_pos": 501,
+          "n_neg": 546,
+          "tp": 467,
+          "fp": 41,
+          "fn": 34,
+          "tn": 505,
+          "accuracy": 0.928367,
+          "precision": 0.919291,
+          "recall": 0.932136,
+          "fpr": 0.075092,
+          "unsafe_f1": 0.925669,
+          "safe_f1": 0.930876,
+          "macro_f1": 0.928272,
+          "balanced_accuracy": 0.928522,
+          "mcc": 0.856628,
+          "auroc": 0.982665,
+          "auprc": 0.982962,
+          "real_macro_f1": 0.824733
+        },
+        "full_timing": {
+          "rows": 1047,
+          "seconds": 76.696,
+          "rows_per_s": 13.651,
+          "input_tokens": 176561,
+          "output_tokens": 0
+        }
+      }
+    ],
+    "feasible": true,
+    "gate": {
+      "fpr_max": 0.055,
+      "recall_min": 0.82,
+      "primary": "macro_f1",
+      "tie_break": [
+        "real_macro_f1",
+        "auprc",
+        "mcc",
+        "earlier_step"
+      ]
+    },
+    "selected": {
+      "checkpoint": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/runs/qwen3_4b/final_distilled_student/best_step140",
+      "step": 140,
+      "fast_metrics": {
+        "n": 300,
+        "n_pos": 136,
+        "n_neg": 164,
+        "tp": 128,
+        "fp": 11,
+        "fn": 8,
+        "tn": 153,
+        "accuracy": 0.936667,
+        "precision": 0.920863,
+        "recall": 0.941176,
+        "fpr": 0.067073,
+        "unsafe_f1": 0.930909,
+        "safe_f1": 0.941538,
+        "macro_f1": 0.936224,
+        "balanced_accuracy": 0.937052,
+        "mcc": 0.872637,
+        "auroc": 0.978524,
+        "auprc": 0.97793,
+        "real_macro_f1": 0.840866
+      },
+      "timing": {
+        "rows": 300,
+        "seconds": 13.889,
+        "rows_per_s": 21.6,
+        "input_tokens": 54549,
+        "output_tokens": 0
+      },
+      "full_metrics": {
+        "n": 1047,
+        "n_pos": 501,
+        "n_neg": 546,
+        "tp": 465,
+        "fp": 29,
+        "fn": 36,
+        "tn": 517,
+        "accuracy": 0.937918,
+        "precision": 0.941296,
+        "recall": 0.928144,
+        "fpr": 0.053114,
+        "unsafe_f1": 0.934673,
+        "safe_f1": 0.940855,
+        "macro_f1": 0.937764,
+        "balanced_accuracy": 0.937515,
+        "mcc": 0.875613,
+        "auroc": 0.981813,
+        "auprc": 0.982878,
+        "real_macro_f1": 0.843552
+      },
+      "full_timing": {
+        "rows": 1047,
+        "seconds": 76.878,
+        "rows_per_s": 13.619,
+        "input_tokens": 176561,
+        "output_tokens": 0
+      }
+    }
+  },
+  "eval_seconds": 639.06,
+  "device": "cuda",
+  "dtype": "bf16",
+  "max_length": 512,
+  "score_batch": 4
+}

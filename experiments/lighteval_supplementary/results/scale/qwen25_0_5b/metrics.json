@@ -1,0 +1,118 @@
+{
+  "core_dev": {
+    "n": 1047,
+    "n_pos": 501,
+    "n_neg": 546,
+    "tp": 389,
+    "fp": 101,
+    "fn": 112,
+    "tn": 445,
+    "accuracy": 0.796562,
+    "precision": 0.793878,
+    "recall": 0.776447,
+    "fpr": 0.184982,
+    "unsafe_f1": 0.785066,
+    "safe_f1": 0.80689,
+    "macro_f1": 0.795978,
+    "balanced_accuracy": 0.795733,
+    "mcc": 0.592133,
+    "auroc": 0.864864,
+    "auprc": 0.851428,
+    "real_macro_f1": 0.72229
+  },
+  "core_test": {
+    "n": 1262,
+    "n_pos": 619,
+    "n_neg": 643,
+    "tp": 473,
+    "fp": 122,
+    "fn": 146,
+    "tn": 521,
+    "accuracy": 0.787639,
+    "precision": 0.794958,
+    "recall": 0.764136,
+    "fpr": 0.189736,
+    "unsafe_f1": 0.779242,
+    "safe_f1": 0.79542,
+    "macro_f1": 0.787331,
+    "balanced_accuracy": 0.7872,
+    "mcc": 0.575233,
+    "auroc": 0.869487,
+    "auprc": 0.852442,
+    "four_class": {
+      "macro_f1": 0.475041,
+      "confusion": [
+        [
+          517,
+          64,
+          9,
+          53
+        ],
+        [
+          90,
+          382,
+          18,
+          44
+        ],
+        [
+          53,
+          6,
+          20,
+          1
+        ],
+        [
+          4,
+          0,
+          0,
+          1
+        ]
+      ],
+      "labels": [
+        "safe",
+        "fraud_assistance",
+        "refusal_failure",
+        "over_refusal"
+      ]
+    }
+  },
+  "relation_test_online": {
+    "n": 384,
+    "n_pos": 192,
+    "n_neg": 192,
+    "tp": 144,
+    "fp": 84,
+    "fn": 48,
+    "tn": 108,
+    "accuracy": 0.65625,
+    "precision": 0.631579,
+    "recall": 0.75,
+    "fpr": 0.4375,
+    "unsafe_f1": 0.685714,
+    "safe_f1": 0.62069,
+    "macro_f1": 0.653202,
+    "balanced_accuracy": 0.65625,
+    "mcc": 0.318142,
+    "auroc": 0.667304,
+    "auprc": 0.642865
+  },
+  "hard_safe_test": {
+    "n": 180,
+    "n_pos": 0,
+    "n_neg": 180,
+    "tp": 0,
+    "fp": 38,
+    "fn": 0,
+    "tn": 142,
+    "accuracy": 0.788889,
+    "precision": 0.0,
+    "recall": null,
+    "fpr": 0.211111,
+    "unsafe_f1": 0.0,
+    "safe_f1": 0.881988,
+    "macro_f1": 0.440994,
+    "balanced_accuracy": 0.788889,
+    "mcc": 0.0,
+    "auroc": null,
+    "auprc": null
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "started_at_unix": 1792500763.2732933,
+  "stage": "all",
+  "execute": false,
+  "models": "all",
+  "stages": [
+    {
+      "stage": "prepare",
+      "status": "done",
+      "counts": {
+        "train": 4747,
+        "core_dev": 1047,
+        "core_test": 1262,
+        "relation_calibration": 96,
+        "hard_safe_calibration": 60,
+        "relation_test": 384,
+        "hard_safe_test": 180
+      }
+    },
+    {
+      "stage": "preflight",
+      "status": "done",
+      "cuda": false,
+      "gpu_count": 0
+    },
+    {
+      "stage": "train",
+      "status": "dry_run",
+      "queued": [
+        "qwen25_0_5b",
+        "qwen25_1_5b",
+        "qwen25_3b",
+        "qwen25_7b",
+        "qwen25_14b"
+      ]
+    },
+    {
+      "stage": "eval",
+      "status": "dry_run",
+      "models": [
+        {
+          "model_id": "qwen25_0_5b",
+          "status": "dry_run"
+        },
+        {
+          "model_id": "qwen25_1_5b",
+          "status": "dry_run"
+        },
+        {
+          "model_id": "qwen25_3b",
+          "status": "dry_run"
+        },
+        {
+          "model_id": "qwen25_7b",
+          "status": "dry_run"
+        },
+        {
+          "model_id": "qwen25_14b",
+          "status": "dry_run"
+        },
+        {
+          "model_id": "deepseek_r1_qwen_1_5b",
+          "status": "dry_run"
+        }
+      ]
+    },
+    {
+      "stage": "a0",
+      "status": "DRY_RUN_NO_MODEL_LOAD"
+    },
+    {
+      "stage": "audit",
+      "status": "DRY_RUN_NO_API_CALL",
+      "todo": 76,
+      "cached": 0
+    },
+    {
+      "stage": "ablation",
+      "status": "done",
+      "ready": [
+        "A1",
+        "A2"
+      ]
+    },
+    {
+      "stage": "report",
+      "status": "done",
+      "outputs": {
+        "scale_table": "C:\\Users\\18201\\Desktop\\FraudDistill\\experiments\\lighteval_supplementary\\results\\tables\\table_scale_quality_cost.md",
+        "ablation_table": "C:\\Users\\18201\\Desktop\\FraudDistill\\experiments\\lighteval_supplementary\\results\\tables\\table_ablation_budget.md",
+        "scale_figure": "C:\\Users\\18201\\Desktop\\FraudDistill\\experiments\\lighteval_supplementary\\results\\figures\\fig_scale_quality_cost.svg",
+        "audit_figure": "C:\\Users\\18201\\Desktop\\FraudDistill\\experiments\\lighteval_supplementary\\results\\figures\\fig_audit_budget_quality_cost.svg"
+      }
+    }
+  ],
+  "elapsed_s": 65.59
+}

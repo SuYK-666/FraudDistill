@@ -1,0 +1,94 @@
+# LightEval supplementary experiment 2: training / calibration / audit budget.
+protocol: lighteval-ablation-v1
+seed: 20260811
+bootstrap_replicates: 10000
+
+paths:
+  test_manifest: experiments/exp6_balanced_multi_api/balanced/frozen_test_manifest.jsonl
+  calibration_manifest: experiments/exp6_balanced_multi_api/balanced/calibration_manifest.jsonl
+  hard_safe_manifest: experiments/exp6_balanced_multi_api/balanced/hard_safe_manifest.jsonl
+  student_checkpoint: experiments/exp3_agent_distillation_ablation/outputs/neural_student/final_distilled_student/best_step120
+  student_predictions: experiments/exp6_balanced_multi_api/student/predictions_all.jsonl
+  source_threshold: experiments/exp6_balanced_multi_api/student/threshold_selection.json
+  e5_audit_cache: experiments/exp5_calibration/e5/p3_audit_cache.jsonl
+
+expected_counts:
+  relation_test: 384
+  relation_calibration: 96
+  hard_safe_calibration: 60
+  hard_safe_test: 180
+
+threshold:
+  source: 0.5622
+  target: 0.2323
+  source_fpr_max: 0.055
+  source_recall_min: 0.82
+  target_recall_min: 0.65
+  target_hard_safe_fpr_max: 0.15
+
+audit:
+  # Always rank with |score - target_threshold|, then stable composite id.
+  ranking: distance_to_target_threshold_then_fixed_id
+  max_budget: 0.20
+  rates: [0.05, 0.10, 0.15, 0.20]
+  max_items: 76
+  inputs: q_y_only
+  include_student_score_in_reviewer_input: false
+  include_reference_label_in_reviewer_input: false
+  model: deepseek-chat
+  model_snapshot: deepseek-chat
+  provider: deepseek
+  prompt_version: lighteval-audit-v1
+  temperature: 0.0
+  max_output_tokens: 96
+  max_input_chars: 16000
+  # Confirm against the provider's rental/run date before executing. Tokens are
+  # measured exactly and multiplied by these configurable CNY-per-million rates.
+  input_price_cny_per_m: 2.0
+  output_price_cny_per_m: 8.0
+  max_retries: 2
+  default_workers: 12
+  hard_budget_cny: 5.0
+  soft_budget_cny: 3.0
+  e5_cache_compatibility:
+    enabled: true
+    require_prompt_match: true
+    require_model_match: true
+    known_e5_prompt: e5-fallback-v1
+
+ablations:
+  - id: A0
+    label: Initial 1.5B, valid language-model class interface
+    training: false
+    calibration: false
+    audit_rate: 0.0
+  - id: A1
+    label: Trained student, source operating point
+    training: true
+    calibration: false
+    audit_rate: 0.0
+  - id: A2
+    label: Trained student + target-domain calibration
+    training: true
+    calibration: true
+    audit_rate: 0.0
+  - id: A3
+    label: A2 + 5% boundary audit
+    training: true
+    calibration: true
+    audit_rate: 0.05
+  - id: A4
+    label: A2 + 10% boundary audit
+    training: true
+    calibration: true
+    audit_rate: 0.10
+  - id: A5
+    label: A2 + 15% boundary audit
+    training: true
+    calibration: true
+    audit_rate: 0.15
+  - id: A6
+    label: A2 + 20% boundary audit
+    training: true
+    calibration: true
+    audit_rate: 0.20

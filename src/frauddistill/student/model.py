@@ -82,6 +82,10 @@ class NeuralStudentConfig:
     lora_dropout: float = 0.05
     target_modules: list = field(default_factory=lambda: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"])
     use_lora: bool = True
+    torch_dtype: str = "float32"          # float32 | float16 | bfloat16
+    gradient_checkpointing: bool = False
+    master_weights_fp32: bool = False
+    model_revision: str | None = None
 
 
 class QueryAnswerInteractionHead(torch.nn.Module):
@@ -124,13 +128,30 @@ def build_neural_student(config: NeuralStudentConfig, freeze_base: bool = False,
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
     from peft import LoraConfig, get_peft_model
 
+    dtype_name = str(config.torch_dtype or "float32").lower()
+    dtype_map = {"float32": torch.float32, "fp32": torch.float32,
+                 "float16": torch.float16, "fp16": torch.float16,
+                 "bfloat16": torch.bfloat16, "bf16": torch.bfloat16}
+    if dtype_name not in dtype_map:
+        raise ValueError(f"unknown torch dtype: {config.torch_dtype}")
+    torch_dtype = dtype_map[dtype_name]
+    from transformers import __version__ as transformers_version
+    dtype_kwargs = ({"dtype": torch_dtype}
+                    if int(transformers_version.split(".", 1)[0]) >= 5
+                    else {"torch_dtype": torch_dtype})
+    load_kwargs = {"revision": config.model_revision, **dtype_kwargs}
     if config.architecture == "standard":
         model = AutoModelForSequenceClassification.from_pretrained(
-            config.model_name, num_labels=config.num_labels, torch_dtype=torch.float32)
-        model.config.pad_token_id = model.config.eos_token_id or 0
+            config.model_name, num_labels=config.num_labels, **load_kwargs)
+        eos_token_id = getattr(model.config, "eos_token_id", None)
+        if eos_token_id is None and getattr(model.config, "text_config", None) is not None:
+            eos_token_id = getattr(model.config.text_config, "eos_token_id", None)
+        model.config.pad_token_id = eos_token_id or 0
+        if getattr(model.config, "text_config", None) is not None:
+            model.config.text_config.pad_token_id = eos_token_id or 0
     elif config.architecture == "interaction":
         from transformers import AutoModel
-        base = AutoModel.from_pretrained(config.model_name, torch_dtype=torch.float32)
+        base = AutoModel.from_pretrained(config.model_name, **load_kwargs)
         hidden = int(base.config.hidden_size)
         head = QueryAnswerInteractionHead(hidden, config.num_labels)
         model = _InteractionStudent(base, head)
@@ -152,6 +173,18 @@ def build_neural_student(config: NeuralStudentConfig, freeze_base: bool = False,
         pc = model.peft_config[model.active_adapter]
         assert any("classifier" in str(m) or "score" in str(m) for m in pc.modules_to_save), \
             "classifier must be in modules_to_save"
+    if config.gradient_checkpointing:
+        if hasattr(model, "gradient_checkpointing_enable"):
+            model.gradient_checkpointing_enable()
+        if hasattr(model, "enable_input_require_grads"):
+            model.enable_input_require_grads()
+        if hasattr(model, "config"):
+            model.config.use_cache = False
+    if config.master_weights_fp32:
+        for parameter in model.parameters():
+            if parameter.requires_grad:
+                parameter.data = parameter.data.float()
+        setattr(model, "_fd_master_weights_fp32", True)
     if freeze_base:
         for name, p in model.named_parameters():
             if "lora" not in name and "score" not in name and "head" not in name:

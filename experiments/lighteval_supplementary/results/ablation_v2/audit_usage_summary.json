@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "source": "aggregated from the real DeepSeek API audit cache; raw prompts, outputs and evidence spans are intentionally excluded",
+  "requested_model": "deepseek-chat",
+  "served_model": "deepseek-flash",
+  "n_test": 384,
+  "budgets": {
+    "19": {
+      "k": 19,
+      "input_tokens": 14304,
+      "output_tokens": 775,
+      "total_tokens": 15079,
+      "latency_ms": 16141.05,
+      "avg_latency_ms": 849.53,
+      "incremental_cost_cny": 0.034808
+    },
+    "38": {
+      "k": 38,
+      "input_tokens": 30851,
+      "output_tokens": 1570,
+      "total_tokens": 32421,
+      "latency_ms": 33967.08,
+      "avg_latency_ms": 893.87,
+      "incremental_cost_cny": 0.074262
+    },
+    "57": {
+      "k": 57,
+      "input_tokens": 47103,
+      "output_tokens": 2316,
+      "total_tokens": 49419,
+      "latency_ms": 50371.24,
+      "avg_latency_ms": 883.71,
+      "incremental_cost_cny": 0.112734
+    },
+    "76": {
+      "k": 76,
+      "input_tokens": 62983,
+      "output_tokens": 3029,
+      "total_tokens": 66012,
+      "latency_ms": 64910.39,
+      "avg_latency_ms": 854.08,
+      "incremental_cost_cny": 0.150198
+    }
+  }
+}

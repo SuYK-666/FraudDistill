@@ -37,6 +37,19 @@ mlruns/
 api_keys*.py
 !api_keys.template.py
 
+# Credentials, editor state, and local tool caches
+.env
+.env.*
+secrets/
+*.pem
+*.key
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.idea/
+.vscode/
+
 # exp2: raw q+y content stays private (regenerable from public datasets); keep metrics/reports/audit labels
 experiments/**/unified/
 experiments/**/answers/
@@ -67,3 +80,9 @@ experiments/exp6_balanced_multi_api/balanced/calibration_manifest.jsonl
 experiments/exp6_balanced_multi_api/balanced/frozen_test_manifest.jsonl
 experiments/exp6_balanced_multi_api/balanced/hard_safe_manifest.jsonl
 _e6v2_server_stage/
+
+# LightEval supplementary: raw q+y and downloaded/trained model artifacts stay local
+experiments/lighteval_supplementary/prepared/raw/
+experiments/lighteval_supplementary/runs/
+experiments/lighteval_supplementary/audit/
+experiments/lighteval_supplementary/logs/

@@ -1,0 +1,10 @@
+{
+  "protocol": "lighteval-ablation-a0-v1",
+  "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+  "manifest": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/prepared/raw/relation_test.jsonl",
+  "rows": 384,
+  "device": "cuda",
+  "dtype": "bf16",
+  "prompt_sha256": "1c3975486a6765cdabbda1c34e3abda187bc4c47bf10eb2f3cd6dbfd54cae30c",
+  "interface": "generated four-class category plus one-forward-pass label log-probabilities"
+}

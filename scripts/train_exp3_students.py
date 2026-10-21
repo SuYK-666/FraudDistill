@@ -322,7 +322,18 @@ def main_neural(args) -> None:
 
     out_root = Path(args.out_root or (OUT_ROOT / "neural_student"))
     out_root.mkdir(parents=True, exist_ok=True)
-    device = torch.device("cpu")
+    if args.device == "auto":
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device(args.device)
+    dtype = args.dtype
+    if dtype == "auto":
+        dtype = "bf16" if device.type == "cuda" and torch.cuda.is_bf16_supported() else "fp32"
+    if device.type == "cpu" and dtype != "fp32":
+        raise SystemExit("CPU student training must use --dtype fp32")
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats()
+    print(f"[device] {device} dtype={dtype} gradient_checkpointing={args.gradient_checkpointing}", flush=True)
 
     manifest_path = Path(args.manifest)
     if not manifest_path.exists():
@@ -373,12 +384,19 @@ def main_neural(args) -> None:
         def __len__(self): return len(self.exs)
         def __getitem__(self, i): return self.exs[i]
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name, revision=args.model_revision)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    train_input_tokens = sum(
+        min(len(tokenizer(ex["text"], add_special_tokens=False)["input_ids"]), args.max_length)
+        for ex in train_examples
+    )
 
     cfg = NeuralStudentConfig(model_name=args.model_name, architecture=args.architecture,
-                              max_length=args.max_length, lora_r=args.lora_r, lora_alpha=args.lora_alpha * 2)
+                              max_length=args.max_length, lora_r=args.lora_r, lora_alpha=args.lora_alpha * 2,
+                              torch_dtype=dtype, gradient_checkpointing=args.gradient_checkpointing,
+                              master_weights_fp32=args.master_weights_fp32,
+                              model_revision=args.model_revision)
     if args.setting != "final_distill":
         loss_fn = FraudDistillLoss(lambda_gold={"gold": 1.0, "soft_distill": 0.75, "full_distill": 0.65, "final_student": 0.75}[args.setting],
                                    lambda_soft={"gold": 0.0, "soft_distill": 0.25, "full_distill": 0.25, "final_student": 0.25}[args.setting],
@@ -389,7 +407,7 @@ def main_neural(args) -> None:
 
     def collate(batch): return neural_collate(batch, tokenizer, max_length=args.max_length, architecture=args.architecture)
 
-    eval_batch = max(args.micro_batch * 8, 16)
+    eval_batch = args.eval_batch if args.eval_batch > 0 else max(args.micro_batch * 8, 16)
     dev_loader = DataLoader(SimpleDataset(dev_examples), batch_size=eval_batch, shuffle=False, collate_fn=collate)
     test_loader = DataLoader(SimpleDataset(test_examples), batch_size=eval_batch, shuffle=False, collate_fn=collate)
 
@@ -399,7 +417,10 @@ def main_neural(args) -> None:
         # Guide 10/14: lora r=32 alpha=64 dropout=0.05 (NOT the legacy *2).
         cfg = NeuralStudentConfig(model_name=args.model_name, architecture=args.architecture,
                                   max_length=args.max_length, lora_r=args.lora_r,
-                                  lora_alpha=args.lora_alpha, lora_dropout=0.05)
+                                  lora_alpha=args.lora_alpha, lora_dropout=0.05,
+                                  torch_dtype=dtype, gradient_checkpointing=args.gradient_checkpointing,
+                                  master_weights_fp32=args.master_weights_fp32,
+                                  model_revision=args.model_revision)
         import math
         from collections import Counter as _Counter
         src_counts = _Counter(ex.get("source_bucket", "") for ex in train_examples)
@@ -443,11 +464,12 @@ def main_neural(args) -> None:
         torch.manual_seed(args.seed)
         model = build_neural_student(cfg, freeze_base=False, device=device)
         t0 = time.time()
-        run_dir = out_root / f"final_distilled_student"
+        run_dir = out_root / str(args.run_name or "final_distilled_student")
         run_dir.mkdir(parents=True, exist_ok=True)
         best_state, history = train_neural_final(
             model, train_loader, dev_loader, loss_fn, tokenizer,
             epochs=args.epochs, lr_lora=args.lr_lora, lr_head=args.lr_head,
+            warmup_ratio=args.warmup_ratio,
             grad_accum=max(1, args.effective_batch // args.micro_batch),
             eval_steps=args.eval_steps, save_steps=args.eval_steps,
             patience=args.patience, seed=args.seed, out_dir=run_dir,
@@ -461,7 +483,7 @@ def main_neural(args) -> None:
                 json.dumps({"setting": "final_distill", "seed": args.seed, "steps": args.max_steps,
                             "wall_seconds": round(time.time() - t0, 1)}, ensure_ascii=False, indent=2),
                 encoding="utf-8")
-            print("SMOKE OK (5 steps)", flush=True)
+            print(f"SMOKE OK ({args.max_steps} optimizer steps)", flush=True)
             return
         # Official test is NOT run here: guide 20/44 requires a single test run
         # with the dev-selected checkpoint and frozen calibration, executed by
@@ -469,8 +491,19 @@ def main_neural(args) -> None:
         save_checkpoint(model, tokenizer, run_dir / "final", args.architecture)
         (run_dir / "final_distill_metrics.json").write_text(
             json.dumps({"setting": "final_distill", "architecture": args.architecture, "seed": args.seed,
-                        "rows": len(train_examples), "test": "skipped (official test via evaluate_final_student.py)",
+                        "model_name": args.model_name, "device": str(device), "dtype": dtype,
+                        "gradient_checkpointing": bool(args.gradient_checkpointing),
+                        "micro_batch": args.micro_batch, "effective_batch": args.effective_batch,
+                        "epochs": args.epochs,
+                        "max_length": args.max_length, "rows": len(train_examples),
+                        "train_input_tokens": int(train_input_tokens), "train_output_tokens": 0,
+                        "train_input_tokens_per_epoch": int(train_input_tokens),
+                        "train_input_tokens": int(train_input_tokens * args.epochs),
+                        "train_output_tokens": 0,
+                        "test": "skipped (official test via evaluate_final_student.py)",
                         "history": history, "wall_seconds": round(time.time() - t0, 1),
+                        "peak_vram_bytes": int(torch.cuda.max_memory_allocated()) if device.type == "cuda" else None,
+                        "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 1024 ** 3, 3) if device.type == "cuda" else None,
                         "class_weights": [round(w, 3) for w in cw]}, ensure_ascii=False, indent=2),
             encoding="utf-8")
         return
@@ -551,14 +584,17 @@ if __name__ == "__main__":
     ap.add_argument("--setting", default="full_distill", choices=["gold", "soft_distill", "full_distill", "final_student", "final_distill"])
     ap.add_argument("--architecture", default="standard", choices=["standard", "interaction"])
     ap.add_argument("--model-name", default="deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B")
+    ap.add_argument("--model-revision", default=None)
     ap.add_argument("--manifest", default="data/prepared/exp3_neural_student/train_manifest.jsonl")
     ap.add_argument("--seeds", default="11,37,71")
     ap.add_argument("--epochs", type=int, default=3)
     ap.add_argument("--max-length", type=int, default=1024)
     ap.add_argument("--micro-batch", type=int, default=4)
+    ap.add_argument("--eval-batch", type=int, default=0, help="0 derives from micro-batch")
     ap.add_argument("--effective-batch", type=int, default=32)
     ap.add_argument("--lr-lora", type=float, default=1e-4)
     ap.add_argument("--lr-head", type=float, default=5e-4)
+    ap.add_argument("--warmup-ratio", type=float, default=0.05)
     ap.add_argument("--lora-r", type=int, default=32)
     ap.add_argument("--lora-alpha", type=int, default=64)
     ap.add_argument("--eval-steps", type=int, default=100)
@@ -571,6 +607,11 @@ if __name__ == "__main__":
     ap.add_argument("--resume", default=None, help="resume checkpoint json from a previous run")
     ap.add_argument("--max-steps", type=int, default=None)
     ap.add_argument("--out-root", default=None)
+    ap.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
+    ap.add_argument("--dtype", default="auto", choices=["auto", "fp32", "fp16", "bf16"])
+    ap.add_argument("--gradient-checkpointing", action="store_true")
+    ap.add_argument("--master-weights-fp32", action="store_true")
+    ap.add_argument("--run-name", default=None, help="output subdirectory; used to isolate multiple model scales")
     args = ap.parse_args()
     if args.backend == "neural":
         for seed in [int(x) for x in args.seeds.split(",")]:

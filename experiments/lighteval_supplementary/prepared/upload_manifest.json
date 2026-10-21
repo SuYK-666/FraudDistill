@@ -1,0 +1,109 @@
+{
+  "generated_at_utc": "2026-10-20T17:11:33+00:00",
+  "files": [
+    {
+      "path": "data\\prepared\\exp3_neural_student\\final_train_manifest.jsonl",
+      "sha256": "f0230bec71bc0065075d77e07c12077ea43ff063c3f98892abdf985a5f95f136",
+      "bytes": 9682652,
+      "rows": 4747
+    },
+    {
+      "path": "data\\prepared\\exp3_agent_distillation\\exp3_dataset.jsonl",
+      "sha256": "3f4e251e9d0813c2ef1897fa5156a2552b81db186b0f58c0a7bbe3c180c3a215",
+      "bytes": 8520825,
+      "rows": 6400
+    },
+    {
+      "path": "experiments\\exp6_balanced_multi_api\\balanced\\calibration_manifest.jsonl",
+      "sha256": "919e8240fa239a349ea9533a89dcbbd52e0dbf32fe3cf3e4b3da214974ad5447",
+      "bytes": 410336,
+      "rows": 156
+    },
+    {
+      "path": "experiments\\exp6_balanced_multi_api\\balanced\\frozen_test_manifest.jsonl",
+      "sha256": "df29546d73c69c781c8bbcd2f67f5323205f8698d3b9bf216cfc7f5436654184",
+      "bytes": 1168765,
+      "rows": 384
+    },
+    {
+      "path": "experiments\\exp6_balanced_multi_api\\balanced\\hard_safe_manifest.jsonl",
+      "sha256": "bdf1a604a07066d72a8f94a5c25bdcdf0b5d612dd08412e493d290d049991691",
+      "bytes": 387265,
+      "rows": 240
+    },
+    {
+      "path": "experiments\\exp6_balanced_multi_api\\student\\predictions_all.jsonl",
+      "sha256": "1f37fe44a8c13e32813ec9bda650c3e00e8160f4e60197ae06ecf547afefa7a6",
+      "bytes": 308724,
+      "rows": 720
+    },
+    {
+      "path": "experiments\\exp6_balanced_multi_api\\student\\threshold_selection.json",
+      "sha256": "0babe7431c133dbe50899f18214538203b89c66269c874381a2c42aec0970e41",
+      "bytes": 300
+    },
+    {
+      "path": "experiments\\exp5_calibration\\e5\\p3_audit_cache.jsonl",
+      "sha256": "a88bb4cc5a233e8e769fd7b5740edde7c42c797aaac503dcd6bf8841e9d7edd0",
+      "bytes": 166017,
+      "rows": 598
+    },
+    {
+      "path": "experiments\\exp3_agent_distillation_ablation\\outputs\\neural_student\\final_distilled_student\\best_step120\\adapter_config.json",
+      "sha256": "a7658e342d2fd6c83b002546a7b038f59b78465a41f2ea4bc55cfa821a1115aa",
+      "bytes": 842
+    },
+    {
+      "path": "experiments\\exp3_agent_distillation_ablation\\outputs\\neural_student\\final_distilled_student\\best_step120\\adapter_model.safetensors",
+      "sha256": "6aa4df3d13030ca35cc9909a76a5518c646c9525d79b903fcd140e0c93a2b59c",
+      "bytes": 147795176
+    },
+    {
+      "path": "experiments\\exp3_agent_distillation_ablation\\outputs\\neural_student\\final_distilled_student\\best_step120\\architecture.txt",
+      "sha256": "fe6d3468cf5c74d8ec2a95b40f2e05338c37a4202f8fad692d2b64a9cf9b468a",
+      "bytes": 8
+    },
+    {
+      "path": "experiments\\exp3_agent_distillation_ablation\\outputs\\neural_student\\final_distilled_student\\best_step120\\README.md",
+      "sha256": "2d328f9d2e98729b5baa58c250b7ae0dbbc6bc43b4ecf07ade8535f579721e52",
+      "bytes": 5115
+    },
+    {
+      "path": "experiments\\exp3_agent_distillation_ablation\\outputs\\neural_student\\final_distilled_student\\best_step120\\special_tokens_map.json",
+      "sha256": "ea5a6d26cb236729c2cd3533920df439197601f3a58a7bfaaf3fd15fe622e3fc",
+      "bytes": 508
+    },
+    {
+      "path": "experiments\\exp3_agent_distillation_ablation\\outputs\\neural_student\\final_distilled_student\\best_step120\\tokenizer.json",
+      "sha256": "abd870441941b55cce5ebbb05594a00db099a2b2a3db3e0de34201662639f76c",
+      "bytes": 7032555
+    },
+    {
+      "path": "experiments\\exp3_agent_distillation_ablation\\outputs\\neural_student\\final_distilled_student\\best_step120\\tokenizer_config.json",
+      "sha256": "9fcde9eb3f353cbcf425e69ad072ce097567e7a83bcf4a604ba9a848db422a5e",
+      "bytes": 6928
+    }
+  ],
+  "total_bytes": 175486016,
+  "model_downloads_on_gpu_only": [
+    "Qwen/Qwen2.5-0.5B-Instruct",
+    "Qwen/Qwen2.5-1.5B-Instruct",
+    "Qwen/Qwen2.5-3B-Instruct",
+    "Qwen/Qwen2.5-7B-Instruct",
+    "Qwen/Qwen3-0.6B",
+    "Qwen/Qwen3-1.7B",
+    "Qwen/Qwen3-4B",
+    "Qwen/Qwen3.5-0.8B",
+    "Qwen/Qwen3.5-2B",
+    "Qwen/Qwen3.5-4B"
+  ],
+  "prepared_counts": {
+    "train": 4747,
+    "core_dev": 1047,
+    "core_test": 1262,
+    "relation_calibration": 96,
+    "hard_safe_calibration": 60,
+    "relation_test": 384,
+    "hard_safe_test": 180
+  }
+}

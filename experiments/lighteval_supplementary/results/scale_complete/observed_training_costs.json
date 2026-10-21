@@ -1,0 +1,65 @@
+[
+  {
+    "model_id": "qwen25_7b",
+    "last_attempt_s": 384.0,
+    "step_span_s": 5891.27,
+    "cumulative_s": 5891.27,
+    "attempts": 3,
+    "retries": 2,
+    "total_gpu_hours": 1.79059
+  },
+  {
+    "model_id": "qwen3_0_6b",
+    "last_attempt_s": 691.2,
+    "step_span_s": 684.47,
+    "cumulative_s": 691.2,
+    "attempts": 1,
+    "retries": 0,
+    "total_gpu_hours": 0.24442
+  },
+  {
+    "model_id": "qwen3_1_7b",
+    "last_attempt_s": 787.7,
+    "step_span_s": 757.08,
+    "cumulative_s": 787.7,
+    "attempts": 1,
+    "retries": 0,
+    "total_gpu_hours": 0.36967
+  },
+  {
+    "model_id": "qwen3_4b",
+    "last_attempt_s": 2810.3,
+    "step_span_s": 2748.97,
+    "cumulative_s": 2810.3,
+    "attempts": 1,
+    "retries": 0,
+    "total_gpu_hours": 0.95816
+  },
+  {
+    "model_id": "qwen35_0_8b",
+    "last_attempt_s": 767.3,
+    "step_span_s": 740.34,
+    "cumulative_s": 767.3,
+    "attempts": 1,
+    "retries": 0,
+    "total_gpu_hours": 0.33067
+  },
+  {
+    "model_id": "qwen35_2b",
+    "last_attempt_s": 1714.3,
+    "step_span_s": 1697.95,
+    "cumulative_s": 1714.3,
+    "attempts": 1,
+    "retries": 0,
+    "total_gpu_hours": 0.54957
+  },
+  {
+    "model_id": "qwen35_4b",
+    "last_attempt_s": 600.0,
+    "step_span_s": 5683.74,
+    "cumulative_s": 5683.74,
+    "attempts": 9,
+    "retries": 8,
+    "total_gpu_hours": 1.61862
+  }
+]

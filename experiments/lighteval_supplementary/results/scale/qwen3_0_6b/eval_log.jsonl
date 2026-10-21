@@ -1,0 +1,14 @@
+{"global_step": 20, "event": "eval_done", "macro_f1": 0.6033, "recall": 0.6544, "fpr": 0.439, "auprc": 0.5619, "mcc": 0.215, "ts": 1792516721.43}
+{"global_step": 40, "event": "eval_done", "macro_f1": 0.71, "recall": 0.6691, "fpr": 0.25, "auprc": 0.7435, "mcc": 0.4203, "ts": 1792516766.02}
+{"global_step": 60, "event": "eval_done", "macro_f1": 0.8377, "recall": 0.7941, "fpr": 0.122, "auprc": 0.8825, "mcc": 0.6765, "ts": 1792516811.32}
+{"global_step": 80, "event": "eval_done", "macro_f1": 0.9056, "recall": 0.8824, "fpr": 0.0732, "auprc": 0.9431, "mcc": 0.8115, "ts": 1792516855.85}
+{"global_step": 100, "event": "eval_done", "macro_f1": 0.826, "recall": 0.9779, "fpr": 0.2988, "auprc": 0.9657, "mcc": 0.6921, "ts": 1792516900.25}
+{"global_step": 120, "event": "eval_done", "macro_f1": 0.9259, "recall": 0.9118, "fpr": 0.061, "auprc": 0.9719, "mcc": 0.8519, "ts": 1792516942.7}
+{"global_step": 140, "event": "eval_done", "macro_f1": 0.9231, "recall": 0.9632, "fpr": 0.1098, "auprc": 0.9813, "mcc": 0.8498, "ts": 1792516987.32}
+{"global_step": 160, "event": "eval_done", "macro_f1": 0.9265, "recall": 0.9632, "fpr": 0.1037, "auprc": 0.9781, "mcc": 0.8559, "ts": 1792517060.04}
+{"global_step": 180, "event": "eval_done", "macro_f1": 0.9161, "recall": 0.9191, "fpr": 0.0854, "auprc": 0.9779, "mcc": 0.8324, "ts": 1792517107.12}
+{"global_step": 200, "event": "eval_done", "macro_f1": 0.9226, "recall": 0.9118, "fpr": 0.0671, "auprc": 0.9729, "mcc": 0.8452, "ts": 1792517149.85}
+{"global_step": 220, "event": "eval_done", "macro_f1": 0.9362, "recall": 0.9412, "fpr": 0.0671, "auprc": 0.9722, "mcc": 0.8726, "ts": 1792517192.99}
+{"global_step": 240, "event": "eval_done", "macro_f1": 0.9132, "recall": 0.9632, "fpr": 0.128, "auprc": 0.9717, "mcc": 0.8316, "ts": 1792517239.39}
+{"global_step": 260, "event": "eval_done", "macro_f1": 0.9261, "recall": 0.9265, "fpr": 0.0732, "auprc": 0.9748, "mcc": 0.8523, "ts": 1792517282.62}
+{"global_step": 280, "event": "eval_done", "macro_f1": 0.9262, "recall": 0.9338, "fpr": 0.0793, "auprc": 0.965, "mcc": 0.8527, "ts": 1792517326.26}

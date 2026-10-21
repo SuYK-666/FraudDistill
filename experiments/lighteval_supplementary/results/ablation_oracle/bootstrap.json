@@ -1,0 +1,74 @@
+{
+  "A1_vs_A2": {
+    "metric": "macro_f1_delta",
+    "replicates": 10000,
+    "family_count": 92,
+    "mean": -0.005224,
+    "ci95": [
+      -0.040695,
+      0.030671
+    ],
+    "ci95_above_zero": false,
+    "approx_p_two_sided": 0.7714
+  },
+  "A3_vs_A2": {
+    "metric": "macro_f1_delta",
+    "replicates": 10000,
+    "family_count": 92,
+    "mean": 0.026116,
+    "ci95": [
+      0.012182,
+      0.042281
+    ],
+    "ci95_above_zero": true,
+    "approx_p_two_sided": 0.0
+  },
+  "A4_vs_A2": {
+    "metric": "macro_f1_delta",
+    "replicates": 10000,
+    "family_count": 92,
+    "mean": 0.049621,
+    "ci95": [
+      0.028372,
+      0.072603
+    ],
+    "ci95_above_zero": true,
+    "approx_p_two_sided": 0.0
+  },
+  "A5_vs_A2": {
+    "metric": "macro_f1_delta",
+    "replicates": 10000,
+    "family_count": 92,
+    "mean": 0.062784,
+    "ci95": [
+      0.039392,
+      0.088187
+    ],
+    "ci95_above_zero": true,
+    "approx_p_two_sided": 0.0
+  },
+  "A6_vs_A2": {
+    "metric": "macro_f1_delta",
+    "replicates": 10000,
+    "family_count": 92,
+    "mean": 0.078332,
+    "ci95": [
+      0.051512,
+      0.10624
+    ],
+    "ci95_above_zero": true,
+    "approx_p_two_sided": 0.0
+  },
+  "A1_vs_A0": {
+    "metric": "macro_f1_delta",
+    "replicates": 10000,
+    "family_count": 92,
+    "mean": 0.192686,
+    "ci95": [
+      0.123703,
+      0.263157
+    ],
+    "ci95_above_zero": true,
+    "approx_p_two_sided": 0.0
+  }
+}

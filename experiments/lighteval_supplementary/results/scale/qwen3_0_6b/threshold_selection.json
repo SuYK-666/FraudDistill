@@ -1,0 +1,18 @@
+{
+  "feasible": true,
+  "threshold": 0.17666,
+  "constraints": {
+    "relation_recall_min": 0.65,
+    "hard_safe_fpr_max": 0.15
+  },
+  "calibration": {
+    "threshold": 0.17666,
+    "relation_macro_f1": 0.864451,
+    "relation_mcc": 0.730595,
+    "relation_recall": 0.895833,
+    "hard_safe_fpr": 0.016667,
+    "hard_safe_fp": 1,
+    "hard_safe_n": 60
+  },
+  "n_feasible_candidates": 42
+}

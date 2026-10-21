@@ -1,0 +1,262 @@
+{
+  "model_id": "qwen25_3b",
+  "checkpoint": "experiments/lighteval_supplementary/runs/qwen25_3b/final_distilled_student/best_step200",
+  "checkpoint_step": 200,
+  "checkpoint_sha256": "b9d6bfb082ca5baf947721bdaf2daadd9b90d220855644f36e4c098642497717",
+  "checkpoint_files": [
+    "README.md",
+    "adapter_config.json",
+    "adapter_model.safetensors",
+    "added_tokens.json",
+    "architecture.txt",
+    "merges.txt",
+    "special_tokens_map.json",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "vocab.json"
+  ],
+  "training": {
+    "wall_seconds": 981.5,
+    "peak_vram_gb": 15.46,
+    "train_input_tokens": 2038326,
+    "rows": 4747,
+    "epochs": 2,
+    "device": "cuda",
+    "dtype": "bf16"
+  },
+  "threshold_selection": {
+    "feasible": true,
+    "threshold": 0.069972,
+    "constraints": {
+      "relation_recall_min": 0.65,
+      "hard_safe_fpr_max": 0.15
+    },
+    "calibration": {
+      "threshold": 0.069972,
+      "relation_macro_f1": 0.733066,
+      "relation_mcc": 0.50443,
+      "relation_recall": 0.895833,
+      "hard_safe_fpr": 0.15,
+      "hard_safe_fp": 9,
+      "hard_safe_n": 60
+    },
+    "n_feasible_candidates": 30
+  },
+  "metrics": {
+    "core_dev": {
+      "n": 1047,
+      "n_pos": 501,
+      "n_neg": 546,
+      "tp": 472,
+      "fp": 56,
+      "fn": 29,
+      "tn": 490,
+      "accuracy": 0.918816,
+      "precision": 0.893939,
+      "recall": 0.942116,
+      "fpr": 0.102564,
+      "unsafe_f1": 0.917396,
+      "safe_f1": 0.920188,
+      "macro_f1": 0.918792,
+      "balanced_accuracy": 0.919776,
+      "mcc": 0.838807,
+      "auroc": 0.971162,
+      "auprc": 0.972121,
+      "real_macro_f1": 0.822007
+    },
+    "core_test": {
+      "n": 1262,
+      "n_pos": 619,
+      "n_neg": 643,
+      "tp": 608,
+      "fp": 136,
+      "fn": 11,
+      "tn": 507,
+      "accuracy": 0.883518,
+      "precision": 0.817204,
+      "recall": 0.982229,
+      "fpr": 0.211509,
+      "unsafe_f1": 0.89215,
+      "safe_f1": 0.873385,
+      "macro_f1": 0.882767,
+      "balanced_accuracy": 0.88536,
+      "mcc": 0.783243,
+      "auroc": 0.974315,
+      "auprc": 0.97275,
+      "four_class": {
+        "macro_f1": 0.527464,
+        "confusion": [
+          [
+            561,
+            30,
+            44,
+            8
+          ],
+          [
+            4,
+            365,
+            110,
+            55
+          ],
+          [
+            17,
+            2,
+            61,
+            0
+          ],
+          [
+            5,
+            0,
+            0,
+            0
+          ]
+        ],
+        "labels": [
+          "safe",
+          "fraud_assistance",
+          "refusal_failure",
+          "over_refusal"
+        ]
+      }
+    },
+    "relation_test_online": {
+      "n": 384,
+      "n_pos": 192,
+      "n_neg": 192,
+      "tp": 171,
+      "fp": 90,
+      "fn": 21,
+      "tn": 102,
+      "accuracy": 0.710938,
+      "precision": 0.655172,
+      "recall": 0.890625,
+      "fpr": 0.46875,
+      "unsafe_f1": 0.754967,
+      "safe_f1": 0.647619,
+      "macro_f1": 0.701293,
+      "balanced_accuracy": 0.710938,
+      "mcc": 0.452077,
+      "auroc": 0.84592,
+      "auprc": 0.856552
+    },
+    "hard_safe_test": {
+      "n": 180,
+      "n_pos": 0,
+      "n_neg": 180,
+      "tp": 0,
+      "fp": 34,
+      "fn": 0,
+      "tn": 146,
+      "accuracy": 0.811111,
+      "precision": 0.0,
+      "recall": null,
+      "fpr": 0.188889,
+      "unsafe_f1": 0.0,
+      "safe_f1": 0.895706,
+      "macro_f1": 0.447853,
+      "balanced_accuracy": 0.811111,
+      "mcc": 0.0,
+      "auroc": null,
+      "auprc": null
+    }
+  },
+  "cost": {
+    "training": {
+      "measurement": "new_gpu_run",
+      "wall_seconds": 981.5,
+      "peak_vram_gb": 15.46,
+      "wall_hours": 0.27264,
+      "billable_gpu_hours": 0.27264,
+      "input_tokens": 2038326,
+      "input_tokens_method": "estimated retained tokens per sampled row x epochs",
+      "output_tokens": 0
+    },
+    "evaluation": {
+      "wall_seconds": 283.1,
+      "peak_vram_gb": 7.532,
+      "per_set": {
+        "core_dev": {
+          "rows": 1047,
+          "seconds": 20.813,
+          "rows_per_s": 50.304,
+          "input_tokens": 176561,
+          "output_tokens": 0
+        },
+        "core_test": {
+          "rows": 1262,
+          "seconds": 24.92,
+          "rows_per_s": 50.642,
+          "input_tokens": 226407,
+          "output_tokens": 0
+        },
+        "relation_calibration": {
+          "rows": 96,
+          "seconds": 3.156,
+          "rows_per_s": 30.415,
+          "input_tokens": 44157,
+          "output_tokens": 0
+        },
+        "hard_safe_calibration": {
+          "rows": 60,
+          "seconds": 1.688,
+          "rows_per_s": 35.541,
+          "input_tokens": 16501,
+          "output_tokens": 0
+        },
+        "relation_test": {
+          "rows": 384,
+          "seconds": 12.906,
+          "rows_per_s": 29.753,
+          "input_tokens": 172325,
+          "output_tokens": 0
+        },
+        "hard_safe_test": {
+          "rows": 180,
+          "seconds": 5.103,
+          "rows_per_s": 35.271,
+          "input_tokens": 46525,
+          "output_tokens": 0
+        }
+      },
+      "total_rows": 3029,
+      "total_input_tokens": 682476,
+      "total_output_tokens": 0,
+      "retry_tokens": 0,
+      "serving": {
+        "batch_size_for_primary_scoring": 8,
+        "latency_batch": 1,
+        "latency_samples": 64,
+        "latency_p50_ms": 36.27,
+        "latency_p95_ms": 37.47,
+        "throughput_batch": 8,
+        "throughput_samples": 128,
+        "throughput_seconds": 4.1359,
+        "rows_per_s": 30.949,
+        "seconds_per_1000_rows": 32.311,
+        "input_tokens_per_s": 13916.81,
+        "output_tokens": 0,
+        "peak_vram_gb": 7.532
+      }
+    },
+    "total_gpu_hours": 0.35128,
+    "gpu_hour_cny": 0.0,
+    "estimated_total_gpu_cny": 0.0,
+    "classifier_output_tokens": 0,
+    "note": "Wall time includes checkpoint loading and all frozen evaluation sets; serving latency excludes load time."
+  },
+  "artifacts": [
+    "checkpoint_selection.json",
+    "cost.json",
+    "evaluation_plan.json",
+    "metrics.json",
+    "predictions_core_dev.jsonl",
+    "predictions_core_test.jsonl",
+    "predictions_hard_safe_calibration.jsonl",
+    "predictions_hard_safe_test.jsonl",
+    "predictions_relation_calibration.jsonl",
+    "predictions_relation_test.jsonl",
+    "summary.json",
+    "threshold_selection.json"
+  ],
+  "note": "The checkpoint hash and metrics were recorded locally. The remote model/run checkpoint was removed after final evaluation; only frozen result artifacts remain on the local host."
+}

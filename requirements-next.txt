@@ -1,0 +1,11 @@
+# Isolated GPU environment for Qwen3 and Qwen3.5 scale experiments.
+# PyTorch 2.6+ is required by Transformers 5.x for Qwen3.5.
+torch==2.6.0
+torchvision==0.21.0
+torchaudio==2.6.0
+transformers==5.20.2
+tokenizers==0.23.3
+huggingface-hub==1.31.0
+safetensors==0.8.0
+peft==0.21.2
+accelerate==1.15.0

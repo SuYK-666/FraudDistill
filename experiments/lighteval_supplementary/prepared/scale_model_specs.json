@@ -1,0 +1,182 @@
+{
+  "protocol": "lighteval-scale-v1",
+  "seed": 11,
+  "training": {
+    "epochs": 2,
+    "effective_batch": 32,
+    "micro_batch_default": 2,
+    "max_length": 512,
+    "head_tail": true,
+    "lora_r": 32,
+    "lora_alpha": 64,
+    "lora_dropout": 0.05,
+    "lr_lora": 0.0001,
+    "lr_head": 0.0005,
+    "weight_decay": 0.01,
+    "warmup_ratio": 0.05,
+    "eval_steps": 20,
+    "save_steps": 40,
+    "patience": 4,
+    "gradient_checkpointing": true,
+    "loss": "final_distill",
+    "selection": {
+      "fpr_max": 0.055,
+      "recall_min": 0.82,
+      "primary": "macro_f1",
+      "tie_break": [
+        "real_macro_f1",
+        "auprc",
+        "mcc",
+        "earlier_step"
+      ]
+    }
+  },
+  "calibration": {
+    "recall_min": 0.65,
+    "hard_safe_fpr_max": 0.15,
+    "frozen_source_threshold": 0.5622,
+    "selection": "max_relation_macro_f1_then_mcc_then_higher_threshold"
+  },
+  "cost": {
+    "dtype_primary": "bf16",
+    "score_batch": 4,
+    "latency_batch": 1,
+    "latency_samples": 64,
+    "throughput_batch": 4,
+    "throughput_samples": 128,
+    "gpu_hour_cny": null
+  },
+  "models": [
+    {
+      "id": "qwen25_0_5b",
+      "label": "Qwen2.5-0.5B-Instruct student",
+      "family": "qwen2.5",
+      "params_b": 0.5,
+      "hf_id": "Qwen/Qwen2.5-0.5B-Instruct",
+      "micro_batch": 4,
+      "eval_batch": 16,
+      "min_free_vram_gb": 12,
+      "train": true
+    },
+    {
+      "id": "qwen25_1_5b",
+      "label": "Qwen2.5-1.5B-Instruct student",
+      "family": "qwen2.5",
+      "params_b": 1.5,
+      "hf_id": "Qwen/Qwen2.5-1.5B-Instruct",
+      "micro_batch": 2,
+      "eval_batch": 16,
+      "min_free_vram_gb": 16,
+      "train": true
+    },
+    {
+      "id": "qwen25_3b",
+      "label": "Qwen2.5-3B-Instruct student",
+      "family": "qwen2.5",
+      "params_b": 3.0,
+      "hf_id": "Qwen/Qwen2.5-3B-Instruct",
+      "micro_batch": 2,
+      "eval_batch": 16,
+      "min_free_vram_gb": 24,
+      "train": true
+    },
+    {
+      "id": "qwen25_7b",
+      "label": "Qwen2.5-7B-Instruct student",
+      "family": "qwen2.5",
+      "params_b": 7.0,
+      "hf_id": "Qwen/Qwen2.5-7B-Instruct",
+      "micro_batch": 1,
+      "eval_batch": 1,
+      "eval_steps": 40,
+      "lr_lora": 5e-05,
+      "lr_head": 0.0001,
+      "warmup_ratio": 0.1,
+      "master_weights_fp32": true,
+      "min_free_vram_gb": 32,
+      "train": true
+    },
+    {
+      "id": "qwen3_0_6b",
+      "label": "Qwen3-0.6B student",
+      "family": "qwen3",
+      "params_b": 0.6,
+      "hf_id": "Qwen/Qwen3-0.6B",
+      "hf_revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "micro_batch": 4,
+      "eval_batch": 16,
+      "min_free_vram_gb": 12,
+      "train": true
+    },
+    {
+      "id": "qwen3_1_7b",
+      "label": "Qwen3-1.7B student",
+      "family": "qwen3",
+      "params_b": 1.7,
+      "hf_id": "Qwen/Qwen3-1.7B",
+      "hf_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+      "micro_batch": 2,
+      "eval_batch": 16,
+      "min_free_vram_gb": 16,
+      "train": true
+    },
+    {
+      "id": "qwen3_4b",
+      "label": "Qwen3-4B student",
+      "family": "qwen3",
+      "params_b": 4.0,
+      "hf_id": "Qwen/Qwen3-4B",
+      "hf_revision": "1cfa9a7208912126459214e8b04321603b3df60c",
+      "micro_batch": 1,
+      "eval_batch": 8,
+      "min_free_vram_gb": 24,
+      "train": true
+    },
+    {
+      "id": "qwen35_0_8b",
+      "label": "Qwen3.5-0.8B student",
+      "family": "qwen3.5",
+      "params_b": 0.8,
+      "hf_id": "Qwen/Qwen3.5-0.8B",
+      "hf_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+      "micro_batch": 4,
+      "eval_batch": 8,
+      "min_free_vram_gb": 16,
+      "train": true
+    },
+    {
+      "id": "qwen35_2b",
+      "label": "Qwen3.5-2B student",
+      "family": "qwen3.5",
+      "params_b": 2.0,
+      "hf_id": "Qwen/Qwen3.5-2B",
+      "hf_revision": "15852e8c16360a2fea060d615a32b45270f8a8fc",
+      "micro_batch": 2,
+      "eval_batch": 8,
+      "min_free_vram_gb": 24,
+      "train": true
+    },
+    {
+      "id": "qwen35_4b",
+      "label": "Qwen3.5-4B student",
+      "family": "qwen3.5",
+      "params_b": 4.0,
+      "hf_id": "Qwen/Qwen3.5-4B",
+      "hf_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "micro_batch": 1,
+      "eval_batch": 4,
+      "min_free_vram_gb": 24,
+      "train": true
+    },
+    {
+      "id": "deepseek_r1_qwen_1_5b",
+      "label": "Original DeepSeek-R1-Distill-Qwen-1.5B student",
+      "family": "deepseek-r1-qwen",
+      "params_b": 1.5,
+      "hf_id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+      "model_path": "experiments/exp3_agent_distillation_ablation/outputs/neural_student/final_distilled_student/best_step120",
+      "reuse": true,
+      "train": false
+    }
+  ]
+}

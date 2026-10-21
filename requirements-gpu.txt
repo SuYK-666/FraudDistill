@@ -1,0 +1,10 @@
+# GPU-host dependencies for the LightEval supplementary experiments.
+# Install on the rented GPU machine only. This file does not download model weights.
+-r requirements.txt
+torch>=2.4
+transformers>=4.43
+peft>=0.12
+accelerate>=0.28
+datasets>=2.18
+huggingface_hub>=0.24
+openai>=1.0

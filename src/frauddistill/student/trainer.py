@@ -10,11 +10,24 @@
 from __future__ import annotations
 
 import json
+import gc
 import time
 from pathlib import Path
 
 import torch
 
+
+def model_logits(model, batch, device):
+    """Forward with BF16 autocast when trainable FP32 master weights are used."""
+    kw = {}
+    if batch.get("query_mask") is not None:
+        kw["query_mask"] = batch["query_mask"]
+        kw["answer_mask"] = batch["answer_mask"]
+    enabled = bool(getattr(model, "_fd_master_weights_fp32", False)) and torch.device(device).type == "cuda"
+    autocast_dtype = getattr(model, "_fd_master_weights_dtype", torch.bfloat16)
+    with torch.autocast(device_type="cuda", dtype=autocast_dtype, enabled=enabled):
+        output = model(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"], **kw)
+    return output.logits.float()
 
 def split_param_groups(model, lr_lora: float, lr_head: float, weight_decay: float = 0.01):
     lora_params, head_params, rest_params = [], [], []
@@ -83,12 +96,8 @@ def train_neural(model, train_loader, dev_loader, loss_fn, tokenizer,
             if epoch == start_epoch and step < start_step:
                 continue
             batch = {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
-            kw = {}
-            if batch.get("query_mask") is not None:
-                kw["query_mask"] = batch["query_mask"]
-                kw["answer_mask"] = batch["answer_mask"]
-            out = model(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"], **kw)
-            loss, comps = loss_fn(out.logits, batch["gold_type_id"], batch["teacher_distribution"],
+            logits = model_logits(model, batch, device)
+            loss, comps = loss_fn(logits, batch["gold_type_id"], batch["teacher_distribution"],
                                   batch["sample_weight"], batch.get("pair_metadata"))
             loss = loss / grad_accum
             loss.backward()
@@ -98,7 +107,7 @@ def train_neural(model, train_loader, dev_loader, loss_fn, tokenizer,
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
                 optimizer.step()
                 scheduler.step()
-                optimizer.zero_grad()
+                optimizer.zero_grad(set_to_none=True)
                 global_step += 1
                 if max_steps is not None and global_step >= max_steps:
                     print(f"max_steps reached ({max_steps}); stopping", flush=True)
@@ -122,7 +131,7 @@ def train_neural(model, train_loader, dev_loader, loss_fn, tokenizer,
                 if dev_metric["macro_f1"] > best_metric:
                     best_metric = dev_metric["macro_f1"]
                     best_epoch = epoch + 1
-                    best_state = {k: v.detach().clone() for k, v in model.state_dict().items()
+                    best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()
                                   if any(tag in k for tag in ("lora_", "score", "head"))}
                     if out_dir:
                         save_checkpoint(model, tokenizer, out_dir / f"best_step{global_step}", architecture)
@@ -142,7 +151,7 @@ def train_neural(model, train_loader, dev_loader, loss_fn, tokenizer,
         if dev_metric["macro_f1"] > best_metric:
             best_metric = dev_metric["macro_f1"]
             best_epoch = epoch + 1
-            best_state = {k: v.detach().clone() for k, v in model.state_dict().items()
+            best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()
                                   if any(tag in k for tag in ("lora_", "score", "head"))}
             if out_dir:
                 save_checkpoint(model, tokenizer, out_dir / f"best_epoch{epoch+1}", architecture)
@@ -160,14 +169,10 @@ def evaluate_neural(model, loader, loss_fn, device, architecture="standard"):
     with torch.no_grad():
         for batch in loader:
             batch = {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
-            kw = {}
-            if batch.get("query_mask") is not None:
-                kw["query_mask"] = batch["query_mask"]
-                kw["answer_mask"] = batch["answer_mask"]
-            out = model(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"], **kw)
-            loss, _ = loss_fn(out.logits, batch["gold_type_id"], batch["teacher_distribution"],
+            logits = model_logits(model, batch, device)
+            loss, _ = loss_fn(logits, batch["gold_type_id"], batch["teacher_distribution"],
                               batch["sample_weight"], batch.get("pair_metadata"))
-            probs = torch.softmax(out.logits, dim=-1)
+            probs = torch.softmax(logits, dim=-1)
             pred = (1.0 - probs[:, 0]) >= 0.5
             all_y.extend(batch["gold_type_id"].tolist())
             all_pred.extend([int(p) for p in pred.tolist()])
@@ -191,8 +196,17 @@ def evaluate_neural(model, loader, loss_fn, device, architecture="standard"):
     }
 
 
+def _move_optimizer_state(optimizer, device) -> None:
+    """Move Adam moments between devices without duplicating tensor storage."""
+    for state in optimizer.state.values():
+        for key, value in list(state.items()):
+            if torch.is_tensor(value):
+                state[key] = value.to(device)
+
+
 def save_resume(model, optimizer, scheduler, path, epoch, step_in_epoch, global_step,
                 best_metric, best_epoch, history, no_improve=0):
+    # Save only trainable tensors; the frozen base model is reconstructed by model id.
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     # lean snapshot: trainable (LoRA/head) params only; base weights come from
     # the frozen checkpoint on resume. Old full-state snapshots still load via strict=False.
@@ -244,20 +258,16 @@ def evaluate_neural_full(model, loader, device, architecture="standard",
     with torch.no_grad():
         for batch in loader:
             batch = {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
-            kw = {}
-            if batch.get("query_mask") is not None:
-                kw["query_mask"] = batch["query_mask"]
-                kw["answer_mask"] = batch["answer_mask"]
-            out = model(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"], **kw)
+            logits = model_logits(model, batch, device)
             if loss_fn is not None:
                 if getattr(loss_fn, "uses_batch", False):
-                    loss, _ = loss_fn(out.logits, batch)
+                    loss, _ = loss_fn(logits, batch)
                 else:
-                    loss, _ = loss_fn(out.logits, batch["gold_type_id"], batch["teacher_distribution"],
+                    loss, _ = loss_fn(logits, batch["gold_type_id"], batch["teacher_distribution"],
                                       batch["sample_weight"], batch.get("pair_metadata"))
                 total_loss += float(loss)
                 n_batch += 1
-            probs = torch.softmax(out.logits, dim=-1)
+            probs = torch.softmax(logits, dim=-1)
             scores = (1.0 - probs[:, 0]).tolist()
             all_y.extend(batch["gold_type_id"].tolist())
             all_pred.extend([1 if sc >= threshold else 0 for sc in scores])
@@ -392,15 +402,11 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
             if epoch == start_epoch and step < start_step:
                 continue
             batch = {k: (v.to(device) if isinstance(v, torch.Tensor) else v) for k, v in batch.items()}
-            kw = {}
-            if batch.get("query_mask") is not None:
-                kw["query_mask"] = batch["query_mask"]
-                kw["answer_mask"] = batch["answer_mask"]
-            out = model(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"], **kw)
+            logits = model_logits(model, batch, device)
             if getattr(loss_fn, "uses_batch", False):
-                loss, comps = loss_fn(out.logits, batch)
+                loss, comps = loss_fn(logits, batch)
             else:
-                loss, comps = loss_fn(out.logits, batch["gold_type_id"], batch["teacher_distribution"],
+                loss, comps = loss_fn(logits, batch["gold_type_id"], batch["teacher_distribution"],
                                       batch["sample_weight"], batch.get("pair_metadata"))
             loss = loss / grad_accum
             loss.backward()
@@ -414,7 +420,7 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                     raise RuntimeError(f"abort: non-finite grad norm at step {global_step} (guide 35)")
                 optimizer.step()
                 scheduler.step()
-                optimizer.zero_grad()
+                optimizer.zero_grad(set_to_none=True)
                 global_step += 1
                 _steps_since_log += 1
                 pbar.update(1)
@@ -463,7 +469,17 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                         save_checkpoint(model, tokenizer, ck_path, architecture)
                         _prune_checkpoints(out_dir, keep=3)
                 if global_step > 0 and global_step % eval_steps == 0:
+                    if device.type == "cuda":
+                        # AdamW moments remain allocated between steps. Temporarily
+                        # offload them so a 24 GB card can run full dev evaluation
+                        # without overlapping optimizer state and eval activations.
+                        _move_optimizer_state(optimizer, torch.device("cpu"))
+                        torch.cuda.empty_cache()
                     dev_metric = evaluate_neural_full(model, dev_loader, device, architecture, loss_fn)
+                    if device.type == "cuda":
+                        gc.collect()
+                        _move_optimizer_state(optimizer, device)
+                        torch.cuda.empty_cache()
                     history["dev"].append({"step": global_step, "epoch": epoch + 1, **dev_metric})
                     mf1 = dev_metric["macro_f1"]
                     sl = dev_metric.get("slices") or {}
@@ -487,7 +503,7 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                         best_step = global_step
                         no_improve = 0
                         real_down_streak = 0
-                        best_state = {k: v.detach().clone() for k, v in model.state_dict().items()
+                        best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()
                                       if any(tag in k for tag in ("lora_", "score", "head"))}
                         if out_dir:
                             save_checkpoint(model, tokenizer, out_dir / f"best_step{global_step}", architecture)
@@ -514,14 +530,31 @@ def train_neural_final(model, train_loader, dev_loader, loss_fn, tokenizer,
                     if out_dir:
                         save_resume(model, optimizer, scheduler, out_dir / "resume.pt", epoch, step, global_step,
                                     best_metric, best_step, history, no_improve=no_improve)
+        if global_step >= total_steps and out_dir:
+            # The final full-dev comparison is performed by checkpoint selection.
+            # Avoid a redundant end-of-epoch forward pass after the step budget.
+            save_resume(model, optimizer, scheduler, out_dir / "resume.pt", epoch,
+                        len(train_loader) - 1, global_step, best_metric, best_step,
+                        history, no_improve=no_improve)
+            if best_state:
+                model.load_state_dict(best_state, strict=False)
+            pbar.close()
+            return best_state, history
+        if device.type == "cuda":
+            _move_optimizer_state(optimizer, torch.device("cpu"))
+            torch.cuda.empty_cache()
         dev_metric = evaluate_neural_full(model, dev_loader, device, architecture, loss_fn)
+        if device.type == "cuda":
+            gc.collect()
+            _move_optimizer_state(optimizer, device)
+            torch.cuda.empty_cache()
         history["dev"].append({"step": global_step, "epoch": epoch + 1, **dev_metric})
         print(f"epoch {epoch+1} dev: macro_f1={dev_metric['macro_f1']:.4f} recall={dev_metric['recall']:.4f} "
               f"fpr={dev_metric['fpr']:.4f}", flush=True)
         if dev_metric["macro_f1"] > best_metric:
             best_metric = dev_metric["macro_f1"]
             best_step = global_step
-            best_state = {k: v.detach().clone() for k, v in model.state_dict().items()
+            best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()
                                   if any(tag in k for tag in ("lora_", "score", "head"))}
             if out_dir:
                 save_checkpoint(model, tokenizer, out_dir / f"best_step{global_step}", architecture)

@@ -60,8 +60,8 @@ class FraudDistillLoss:
     def __call__(self, logits, gold_labels, teacher_distribution, sample_weight,
                  pair_metadata=None):
         device = logits.device
-        cw = self.class_weights.to(device)
-        sw = sample_weight.to(device).detach()
+        cw = self.class_weights.to(device=device, dtype=logits.dtype)
+        sw = sample_weight.to(device=device, dtype=logits.dtype).detach()
 
         # gold CE with sample weights
         gold = F.cross_entropy(logits, gold_labels, weight=cw, reduction="none")
@@ -70,7 +70,7 @@ class FraudDistillLoss:
         loss_soft = torch.zeros((), device=device)
         if self.lambda_soft > 0:
             student_log_prob = F.log_softmax(logits / self.temperature, dim=-1)
-            teacher_prob = teacher_distribution.to(device).detach()
+            teacher_prob = teacher_distribution.to(device=device, dtype=logits.dtype).detach()
             kl = F.kl_div(student_log_prob, teacher_prob, reduction="none").sum(dim=-1)
             loss_soft = (kl * sw).sum() / sw.sum().clamp_min(1.0) * (self.temperature ** 2)
 
@@ -118,16 +118,16 @@ class FinalDistillLoss:
 
     def __call__(self, logits, batch):
         device = logits.device
-        cw = self.class_weights.to(device)
+        cw = self.class_weights.to(device=device, dtype=logits.dtype)
         gold_labels = batch["gold_type_id"]
         teacher_distribution = batch["teacher_distribution"]
-        sw = batch["sample_weight"].to(device).detach()
+        sw = batch["sample_weight"].to(device=device, dtype=logits.dtype).detach()
 
         gold = F.cross_entropy(logits, gold_labels, weight=cw, reduction="none")
         # teacher-only rows: no hard CE and no binary term (guide 12.2)
         teacher_only = batch.get("teacher_only")
         if teacher_only is not None:
-            tmask = teacher_only.to(device).float()
+            tmask = teacher_only.to(device=device, dtype=logits.dtype)
             gold = gold * (1.0 - tmask)
         # plain batch mean (guide 31: sample_weight is sampler-only; using it
         # again in the loss would double-count and, with sum<1 weights, shrink
@@ -141,7 +141,7 @@ class FinalDistillLoss:
         # safe and makes the term fight CE/KL, diverging the final training.
         loss_binary = torch.zeros((), device=device)
         if self.lambda_binary > 0:
-            gold_bin = batch["gold_binary"].to(device).float()
+            gold_bin = batch["gold_binary"].to(device=device, dtype=logits.dtype)
             p_safe = F.softmax(logits, dim=-1)[:, 0]
             bce = F.binary_cross_entropy(p_safe.clamp(1e-7, 1 - 1e-7), 1.0 - gold_bin, reduction="none")
             if teacher_only is not None:
@@ -151,11 +151,11 @@ class FinalDistillLoss:
         # MAT soft KL with teacher reliability weight (guide 12.3/12.4)
         loss_kl = torch.zeros((), device=device)
         if self.lambda_kl > 0:
-            teacher_prob = teacher_distribution.to(device).detach()
+            teacher_prob = teacher_distribution.to(device=device, dtype=logits.dtype).detach()
             conf = batch.get("teacher_confidence")
             w_t = torch.ones_like(sw)
             if conf is not None:
-                w_t = (0.5 + 0.5 * conf.to(device).float()).clamp(0.5, 1.0)
+                w_t = (0.5 + 0.5 * conf.to(device=device, dtype=logits.dtype)).clamp(0.5, 1.0)
             disagree = batch.get("teacher_gold_agree")
             if disagree is not None:
                 w_t = torch.where(disagree.to(device).bool(), w_t * 0.5, w_t)

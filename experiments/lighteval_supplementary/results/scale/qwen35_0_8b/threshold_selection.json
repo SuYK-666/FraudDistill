@@ -1,0 +1,9 @@
+{
+  "feasible": false,
+  "threshold": 0.5622,
+  "constraints": {
+    "relation_recall_min": 0.65,
+    "hard_safe_fpr_max": 0.15
+  },
+  "note": "no_feasible_target_threshold; source threshold retained"
+}

@@ -1,0 +1,32 @@
+{
+  "A4_vs_A3": {
+    "metric": "macro_f1",
+    "mean_diff": 0.015649767387527685,
+    "ci95": [
+      0.002283160304501536,
+      0.03254720901983799
+    ],
+    "ci95_above_zero": true,
+    "p_value_approx": 0.0316
+  },
+  "A5_vs_A4": {
+    "metric": "macro_f1",
+    "mean_diff": 0.005254981121388197,
+    "ci95": [
+      -0.0051716563874459305,
+      0.01595917484318286
+    ],
+    "ci95_above_zero": false,
+    "p_value_approx": 0.351
+  },
+  "A6_vs_A5": {
+    "metric": "macro_f1",
+    "mean_diff": 0.013002659908579316,
+    "ci95": [
+      0.0,
+      0.02696480911686774
+    ],
+    "ci95_above_zero": false,
+    "p_value_approx": 0.0664
+  }
+}
