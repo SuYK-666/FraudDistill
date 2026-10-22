@@ -96,6 +96,8 @@ flowchart LR
 
 补充实验最终报告：[`FINAL_EXPERIMENT_REPORT.md`](experiments/lighteval_supplementary/results/FINAL_EXPERIMENT_REPORT.md)。
 
+Qwen2.5 0.5B/1.5B/3B/7B 重训与 10%/20% 预算审计报告：[`QWEN25_BUDGET_AUDIT_REPORT.md`](experiments/lighteval_supplementary/results/qwen25_budget_rerun_20261022/QWEN25_BUDGET_AUDIT_REPORT.md)。
+
 > 📖 每个实验的**实验思路、实验设计、数据集选取、主结果表格与实验分析**详见：[`experiments/EXPERIMENTS_SUMMARY.md`](experiments/EXPERIMENTS_SUMMARY.md)（六实验总结文档，含全部报告与数据链接）。
 
 ## 部署工作点与选择性审计

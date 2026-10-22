@@ -1,0 +1,84 @@
+{
+  "training": {
+    "measurement": "new_gpu_run",
+    "wall_seconds": 1093.2,
+    "peak_vram_gb": 13.597,
+    "wall_hours": 0.30367,
+    "billable_gpu_hours": 0.30367,
+    "input_tokens": 2038326,
+    "input_tokens_method": "estimated retained tokens per sampled row x epochs",
+    "output_tokens": 0
+  },
+  "evaluation": {
+    "wall_seconds": 577.38,
+    "peak_vram_gb": 7.857,
+    "per_set": {
+      "core_dev": {
+        "rows": 1047,
+        "seconds": 49.558,
+        "rows_per_s": 21.127,
+        "input_tokens": 176561,
+        "output_tokens": 0
+      },
+      "core_test": {
+        "rows": 1262,
+        "seconds": 57.285,
+        "rows_per_s": 22.03,
+        "input_tokens": 226407,
+        "output_tokens": 0
+      },
+      "relation_calibration": {
+        "rows": 96,
+        "seconds": 3.41,
+        "rows_per_s": 28.149,
+        "input_tokens": 44157,
+        "output_tokens": 0
+      },
+      "hard_safe_calibration": {
+        "rows": 60,
+        "seconds": 1.702,
+        "rows_per_s": 35.249,
+        "input_tokens": 16501,
+        "output_tokens": 0
+      },
+      "relation_test": {
+        "rows": 384,
+        "seconds": 20.021,
+        "rows_per_s": 19.179,
+        "input_tokens": 172325,
+        "output_tokens": 0
+      },
+      "hard_safe_test": {
+        "rows": 180,
+        "seconds": 4.979,
+        "rows_per_s": 36.155,
+        "input_tokens": 46525,
+        "output_tokens": 0
+      }
+    },
+    "total_rows": 3029,
+    "total_input_tokens": 682476,
+    "total_output_tokens": 0,
+    "retry_tokens": 0,
+    "serving": {
+      "batch_size_for_primary_scoring": 16,
+      "latency_batch": 1,
+      "latency_samples": 64,
+      "latency_p50_ms": 50.53,
+      "latency_p95_ms": 51.24,
+      "throughput_batch": 16,
+      "throughput_samples": 128,
+      "throughput_seconds": 4.4409,
+      "rows_per_s": 28.823,
+      "seconds_per_1000_rows": 34.694,
+      "input_tokens_per_s": 12960.946,
+      "output_tokens": 0,
+      "peak_vram_gb": 7.857
+    }
+  },
+  "total_gpu_hours": 0.46405,
+  "gpu_hour_cny": null,
+  "estimated_total_gpu_cny": null,
+  "classifier_output_tokens": 0,
+  "note": "Wall time includes checkpoint loading and all frozen evaluation sets; serving latency excludes load time."
+}

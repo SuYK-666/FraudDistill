@@ -1,0 +1,256 @@
+{
+  "protocol": "qwen25-budget-rerun-v1",
+  "started_at_utc": "2026-10-21T23:32:13+00:00",
+  "models": {
+    "qwen25_0_5b": {
+      "stages": [
+        {
+          "stage": "untrained",
+          "status": "started",
+          "at_utc": "2026-10-21T23:32:13+00:00"
+        },
+        {
+          "stage": "untrained",
+          "status": "started",
+          "at_utc": "2026-10-21T23:34:09+00:00"
+        },
+        {
+          "stage": "untrained",
+          "status": "complete",
+          "at_utc": "2026-10-21T23:35:02+00:00",
+          "wall_seconds": 42.65
+        },
+        {
+          "stage": "train",
+          "status": "started",
+          "at_utc": "2026-10-21T23:35:02+00:00",
+          "device": "cuda",
+          "dtype": "bf16",
+          "command": [
+            "bash",
+            "/home/<remote-user>/FraudDistill/scripts/remote_train_retry.sh",
+            "/home/<remote-user>/FraudDistill",
+            "qwen25_0_5b",
+            "/home/<remote-user>/venv-fd-next/bin/python"
+          ]
+        },
+        {
+          "stage": "train",
+          "status": "complete",
+          "at_utc": "2026-10-21T23:39:22+00:00",
+          "elapsed_s": 260.553
+        },
+        {
+          "stage": "trained_eval",
+          "status": "started",
+          "at_utc": "2026-10-21T23:39:22+00:00"
+        },
+        {
+          "stage": "trained_eval",
+          "status": "complete",
+          "at_utc": "2026-10-21T23:41:17+00:00",
+          "macro_f1": 0.779087,
+          "wall_seconds": 113.39
+        },
+        {
+          "stage": "audit",
+          "status": "complete",
+          "at_utc": "2026-10-21T23:41:25+00:00",
+          "tokens_10pct": 33814,
+          "tokens_20pct": 67809
+        },
+        {
+          "stage": "model_summary",
+          "status": "complete",
+          "at_utc": "2026-10-21T23:41:25+00:00"
+        }
+      ],
+      "updated_at_utc": "2026-10-21T23:41:25+00:00"
+    },
+    "qwen25_1_5b": {
+      "stages": [
+        {
+          "stage": "untrained",
+          "status": "started",
+          "at_utc": "2026-10-21T23:42:12+00:00"
+        },
+        {
+          "stage": "untrained",
+          "status": "complete",
+          "at_utc": "2026-10-21T23:45:02+00:00",
+          "wall_seconds": 73.02
+        },
+        {
+          "stage": "train",
+          "status": "started",
+          "at_utc": "2026-10-21T23:45:02+00:00",
+          "device": "cuda",
+          "dtype": "bf16",
+          "command": [
+            "bash",
+            "/home/<remote-user>/FraudDistill/scripts/remote_train_retry.sh",
+            "/home/<remote-user>/FraudDistill",
+            "qwen25_1_5b",
+            "/home/<remote-user>/venv-fd-next/bin/python"
+          ]
+        },
+        {
+          "stage": "train",
+          "status": "complete",
+          "at_utc": "2026-10-21T23:58:35+00:00",
+          "elapsed_s": 813.31
+        },
+        {
+          "stage": "trained_eval",
+          "status": "started",
+          "at_utc": "2026-10-21T23:58:35+00:00"
+        },
+        {
+          "stage": "trained_eval",
+          "status": "complete",
+          "at_utc": "2026-10-22T00:01:34+00:00",
+          "macro_f1": 0.78625,
+          "wall_seconds": 177.49
+        },
+        {
+          "stage": "audit",
+          "status": "complete",
+          "at_utc": "2026-10-22T00:01:42+00:00",
+          "tokens_10pct": 33333,
+          "tokens_20pct": 68262
+        },
+        {
+          "stage": "model_summary",
+          "status": "complete",
+          "at_utc": "2026-10-22T00:01:42+00:00"
+        }
+      ],
+      "updated_at_utc": "2026-10-22T00:01:42+00:00"
+    },
+    "qwen25_3b": {
+      "stages": [
+        {
+          "stage": "untrained",
+          "status": "started",
+          "at_utc": "2026-10-22T00:01:51+00:00"
+        },
+        {
+          "stage": "untrained",
+          "status": "started",
+          "at_utc": "2026-10-22T00:03:01+00:00"
+        },
+        {
+          "stage": "untrained",
+          "status": "complete",
+          "at_utc": "2026-10-22T00:07:06+00:00",
+          "wall_seconds": 136.44
+        },
+        {
+          "stage": "train",
+          "status": "started",
+          "at_utc": "2026-10-22T00:07:06+00:00",
+          "device": "cuda",
+          "dtype": "bf16",
+          "command": [
+            "bash",
+            "/home/<remote-user>/FraudDistill/scripts/remote_train_retry.sh",
+            "/home/<remote-user>/FraudDistill",
+            "qwen25_3b",
+            "/home/<remote-user>/venv-fd-next/bin/python"
+          ]
+        },
+        {
+          "stage": "train",
+          "status": "complete",
+          "at_utc": "2026-10-22T00:25:42+00:00",
+          "elapsed_s": 1115.909
+        },
+        {
+          "stage": "trained_eval",
+          "status": "started",
+          "at_utc": "2026-10-22T00:25:42+00:00"
+        },
+        {
+          "stage": "trained_eval",
+          "status": "complete",
+          "at_utc": "2026-10-22T00:35:20+00:00",
+          "macro_f1": 0.760313,
+          "wall_seconds": 577.38
+        },
+        {
+          "stage": "audit",
+          "status": "complete",
+          "at_utc": "2026-10-22T00:35:29+00:00",
+          "tokens_10pct": 35696,
+          "tokens_20pct": 70284
+        },
+        {
+          "stage": "model_summary",
+          "status": "complete",
+          "at_utc": "2026-10-22T00:35:30+00:00"
+        }
+      ],
+      "updated_at_utc": "2026-10-22T00:35:30+00:00"
+    },
+    "qwen25_7b": {
+      "stages": [
+        {
+          "stage": "untrained",
+          "status": "started",
+          "at_utc": "2026-10-22T00:35:36+00:00"
+        },
+        {
+          "stage": "untrained",
+          "status": "complete",
+          "at_utc": "2026-10-22T00:41:22+00:00",
+          "wall_seconds": 178.16
+        },
+        {
+          "stage": "train",
+          "status": "started",
+          "at_utc": "2026-10-22T00:41:22+00:00",
+          "device": "cuda",
+          "dtype": "bf16",
+          "command": [
+            "bash",
+            "/home/<remote-user>/FraudDistill/scripts/remote_train_retry.sh",
+            "/home/<remote-user>/FraudDistill",
+            "qwen25_7b",
+            "/home/<remote-user>/venv-fd-next/bin/python"
+          ]
+        },
+        {
+          "stage": "train",
+          "status": "complete",
+          "at_utc": "2026-10-22T01:46:30+00:00",
+          "elapsed_s": 3908.395
+        },
+        {
+          "stage": "trained_eval",
+          "status": "started",
+          "at_utc": "2026-10-22T01:46:30+00:00"
+        },
+        {
+          "stage": "trained_eval",
+          "status": "complete",
+          "at_utc": "2026-10-22T01:53:17+00:00",
+          "macro_f1": 0.637324,
+          "wall_seconds": 405.52
+        },
+        {
+          "stage": "audit",
+          "status": "complete",
+          "at_utc": "2026-10-22T01:53:25+00:00",
+          "tokens_10pct": 33544,
+          "tokens_20pct": 67449
+        },
+        {
+          "stage": "model_summary",
+          "status": "complete",
+          "at_utc": "2026-10-22T01:53:25+00:00"
+        }
+      ],
+      "updated_at_utc": "2026-10-22T01:53:25+00:00"
+    }
+  }
+}

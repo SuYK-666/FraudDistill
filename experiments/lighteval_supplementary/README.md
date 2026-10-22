@@ -63,6 +63,8 @@ scripts/supp_run_all.py              orchestrated stages
 ## Final outputs
 
 - [Final experiment report](results/FINAL_EXPERIMENT_REPORT.md)
+- [Qwen2.5 rerun: four-group quality, latency and audit-token report](results/qwen25_budget_rerun_20261022/QWEN25_BUDGET_AUDIT_REPORT.md)
+- [Qwen2.5 rerun checkpoint manifest](results/qwen25_budget_rerun_20261022/checkpoint_manifest.json)
 - [Table 9: online budget audit](results/tables/table9_online_budget_audit.md)
 - [A0-A6 ablation quality, tokens, latency and API cost](results/tables/table_ablation_budget.md)
 - [Scale quality and deployment cost](results/tables/table_scale_quality_cost.md)

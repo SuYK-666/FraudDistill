@@ -37,6 +37,14 @@ def parse_label(text: str) -> str | None:
     return None
 
 
+def _as_input_ids(value):
+    """Normalize tokenizer chat-template output across Transformers versions."""
+    if isinstance(value, dict):
+        return value.get("input_ids")
+    if hasattr(value, "input_ids"):
+        return value.input_ids
+    return value
+
 def _label_logprobs(model, tokenizer, prompt_ids, label_ids: dict[str, list[int]], device: str) -> dict:
     import torch
     import torch.nn.functional as F
@@ -66,6 +74,7 @@ def _label_logprobs(model, tokenizer, prompt_ids, label_ids: dict[str, list[int]
 
 def run_a0(model_name: str = DEFAULT_MODEL, manifest: Path = DEFAULT_MANIFEST,
            out_dir: Path = DEFAULT_OUT, device: str = "auto", dtype: str = "auto",
+           revision: str | None = None,
            max_new_tokens: int = 16, limit: int | None = None, resume: bool = True,
            dry_run: bool = False) -> dict:
     rows = read_jsonl(manifest)
@@ -101,13 +110,17 @@ def run_a0(model_name: str = DEFAULT_MODEL, manifest: Path = DEFAULT_MANIFEST,
     if dtype == "auto":
         dtype = "bf16" if device == "cuda" and torch.cuda.is_bf16_supported() else "fp32"
     torch_dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[dtype]
+    from transformers import __version__ as transformers_version
+    dtype_kwargs = ({"dtype": torch_dtype}
+                    if int(transformers_version.split(".", 1)[0]) >= 5
+                    else {"torch_dtype": torch_dtype})
     if device == "cpu" and dtype != "fp32":
         raise ValueError("A0 CPU inference must use fp32")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch_dtype)
+    model = AutoModelForCausalLM.from_pretrained(model_name, revision=revision, **dtype_kwargs)
     model.to(device).eval()
     label_ids = {label: tokenizer(label, add_special_tokens=False).input_ids for label in CLASSES}
 
@@ -123,7 +136,8 @@ def run_a0(model_name: str = DEFAULT_MODEL, manifest: Path = DEFAULT_MANIFEST,
             messages = [{"role": "user", "content": prompt}]
             generation_prompt = tokenizer.apply_chat_template(
                 messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
-            ).to(device)
+            )
+            generation_prompt = _as_input_ids(generation_prompt).to(device)
             t0 = time.perf_counter()
             with torch.inference_mode():
                 generated = model.generate(
@@ -135,7 +149,8 @@ def run_a0(model_name: str = DEFAULT_MODEL, manifest: Path = DEFAULT_MANIFEST,
                                               skip_special_tokens=True)
             label_prompt = tokenizer.apply_chat_template(
                 messages, tokenize=True, add_generation_prompt=False, return_tensors="pt"
-            )[0]
+            )
+            label_prompt = _as_input_ids(label_prompt)[0]
             logps = _label_logprobs(model, tokenizer, label_prompt, label_ids, device)
             exp = {label: math.exp(value) for label, value in logps.items()}
             normalizer = sum(exp.values())
@@ -199,6 +214,7 @@ def run_a0(model_name: str = DEFAULT_MODEL, manifest: Path = DEFAULT_MANIFEST,
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model-name", default=DEFAULT_MODEL)
+    parser.add_argument("--revision", default=None)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
@@ -208,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-resume", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
-    run_a0(args.model_name, args.manifest, args.out_dir, args.device, args.dtype,
+    run_a0(args.model_name, args.manifest, args.out_dir, args.device, args.dtype, args.revision,
            args.max_new_tokens, args.limit, not args.no_resume, args.dry_run)
     return 0
 

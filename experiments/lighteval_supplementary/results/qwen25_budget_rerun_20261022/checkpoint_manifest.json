@@ -1,0 +1,35 @@
+{
+  "generated_at": "2026-10-22",
+  "remote_root": "/home/<remote-user>/FraudDistill/experiments/lighteval_supplementary/runs",
+  "verification": "Each listed checkpoint existed on the GPU server and its adapter SHA256 matched the recorded model summary.",
+  "models": [
+    {
+      "model_id": "qwen25_0_5b",
+      "checkpoint": "<remote-root>/qwen25_0_5b/final_distilled_student/checkpoint-160",
+      "step": 160,
+      "adapter_bytes": 70437304,
+      "adapter_sha256": "7d3c47ade357d51ba535ef7b63e1fa20e5787b767c555e89576ca10cee0edfee"
+    },
+    {
+      "model_id": "qwen25_1_5b",
+      "checkpoint": "<remote-root>/qwen25_1_5b/final_distilled_student/best_step160",
+      "step": 160,
+      "adapter_bytes": 147782888,
+      "adapter_sha256": "17c2a5ca2b6b35d0e8410301c42280cd94798a4fe52f54a616fab26e03b25c3e"
+    },
+    {
+      "model_id": "qwen25_3b",
+      "checkpoint": "<remote-root>/qwen25_3b/final_distilled_student/best_step200",
+      "step": 200,
+      "adapter_bytes": 239552760,
+      "adapter_sha256": "cb703628d67d59476dbd3b75b867610c6b58885a5462b8786b53e569b5896535"
+    },
+    {
+      "model_id": "qwen25_7b",
+      "checkpoint": "<remote-root>/qwen25_7b/final_distilled_student/best_step280",
+      "step": 280,
+      "adapter_bytes": 323071616,
+      "adapter_sha256": "c85fca553c563fcb89f85b891445fb50683af0a963ec7ca7d8de528b059b797e"
+    }
+  ]
+}

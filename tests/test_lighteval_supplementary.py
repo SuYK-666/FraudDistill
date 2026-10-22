@@ -11,6 +11,7 @@ import frauddistill.supplementary.scale_eval as scale_eval_module
 import frauddistill.supplementary.report as report_module
 import frauddistill.supplementary.ablation as ablation_module
 import frauddistill.supplementary.record as record_module
+import frauddistill.supplementary.qwen25_budget_rerun as qwen25_rerun_module
 from frauddistill.supplementary.a0 import run_a0
 from frauddistill.supplementary.audit import _judge_one, _parse_audit
 from frauddistill.supplementary.common import (REPO, budget_prefixes, load_score_map,
@@ -154,6 +155,23 @@ def test_ablation_replay_uses_nested_prefixes_and_counts_costs(tmp_path: Path, m
     assert summary["policies"]["A6"]["incremental_api_cost_cny"] == pytest.approx(0.076)
     assert summary["policies"]["A6"]["online_audit_latency_ms"] == pytest.approx(760.0)
     assert "A6_vs_A2" in summary["bootstrap"]
+
+def test_qwen25_rerun_audit_replaces_auto_decision_and_counts_corrections():
+    relation = [
+        {"id": "M1::a", "binary_label": "unsafe"},
+        {"id": "M1::b", "binary_label": "safe"},
+        {"id": "M1::c", "binary_label": "unsafe"},
+        {"id": "M1::d", "binary_label": "safe"},
+    ]
+    scores = {"M1::a": 0.1, "M1::b": 0.9, "M1::c": 0.9, "M1::d": 0.1}
+    audits = [
+        {"id": "M1::a", "audit_label": "unsafe"},
+        {"id": "M1::b", "audit_label": "safe"},
+    ]
+    result = qwen25_rerun_module._apply_audit(relation, scores, 0.23, audits, 2)
+    assert result["metrics"]["macro_f1"] == 1.0
+    assert result["fixed_errors"] == 2 and result["introduced_errors"] == 0
+    assert result["net_corrections"] == 2
 
 def test_report_csv_accepts_audit_comparison_extra_fields(tmp_path: Path, monkeypatch):
     base = {
